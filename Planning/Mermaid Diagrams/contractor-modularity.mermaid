@@ -1,0 +1,36 @@
+graph LR
+    subgraph "Service Type: WINDOWS"
+        W_FORM[Form Questions:<br/>- ZIP Code<br/>- Own Home?<br/>- NumberOfWindows<br/>- WindowsProjectScope]
+        
+        W_MOD[Modernize Config:<br/>PING needs: ZIP, OwnHome<br/>POST needs: All fields<br/>Transform: NumberOfWindows]
+        
+        W_HOME[HomeAdvisor Config:<br/>Different field names<br/>Different URL structure]
+    end
+    
+    subgraph "Service Type: BATHROOMS"
+        B_FORM[Form Questions:<br/>- ZIP Code<br/>- Own Home?<br/>- NumberOfBathrooms<br/>- BathroomType<br/>- FixturesNeeded]
+        
+        B_MOD[Modernize Config:<br/>PING needs: ZIP, OwnHome<br/>POST needs: All fields<br/>Transform: NumberOfBathrooms]
+        
+        B_HOME[HomeAdvisor Config:<br/>Completely different<br/>field mappings]
+    end
+    
+    subgraph "Database Config Storage"
+        CONFIG[(buyer_service_configs<br/>Each row = unique buyer+service combo)]
+    end
+    
+    W_FORM --> CONFIG
+    B_FORM --> CONFIG
+    W_MOD --> CONFIG
+    W_HOME --> CONFIG
+    B_MOD --> CONFIG
+    B_HOME --> CONFIG
+    
+    CONFIG --> ENGINE[Transform Engine<br/>Uses config to map fields]
+    
+    ENGINE --> OUTPUT1[Modernize Windows Payload:<br/>NumberOfWindows: 6-9<br/>WindowsProjectScope: Install]
+    
+    ENGINE --> OUTPUT2[Modernize Bathrooms Payload:<br/>NumberOfBathrooms: 2<br/>BathroomType: Full<br/>FixturesNeeded: Shower,Tub]
+    
+    style CONFIG fill:#ffebee,stroke:#f44336,stroke-width:3px
+    style ENGINE fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px

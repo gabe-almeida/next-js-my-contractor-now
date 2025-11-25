@@ -1,0 +1,83 @@
+# Implementer Roles Configuration for gabe-modular Profile
+# Extends default implementers with code-quality-auditor
+
+implementers:
+  - id: api-engineer
+    areas_of_responsibility:
+      - Create API endpoints
+      - Create controllers and actions
+      - Implement backend business logic
+      - Handle API request/response formatting
+      - Create API serializers/presenters
+      - Implement authentication/authorization logic
+    verified_by: backend-verifier
+    max_file_lines: 300
+    typical_batch_size: 2-3
+
+  - id: ui-designer
+    areas_of_responsibility:
+      - Create UI components
+      - Create views and templates
+      - Implement styling (CSS/Tailwind)
+      - Ensure responsive design
+      - Create frontend layouts
+      - Implement user interactions
+    verified_by: frontend-verifier
+    max_file_lines: 250
+    typical_batch_size: 2-3
+
+  - id: database-engineer
+    areas_of_responsibility:
+      - Create database migrations
+      - Create database models
+      - Implement database queries
+      - Create database indexes
+      - Set up model associations
+      - Create seed data
+    verified_by: backend-verifier
+    max_file_lines: 200
+    typical_batch_size: 1-2
+
+  - id: testing-engineer
+    areas_of_responsibility:
+      - Write unit tests
+      - Write integration tests
+      - Analyze test coverage gaps
+      - Write strategic gap-filling tests (max 10)
+      - Create test fixtures
+      - Write test helper utilities
+    verified_by: null
+    max_file_lines: 300
+    typical_batch_size: 1
+
+  - id: code-quality-auditor
+    areas_of_responsibility:
+      - Code quality review after each batch
+      - Modularity enforcement (500-line limit)
+      - Documentation verification (WHY/WHEN/HOW)
+      - DRY principle enforcement
+      - Race condition detection
+      - Breaking change analysis
+      - Integration point validation
+      - Test coverage verification
+    when_to_use: "After each batch of parallel implementations"
+    verified_by: null
+    critical_violations_block_progress: true
+    audit_checklist:
+      critical:
+        - File size > 500 lines
+        - Missing WHY/WHEN/HOW documentation
+        - Multiple responsibilities in one file
+        - Code duplication detected
+        - Race conditions present
+        - Breaking changes without migration plan
+        - Tests failing
+      high:
+        - File size > 400 lines
+        - Wrong directory placement
+        - Import disorganization
+        - Naming convention violations
+      medium:
+        - High complexity functions (> 30 lines)
+        - Deep nesting (> 3 levels)
+        - Many parameters (> 4)

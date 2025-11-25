@@ -1,0 +1,65 @@
+flowchart TD
+    Start([User Visits Site])
+    Start --> ST[Select Service Type<br/>Windows/Bathrooms/Roofing]
+    
+    ST --> DF[Dynamic Form Loads<br/>Based on Service Type]
+    
+    DF --> Q1[ZIP Code Input<br/>with Radar.com API]
+    DF --> Q2[Own Home?<br/>Yes/No]
+    DF --> Q3[Timeframe<br/>Immediately/6 months]
+    DF --> Q4[Service-Specific Questions<br/>Windows: NumberOfWindows<br/>Bathrooms: NumberOfBathrooms]
+    
+    Q1 --> SUB[Submit Lead]
+    Q2 --> SUB
+    Q3 --> SUB
+    Q4 --> SUB
+    
+    SUB --> SAVE[(Save to Database<br/>Status: PENDING)]
+    
+    SAVE --> QUEUE[Add to Queue<br/>Async Processing]
+    
+    QUEUE --> FIND[Find Active Buyers<br/>for This Service Type]
+    
+    FIND --> PING[PING All Buyers<br/>In Parallel]
+    
+    PING --> B1[Modernize<br/>Windows Config]
+    PING --> B2[HomeAdvisor<br/>Windows Config]  
+    PING --> B3[Angi<br/>Windows Config]
+    
+    B1 --> RESP1[Response: $50]
+    B2 --> RESP2[Response: $35]
+    B3 --> RESP3[Response: Rejected]
+    
+    RESP1 --> AUCTION[Run Auction<br/>Highest Bid Wins]
+    RESP2 --> AUCTION
+    RESP3 --> AUCTION
+    
+    AUCTION --> WIN[Winner: Modernize<br/>Price: $50]
+    
+    WIN --> POST[POST Full Lead<br/>to Winner]
+    
+    POST --> SUCCESS{Response<br/>Status?}
+    
+    SUCCESS -->|Success| SOLD[Update Status<br/>SOLD]
+    SUCCESS -->|Rejected| REJ[Update Status<br/>REJECTED]
+    
+    SOLD --> LOG[(Log All<br/>Transactions)]
+    REJ --> LOG
+    
+    subgraph Admin Panel
+        AP1[Manage Service Types]
+        AP2[Configure Buyers]
+        AP3[View Leads]
+        AP4[Change Status]
+    end
+    
+    AP1 -.-> DF
+    AP2 -.-> FIND
+    AP3 -.-> SAVE
+    AP4 -.-> SOLD
+    
+    style Start fill:#4CAF50,color:#fff
+    style SOLD fill:#2196F3,color:#fff
+    style REJ fill:#f44336,color:#fff
+    style WIN fill:#FF9800,color:#fff
+    style AUCTION fill:#9C27B0,color:#fff

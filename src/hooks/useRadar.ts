@@ -1,0 +1,154 @@
+import { useState, useEffect, useRef } from 'react';
+import Radar from 'radar-sdk-js';
+import 'radar-sdk-js/dist/radar.css';
+import { secureLog } from '@/lib/security';
+
+interface UseRadarReturn {
+  isReady: boolean;
+  isLoading: boolean;
+  error: string | null;
+  fallbackMode: boolean;
+  searchAddresses: (query: string) => Promise<any[]>;
+}
+
+export function useRadar(): UseRadarReturn {
+  const [isReady, setIsReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const radarRef = useRef<typeof Radar | null>(null);
+
+  useEffect(() => {
+    const initializeRadar = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Check if we're in browser environment
+        if (typeof window === 'undefined') {
+          setFallbackMode(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Use the correct publishable key from environment
+        const publishableKey = process.env.NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY;
+        
+        if (!publishableKey) {
+          secureLog.warn('Radar publishable key not found, enabling fallback mode');
+          setFallbackMode(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Initialize Radar SDK with options as per documentation
+        await Radar.initialize(publishableKey, {
+          debug: false,
+          desktopId: typeof window !== 'undefined' ? window.location.hostname : undefined
+        });
+        
+        radarRef.current = Radar;
+        setIsReady(true);
+        secureLog.log('Radar SDK initialized successfully');
+        
+      } catch (error: any) {
+        secureLog.error('Failed to initialize Radar SDK:', error);
+        
+        // Check for specific error types
+        if (error.message?.includes('401') || error.message?.includes('unauthorized') || error.message?.includes('Unauthorized')) {
+          setError('Invalid Radar API key');
+        } else if (error.message?.includes('network') || error.name === 'NetworkError') {
+          setError('Network error - check internet connection');
+        } else if (error.message?.includes('timeout')) {
+          setError('Address service is taking too long to respond');
+        } else {
+          setError(`Address validation service unavailable: ${error.message}`);
+        }
+        
+        setFallbackMode(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeRadar();
+  }, []);
+
+  const searchAddresses = async (query: string): Promise<any[]> => {
+    if (!isReady || fallbackMode || !radarRef.current) {
+      secureLog.log('Radar not ready, using fallback mode');
+      return [];
+    }
+
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    try {
+      secureLog.log('Searching addresses for query', { queryLength: query.length });
+      
+      // Use the correct Radar.autocomplete API as per documentation
+      const result = await radarRef.current.autocomplete({
+        query: query.trim(),
+        limit: 10,
+        country: 'US'
+      });
+
+      secureLog.log('Radar autocomplete result received', { resultCount: Array.isArray(result) ? result.length : 1 });
+
+      // Handle different possible response formats from Radar API
+      let addresses = [];
+      if (result?.addresses && Array.isArray(result.addresses)) {
+        addresses = result.addresses;
+      } else if (Array.isArray(result)) {
+        addresses = result;
+      } else if (result) {
+        // If result is a single object, wrap it in an array
+        addresses = [result];
+      }
+      
+      // Filter to only include actual street addresses (not just cities or places)
+      const filteredAddresses = addresses.filter((address: any) => {
+        const formattedAddress = address.address?.formattedAddress || address.formattedAddress || address.address?.addressLabel || '';
+        const addressLabel = address.address?.addressLabel || address.addressLabel || '';
+        
+        // Check if the address contains a street number and street name
+        // This regex looks for addresses that start with a number (street number)
+        // and contain typical street indicators
+        const hasStreetNumber = /^\d+\s+/.test(formattedAddress) || /^\d+\s+/.test(addressLabel);
+        
+        // Also check for common street suffixes to ensure it's a real address
+        const hasStreetSuffix = /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|cir|circle|ter|terrace|pkwy|parkway)\b/i.test(formattedAddress) || 
+                               /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|cir|circle|ter|terrace|pkwy|parkway)\b/i.test(addressLabel);
+        
+        // Exclude results that are just "City, State ZIP" format (no street address)
+        const isCityOnly = /^[^,]+,\s*[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(formattedAddress.trim()) || 
+                          /^[^,]+,\s*[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(addressLabel.trim());
+        
+        return hasStreetNumber && hasStreetSuffix && !isCityOnly;
+      });
+      
+      return filteredAddresses;
+    } catch (error: any) {
+      secureLog.error('Radar autocomplete error:', error);
+      
+      // If we get auth errors, switch to fallback mode
+      if (error.status === 401 || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        setFallbackMode(true);
+        setError('Invalid API key - using fallback mode');
+      } else {
+        secureLog.warn('Autocomplete failed but continuing in normal mode');
+      }
+      
+      return [];
+    }
+  };
+
+  return {
+    isReady,
+    isLoading,
+    error,
+    fallbackMode,
+    searchAddresses
+  };
+}

@@ -1,0 +1,64 @@
+graph TB
+    subgraph "Frontend - Next.js"
+        UI[Dynamic Form Engine]
+        ADMIN[Admin Dashboard]
+    end
+    
+    subgraph "API Layer"
+        API1[Service Types API]
+        API2[Leads API]
+        API3[Admin API]
+    end
+    
+    subgraph "Database - PostgreSQL"
+        DB1[service_types<br/>- Form schemas per service]
+        DB2[buyers<br/>- Buyer details]
+        DB3[buyer_service_configs<br/>- Mappings per buyer+service]
+        DB4[leads<br/>- All submissions]
+        DB5[transactions<br/>- PING/POST logs]
+    end
+    
+    subgraph "Processing"
+        QUEUE[Redis Queue]
+        WORKER[Lead Processor]
+        TRANSFORM[Template Engine]
+        AUCTION[Auction System]
+    end
+    
+    subgraph "External Services"
+        RADAR[Radar.com<br/>Address API]
+        MOD[Modernize<br/>Webhook]
+        HOME[HomeAdvisor<br/>Webhook]
+        ANGI[Angi<br/>Webhook]
+    end
+    
+    UI --> API1
+    UI --> API2
+    UI --> RADAR
+    
+    ADMIN --> API3
+    
+    API1 --> DB1
+    API2 --> DB4
+    API2 --> QUEUE
+    API3 --> DB1
+    API3 --> DB2
+    API3 --> DB3
+    
+    QUEUE --> WORKER
+    WORKER --> TRANSFORM
+    WORKER --> AUCTION
+    TRANSFORM --> DB3
+    
+    AUCTION --> MOD
+    AUCTION --> HOME
+    AUCTION --> ANGI
+    
+    AUCTION --> DB5
+    AUCTION --> DB4
+    
+    style UI fill:#e3f2fd
+    style ADMIN fill:#fff3e0
+    style QUEUE fill:#e8f5e9
+    style AUCTION fill:#fce4ec
+    style DB3 fill:#ffebee,stroke:#f44336,stroke-width:3px

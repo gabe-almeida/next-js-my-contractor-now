@@ -1,0 +1,376 @@
+// Database type definitions
+// Aligned with Prisma schema and proper TypeScript typing
+
+import { ComplianceFieldMappings } from '@/lib/templates/types';
+
+// Enums aligned with Prisma schema
+export enum BuyerType {
+  CONTRACTOR = 'CONTRACTOR',
+  NETWORK = 'NETWORK'
+}
+
+export enum LeadStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  AUCTIONED = 'AUCTIONED',
+  SOLD = 'SOLD',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED'
+}
+
+export enum TransactionActionType {
+  PING = 'PING',
+  POST = 'POST'
+}
+
+export enum TransactionStatus {
+  PENDING = 'PENDING',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+  TIMEOUT = 'TIMEOUT'
+}
+
+export enum ComplianceEventType {
+  TRUSTEDFORM_GENERATED = 'TRUSTEDFORM_GENERATED',
+  JORNAYA_CAPTURED = 'JORNAYA_CAPTURED',
+  FORM_SUBMITTED = 'FORM_SUBMITTED',
+  TCPA_CONSENT = 'TCPA_CONSENT'
+}
+
+export interface Buyer {
+  id: string;
+  name: string;
+  displayName?: string;
+  type: BuyerType;
+  apiUrl: string;
+  authConfig?: AuthConfig | null; // Parsed JSON from string
+  pingTimeout: number;
+  postTimeout: number;
+  active: boolean;
+  complianceFieldMappings?: ComplianceFieldMappings | null; // Parsed JSON from string
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  serviceConfigs?: BuyerServiceConfig[];
+  serviceZipCodes?: BuyerServiceZipCode[];
+  transactions?: Transaction[];
+  wonLeads?: Lead[];
+}
+
+// Template and configuration types
+export interface TemplateConfig {
+  url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  headers: Record<string, string>;
+  body: Record<string, any>;
+  timeout: number;
+}
+
+export interface FieldMapping {
+  source: string;
+  target: string;
+  transform?: 'uppercase' | 'lowercase' | 'trim' | 'format_phone' | 'format_date';
+  defaultValue?: any;
+}
+
+export interface ComplianceConfig {
+  trustedForm: {
+    enabled: boolean;
+    includeInPing: boolean;
+    includeInPost: boolean;
+    certificateField: string;
+  };
+  jornaya: {
+    enabled: boolean;
+    includeInPing: boolean;
+    includeInPost: boolean;
+    leadIdField: string;
+  };
+  tcpa: {
+    required: boolean;
+    consentText: string;
+    includeTimestamp: boolean;
+  };
+}
+
+export interface AuthConfig {
+  type: 'apikey' | 'bearer' | 'basic' | 'custom';
+  apiKey?: string;
+  bearerToken?: string;
+  username?: string;
+  password?: string;
+  customHeaders?: Record<string, string>;
+}
+
+export interface BuyerServiceConfig {
+  id: string;
+  buyerId: string;
+  serviceTypeId: string;
+  pingTemplate: TemplateConfig; // Parsed JSON from string
+  postTemplate: TemplateConfig; // Parsed JSON from string
+  fieldMappings: FieldMapping[]; // Parsed JSON from string
+  requiresTrustedForm: boolean;
+  requiresJornaya: boolean;
+  complianceConfig?: ComplianceConfig | null; // Parsed JSON from string
+  minBid: number;
+  maxBid: number;
+  active: boolean;
+  createdAt: Date;
+  
+  // Relations
+  buyer?: Buyer;
+  serviceType?: ServiceType;
+  zipCodeMappings?: BuyerServiceZipCode[];
+}
+
+export interface BuyerServiceZipCode {
+  id: string;
+  buyerId: string;
+  serviceTypeId: string;
+  zipCode: string;
+  active: boolean;
+  priority: number;
+  maxLeadsPerDay?: number | null;
+  minBid?: number | null;
+  maxBid?: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Relations
+  buyer?: Buyer;
+  serviceType?: ServiceType;
+}
+
+// Form schema types
+export interface FormFieldValidation {
+  required?: boolean;
+  pattern?: string;
+  min?: number;
+  max?: number;
+  minLength?: number;
+  maxLength?: number;
+  customValidator?: string;
+}
+
+export interface FormFieldOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+export interface FormFieldConditional {
+  field: string;
+  operator: 'equals' | 'notEquals' | 'includes' | 'greaterThan' | 'lessThan';
+  value: any;
+}
+
+export interface FormField {
+  id: string;
+  name: string;
+  type: 'text' | 'email' | 'phone' | 'number' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'date' | 'multiselect';
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: FormFieldOption[];
+  validation?: FormFieldValidation;
+  conditional?: FormFieldConditional;
+  gridColumn?: string;
+  className?: string;
+}
+
+export interface FormSchema {
+  title: string;
+  description?: string;
+  fields: FormField[];
+  sections?: {
+    id: string;
+    title: string;
+    fields: string[];
+  }[];
+  validationRules: {
+    field: string;
+    rule: string;
+    message: string;
+  }[];
+  complianceSettings?: {
+    trustedForm?: boolean;
+    jornaya?: boolean;
+    tcpaRequired?: boolean;
+  };
+}
+
+export interface ServiceType {
+  id: string;
+  name: string;
+  displayName: string;
+  formSchema: FormSchema; // Parsed JSON from string
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Relations
+  leads?: Lead[];
+  buyerServiceConfigs?: BuyerServiceConfig[];
+  buyerServiceZipCodes?: BuyerServiceZipCode[];
+}
+
+// Compliance and lead data types
+export interface ComplianceData {
+  trustedForm?: {
+    certUrl: string;
+    certId: string;
+    timestamp: string;
+    ipAddress: string;
+    userAgent: string;
+    pageTitle?: string;
+  };
+  jornaya?: {
+    leadId: string;
+    pixelFired: boolean;
+    timestamp: string;
+    ipAddress?: string;
+  };
+  tcpa?: {
+    consented: boolean;
+    consentText: string;
+    timestamp: string;
+    ipAddress: string;
+    method: 'checkbox' | 'signature' | 'verbal';
+  };
+  additionalData?: Record<string, any>;
+}
+
+export interface FormData {
+  personalInfo?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  };
+  addressInfo?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+  };
+  projectDetails?: Record<string, any>;
+  preferences?: Record<string, any>;
+  metadata?: {
+    sessionId?: string;
+    referrer?: string;
+    userAgent?: string;
+    submitTime?: string;
+    timeSpent?: number;
+  };
+}
+
+export interface Lead {
+  id: string;
+  serviceTypeId: string;
+  formData: FormData; // Parsed JSON from string
+  zipCode: string;
+  ownsHome: boolean;
+  timeframe: string;
+  status: LeadStatus;
+  winningBuyerId?: string | null;
+  winningBid?: number | null;
+  trustedFormCertUrl?: string | null;
+  trustedFormCertId?: string | null;
+  jornayaLeadId?: string | null;
+  complianceData?: ComplianceData | null; // Parsed JSON from string
+  leadQualityScore?: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Relations
+  serviceType?: ServiceType;
+  winningBuyer?: Buyer | null;
+  transactions?: Transaction[];
+  complianceAudits?: ComplianceAuditLog[];
+}
+
+export interface Transaction {
+  id: string;
+  leadId: string;
+  buyerId: string;
+  actionType: TransactionActionType;
+  payload: Record<string, any>; // Parsed JSON from string
+  response?: Record<string, any> | null; // Parsed JSON from string
+  status: TransactionStatus;
+  bidAmount?: number | null;
+  responseTime?: number | null;
+  errorMessage?: string | null;
+  complianceIncluded: boolean;
+  trustedFormPresent: boolean;
+  jornayaPresent: boolean;
+  createdAt: Date;
+  
+  // Relations
+  lead?: Lead;
+  buyer?: Buyer;
+}
+
+export interface ComplianceAuditLog {
+  id: string;
+  leadId: string;
+  eventType: ComplianceEventType;
+  eventData: Record<string, any>; // Parsed JSON from string
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: Date;
+  
+  // Relations
+  lead?: Lead;
+}
+
+export interface ZipCodeMetadata {
+  zipCode: string;
+  city: string;
+  state: string;
+  county?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  timezone?: string | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Utility types for API responses
+export interface BuyerWithServiceCoverage extends Buyer {
+  serviceCoverageCount: number;
+  totalZipCodes: number;
+  activeServices: string[];
+}
+
+export interface ServiceCoverageStats {
+  totalBuyers: number;
+  contractorBuyers: number;
+  networkBuyers: number;
+  totalZipCodes: number;
+  avgZipCodesPerBuyer: number;
+}
+
+// Form validation types
+export interface CreateBuyerRequest {
+  name: string;
+  type: BuyerType;
+  apiUrl: string;
+  authConfig?: string;
+  pingTimeout?: number;
+  postTimeout?: number;
+  active?: boolean;
+}
+
+export interface UpdateBuyerRequest extends Partial<CreateBuyerRequest> {
+  id: string;
+}
+
+export interface BuyerQueryFilters {
+  type?: BuyerType;
+  active?: boolean;
+  hasServiceType?: string;
+  hasZipCode?: string;
+  search?: string;
+}

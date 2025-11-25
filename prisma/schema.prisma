@@ -1,0 +1,202 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ServiceType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String   @map("display_name")
+  formSchema  String   @map("form_schema")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  leads               Lead[]
+  buyerServiceConfigs BuyerServiceConfig[]
+  buyerServiceZipCodes BuyerServiceZipCode[]
+
+  @@map("service_types")
+}
+
+model Buyer {
+  id          String    @id @default(uuid())
+  name        String
+  displayName String?   @map("display_name")
+  type        String    @default("CONTRACTOR") // CONTRACTOR or NETWORK
+  apiUrl      String    @map("api_url")
+  authConfig  String?   @map("auth_config")
+  webhookSecret String?  @map("webhook_secret") // HMAC-SHA256 secret for webhook signatures
+  authType    String?   @map("auth_type") // apiKey, bearer, basic
+  pingTimeout Int       @default(30) @map("ping_timeout")
+  postTimeout Int       @default(60) @map("post_timeout")
+  active      Boolean   @default(true)
+  complianceFieldMappings String? @map("compliance_field_mappings") // JSON for custom compliance field names
+
+  // Contact Information
+  contactName       String?  @map("contact_name")
+  contactEmail      String?  @map("contact_email")
+  contactPhone      String?  @map("contact_phone")
+  businessEmail     String?  @map("business_email")
+  businessPhone     String?  @map("business_phone")
+  additionalEmails  String?  @map("additional_emails") // JSON array
+  additionalPhones  String?  @map("additional_phones") // JSON array
+  additionalContacts String? @map("additional_contacts") // JSON array
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  serviceConfigs       BuyerServiceConfig[]
+  serviceZipCodes      BuyerServiceZipCode[]
+  transactions         Transaction[]
+  wonLeads             Lead[]
+
+  @@map("buyers")
+}
+
+model BuyerServiceConfig {
+  id                  String   @id @default(uuid())
+  buyerId             String   @map("buyer_id")
+  serviceTypeId       String   @map("service_type_id")
+  pingTemplate        String     @map("ping_template")
+  postTemplate        String     @map("post_template")
+  fieldMappings       String     @map("field_mappings")
+  requiresTrustedForm Boolean  @default(false) @map("requires_trustedform")
+  requiresJornaya     Boolean  @default(false) @map("requires_jornaya")
+  complianceConfig    String?    @map("compliance_config")
+  minBid              Decimal  @default(0.00) @map("min_bid")
+  maxBid              Decimal  @default(999.99) @map("max_bid")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  buyer       Buyer       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, serviceTypeId])
+  @@map("buyer_service_configs")
+}
+
+model Lead {
+  id                   String    @id @default(uuid())
+  serviceTypeId        String    @map("service_type_id")
+  formData             String      @map("form_data")
+  zipCode              String    @map("zip_code")
+  ownsHome             Boolean   @map("owns_home")
+  timeframe            String
+  status               String    @default("PENDING")
+  winningBuyerId       String?   @map("winning_buyer_id")
+  winningBid           Decimal?  @map("winning_bid")
+  // Compliance fields
+  trustedFormCertUrl   String?   @map("trusted_form_cert_url")
+  trustedFormCertId    String?   @map("trusted_form_cert_id")
+  jornayaLeadId        String?   @map("jornaya_lead_id")
+  complianceData       String?     @map("compliance_data")
+  leadQualityScore     Int?      @map("lead_quality_score")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  serviceType       ServiceType           @relation(fields: [serviceTypeId], references: [id])
+  winningBuyer      Buyer?                @relation(fields: [winningBuyerId], references: [id])
+  transactions      Transaction[]
+  complianceAudits  ComplianceAuditLog[]
+
+  @@index([status])
+  @@index([zipCode])
+  @@index([createdAt])
+  @@index([trustedFormCertId])
+  @@index([jornayaLeadId])
+  @@index([leadQualityScore])
+  @@map("leads")
+}
+
+model Transaction {
+  id                  String   @id @default(uuid())
+  leadId              String   @map("lead_id")
+  buyerId             String   @map("buyer_id")
+  actionType          String   @map("action_type") // PING, POST
+  payload             String
+  response            String?
+  status              String   // PENDING, SUCCESS, FAILED, TIMEOUT
+  bidAmount           Decimal? @map("bid_amount")
+  responseTime        Int?     @map("response_time") // milliseconds
+  errorMessage        String?  @map("error_message")
+  complianceIncluded  Boolean  @default(false) @map("compliance_included")
+  trustedFormPresent  Boolean  @default(false) @map("trusted_form_present")
+  jornayaPresent      Boolean  @default(false) @map("jornaya_present")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  lead  Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  buyer Buyer @relation(fields: [buyerId], references: [id])
+
+  @@index([leadId])
+  @@index([actionType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([complianceIncluded])
+  @@map("transactions")
+}
+
+model ComplianceAuditLog {
+  id        String   @id @default(uuid())
+  leadId    String   @map("lead_id")
+  eventType String   @map("event_type") // TRUSTEDFORM_GENERATED, JORNAYA_CAPTURED, FORM_SUBMITTED
+  eventData String     @map("event_data")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("compliance_audit_log")
+}
+
+model BuyerServiceZipCode {
+  id            String   @id @default(uuid())
+  buyerId       String   @map("buyer_id")
+  serviceTypeId String   @map("service_type_id")
+  zipCode       String   @map("zip_code")
+  active        Boolean  @default(true)
+  priority      Int      @default(100)
+  maxLeadsPerDay Int?    @map("max_leads_per_day")
+  minBid        Decimal?   @map("min_bid")
+  maxBid        Decimal?   @map("max_bid")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  buyer       Buyer       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, serviceTypeId, zipCode])
+  @@index([buyerId, serviceTypeId])
+  @@index([serviceTypeId, zipCode])
+  @@index([zipCode])
+  @@index([active])
+  @@map("buyer_service_zip_codes")
+}
+
+model ZipCodeMetadata {
+  zipCode   String @id @map("zip_code")
+  city      String
+  state     String
+  county    String?
+  latitude  Float?
+  longitude Float?
+  timezone  String?
+  active    Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([state])
+  @@index([city, state])
+  @@map("zip_code_metadata")
+}

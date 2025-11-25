@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Radar SDK Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .warning { background: #fff3e0; color: #ef6c00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Radar SDK Test</h1>
+        
+        <div>
+            <h3>Test 1: CDN Loading</h3>
+            <button onclick="testCDNLoading()">Load Radar from CDN</button>
+            <div id="cdnResult" class="result"></div>
+        </div>
+
+        <div>
+            <h3>Test 2: API Key Validation</h3>
+            <input type="text" id="apiKey" placeholder="Enter your Radar publishable key" value="prj_live_pk_91767cffe84243dd66aae8025c9c44e0e5ebce49">
+            <button onclick="testAPIKey()">Test API Key</button>
+            <div id="apiResult" class="result"></div>
+        </div>
+
+        <div>
+            <h3>Test 3: Address Autocomplete</h3>
+            <input type="text" id="addressInput" placeholder="Type an address...">
+            <button onclick="testAutocomplete()">Search Addresses</button>
+            <div id="autocompleteResult" class="result"></div>
+        </div>
+
+        <div>
+            <h3>Test 4: Fallback Mode</h3>
+            <input type="text" id="fallbackInput" placeholder="Test fallback parsing..." value="123 Main St, Anytown, CA 12345">
+            <button onclick="testFallback()">Test Fallback</button>
+            <div id="fallbackResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        let radarInstance = null;
+
+        async function testCDNLoading() {
+            const resultDiv = document.getElementById('cdnResult');
+            resultDiv.innerHTML = 'Loading...';
+            
+            try {
+                // Load Radar from CDN
+                await new Promise((resolve, reject) => {
+                    if (window.Radar) {
+                        resolve();
+                        return;
+                    }
+
+                    const script = document.createElement('script');
+                    script.src = 'https://js.radar.com/v4.5.5/radar.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+
+                if (window.Radar) {
+                    resultDiv.innerHTML = '<div class="success">✓ Radar SDK loaded successfully from CDN</div>';
+                } else {
+                    throw new Error('Radar not available after script load');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Failed to load Radar SDK: ${error.message}</div>`;
+            }
+        }
+
+        async function testAPIKey() {
+            const resultDiv = document.getElementById('apiResult');
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (!apiKey) {
+                resultDiv.innerHTML = '<div class="error">Please enter an API key</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = 'Testing API key...';
+
+            try {
+                if (!window.Radar) {
+                    await testCDNLoading();
+                }
+
+                window.Radar.initialize(apiKey);
+                radarInstance = window.Radar;
+
+                // Test with a simple geocode call
+                const result = await window.Radar.ipGeocode();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ API key is valid</div>
+                    <div>Location: ${result.address?.city}, ${result.address?.state}</div>
+                `;
+            } catch (error) {
+                let errorMsg = error.message;
+                if (error.status === 401) {
+                    errorMsg = 'Invalid API key - unauthorized';
+                } else if (error.status === 429) {
+                    errorMsg = 'Rate limit exceeded';
+                }
+                
+                resultDiv.innerHTML = `<div class="error">✗ API key test failed: ${errorMsg}</div>`;
+            }
+        }
+
+        async function testAutocomplete() {
+            const resultDiv = document.getElementById('autocompleteResult');
+            const query = document.getElementById('addressInput').value.trim();
+            
+            if (!query) {
+                resultDiv.innerHTML = '<div class="error">Please enter an address to search</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = 'Searching...';
+
+            try {
+                if (!radarInstance) {
+                    throw new Error('Radar not initialized - test API key first');
+                }
+
+                const result = await radarInstance.autocomplete({
+                    query: query,
+                    limit: 5,
+                    country: 'US',
+                    layers: ['address', 'postalCode']
+                });
+
+                if (result?.addresses?.length > 0) {
+                    let html = '<div class="success">✓ Found addresses:</div>';
+                    result.addresses.forEach(addr => {
+                        html += `<div>📍 ${addr.formattedAddress} (${addr.postalCode})</div>`;
+                    });
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="warning">No addresses found</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Autocomplete failed: ${error.message}</div>`;
+            }
+        }
+
+        function parseAddress(input) {
+            const trimmed = input.trim();
+            if (!trimmed) return null;
+            
+            // ZIP code pattern
+            const zipPattern = /\b(\d{5}(-\d{4})?)\b/;
+            const zipMatch = trimmed.match(zipPattern);
+            
+            const result = {
+                formattedAddress: trimmed,
+                postalCode: zipMatch?.[1]
+            };
+            
+            // Extract state
+            const statePattern = /\b([A-Z]{2})\b(?:\s+\d{5})?/i;
+            const stateMatch = trimmed.match(statePattern);
+            if (stateMatch) {
+                result.state = stateMatch[1].toUpperCase();
+            }
+            
+            // Extract city
+            if (result.state) {
+                const cityPattern = new RegExp(`([^,]+),?\\s+${result.state}`, 'i');
+                const cityMatch = trimmed.match(cityPattern);
+                if (cityMatch) {
+                    result.city = cityMatch[1].trim().replace(/,$/, '');
+                }
+            }
+            
+            return result;
+        }
+
+        function testFallback() {
+            const resultDiv = document.getElementById('fallbackResult');
+            const input = document.getElementById('fallbackInput').value.trim();
+            
+            if (!input) {
+                resultDiv.innerHTML = '<div class="error">Please enter an address to parse</div>';
+                return;
+            }
+
+            try {
+                const parsed = parseAddress(input);
+                
+                if (parsed) {
+                    let html = '<div class="success">✓ Fallback parsing successful:</div>';
+                    html += `<div><strong>Original:</strong> ${input}</div>`;
+                    html += `<div><strong>Formatted:</strong> ${parsed.formattedAddress}</div>`;
+                    if (parsed.postalCode) html += `<div><strong>ZIP:</strong> ${parsed.postalCode}</div>`;
+                    if (parsed.city) html += `<div><strong>City:</strong> ${parsed.city}</div>`;
+                    if (parsed.state) html += `<div><strong>State:</strong> ${parsed.state}</div>`;
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="warning">Could not parse address</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Fallback parsing failed: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-test on load
+        window.onload = function() {
+            console.log('Radar SDK Test Page Loaded');
+            // Automatically test CDN loading
+            setTimeout(testCDNLoading, 500);
+        };
+    </script>
+</body>
+</html>

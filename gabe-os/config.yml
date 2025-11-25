@@ -1,0 +1,111 @@
+version: 1.2.4
+# ⚠️ AI AGENTS: When updating this version, YOU MUST also:
+#    1. Update version in profiles/default/CLAUDE.md
+#    2. Run ./scripts/base-install.sh
+#    3. Commit with version info in message
+#    📋 READ: VERSION-UPDATE-CHECKLIST.md
+
+name: Gabe-OS
+description: Production-Grade AI Development System
+type: Standalone AI Development System
+author: Gabe
+created: 2025-11-04
+
+# ================================================
+# GABE-OS CONFIGURATION
+#
+# Gabe-OS is a production-grade AI development system:
+# - 500-line file limits (enforced)
+# - WHY/WHEN/HOW documentation (required)
+# - Intelligent parallel execution (3x faster)
+# - Quality gates after each batch
+# - Visual spec dashboard
+# - Smart spec resumption
+# - Post-implementation auditing
+# ================================================
+
+# Claude Code Integration
+claude_code_commands: true              # Install commands in .claude/commands/
+use_claude_code_subagents: true         # Enable agent delegation within Claude Code
+standards_as_claude_code_skills: true   # Use Skills instead of file injection (HUGE token savings!)
+
+# Multi-agent mode enabled by default
+multi_agent_mode: true
+multi_agent_tool: claude-code
+
+# Default profile (gabe-modular features built-in)
+default_profile: default
+
+# Installation paths
+install_prefix: gabe-os  # Creates gabe-os/ instead of agent-os/
+
+# Quality settings
+quality:
+  enforce_modularity: true
+  max_file_lines: 500
+  warning_threshold_lines: 400
+  require_documentation: true
+  documentation_format: "WHY/WHEN/HOW"
+
+# Execution settings
+execution:
+  parallel_batching_enabled: true
+  max_parallel_tasks_per_batch: 3
+  enable_quality_gates: true
+  audit_after_each_batch: true
+
+# Dashboard settings
+dashboard:
+  enabled: true
+  commands:
+    - main-menu
+    - continue-spec
+    - audit-spec
+
+# Standards enforcement levels
+standards:
+  file_size: "critical"  # Block on violation
+  documentation: "critical"  # Block on violation
+  modularity: "critical"  # Block on violation
+  dry_principle: "high"  # Warn on violation
+  race_conditions: "critical"  # Block on violation
+  breaking_changes: "high"  # Warn on violation
+
+# Features
+features:
+  auto_install: true
+  visual_dashboard: true
+  smart_resumption: true
+  post_implementation_audit: true
+  metadata_tracking: true
+  self_auditing: true
+  dependency_analysis: true
+  token_optimization: true
+
+# Compatibility
+compatible_with:
+  - claude-code
+  - cursor
+  - windsurf
+
+# Features & Enhancements
+gabe_os_features:
+  - Multi-layer standards enforcement
+  - Intelligent parallel batching
+  - Quality gates system
+  - Visual spec dashboard
+  - Smart resumption
+  - Post-implementation auditing
+  - Metadata tracking
+  - Self-auditing mechanism
+  - Auto-install capability
+  - Claude Code Skills integration (37k token savings per spec!)
+  - Token-optimized spec initialization (bash script vs agent)
+  - 6-phase debugging workflow
+  - Interactive one-at-a-time question flows (spec + debug)
+  - Phase-level token usage tracking (cost visibility)
+  - Boolean config toggles (modern Claude Code compatibility)
+  - Orchestrator-driven Q&A (84k token savings per spec, 87% reduction)
+  - Explicit Task tool call syntax (1-2k additional token savings per spec)
+  - Auto-update CLAUDE.md on project updates (prevents version confusion)
+  - Post-compact Gabe-OS reminders (prevents forgetting workflows after /compact)

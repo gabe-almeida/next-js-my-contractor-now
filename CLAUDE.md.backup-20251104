@@ -1,0 +1,167 @@
+# Agent OS - Spec-Driven Development with AI Agents
+
+## What is Agent OS?
+
+Agent OS is the official system for spec-driven development with AI coding agents. It provides structured workflows, coding standards, and specialized agents to transform AI agents from "confused interns into productive developers."
+
+**Version:** 2.0.3
+**Website:** https://buildermethods.com/agent-os
+**Created by:** Brian Casel, Builder Methods
+
+## How It Works
+
+Agent OS uses a **3-layer context approach**:
+
+1. **Standards** - Coding guidelines, conventions, and best practices
+2. **Product** - Vision, roadmap, and feature planning
+3. **Specs** - Detailed feature specifications with implementation tasks
+
+## Available Commands
+
+Agent OS provides slash commands in Claude Code:
+
+- `/new-spec` - Initialize a new feature specification
+- `/create-spec` - Generate detailed spec and task breakdown
+- `/implement-spec` - Execute implementation with specialized agents
+- `/plan-product` - Create or update product roadmap
+
+## Available Agents
+
+Agent OS includes 13 specialized agents in `.claude/agents/agent-os/`:
+
+### Specification Phase
+- **spec-initializer** - Create spec folder structure
+- **spec-researcher** - Gather requirements and ask clarifying questions
+- **spec-writer** - Write detailed specifications
+- **spec-verifier** - Validate spec completeness
+- **tasks-list-creator** - Break specs into implementation tasks
+
+### Planning Phase
+- **product-planner** - Manage product roadmap and feature planning
+
+### Implementation Phase
+- **api-engineer** - Build backend APIs and services
+- **database-engineer** - Design and implement database schemas
+- **frontend-engineer** - Create UI components and pages
+- **ui-designer** - Design user interfaces and experiences
+- **testing-engineer** - Write comprehensive test suites
+
+### Verification Phase
+- **implementation-verifier** - Verify implementation matches spec
+- **backend-verifier** - Validate backend functionality
+- **frontend-verifier** - Validate frontend functionality
+
+## Directory Structure
+
+### Global Installation
+```
+~/agent-os/
+├── config.yml           # Agent OS configuration
+├── profiles/
+│   └── default/
+│       └── standards/   # Coding standards and conventions
+└── scripts/             # Installation scripts
+```
+
+### Project Installation
+```
+your-project/
+├── agent-os/
+│   ├── config.yml       # Project-specific config
+│   └── standards/       # Compiled standards
+│       ├── backend/     # Backend coding standards
+│       ├── frontend/    # Frontend coding standards
+│       ├── global/      # General standards
+│       └── testing/     # Testing standards
+│
+├── .claude/
+│   ├── agents/agent-os/ # Agent OS specialized agents
+│   └── commands/agent-os/ # Agent OS slash commands
+│
+└── @agent-os/
+    ├── product/
+    │   └── roadmap.md   # Product roadmap
+    └── specs/
+        └── YYYY-MM-DD-feature-name/  # Dated spec folders
+            ├── spec.md              # Feature specification
+            ├── requirements.md      # Gathered requirements
+            ├── tasks.md            # Implementation tasks
+            └── assets/             # Design files, screenshots
+```
+
+## Workflow
+
+### 1. Plan Your Product
+```bash
+/plan-product
+```
+Creates or updates `@agent-os/product/roadmap.md` with features and priorities.
+
+### 2. Initialize New Spec
+```bash
+/new-spec "Add user authentication"
+```
+- Creates dated spec folder
+- Gathers requirements through clarifying questions
+- Collects visual assets if needed
+
+### 3. Create Detailed Spec
+```bash
+/create-spec
+```
+- Generates comprehensive specification
+- Breaks down into actionable tasks
+- Documents acceptance criteria
+
+### 4. Implement the Spec
+```bash
+/implement-spec
+```
+- Orchestrates specialized agents
+- Follows task breakdown
+- Verifies against specifications
+
+## Configuration
+
+### Customizing Standards
+
+Edit standards in `~/agent-os/profiles/default/standards/` to match your:
+- Coding conventions
+- Framework preferences
+- Architectural patterns
+
+Then re-run in your project:
+```bash
+~/agent-os/scripts/project-install.sh
+```
+
+### Multi-Agent Mode
+
+Agent OS is configured for **multi-agent mode** with Claude Code, where specialized subagents work autonomously in parallel.
+
+## File Organization Rules
+
+**NEVER save working files to the root folder. Use appropriate directories:**
+- `/src` - Source code files
+- `/tests` - Test files
+- `/@agent-os/specs/` - Specifications
+- `/@agent-os/product/` - Product planning
+- `/docs` - Documentation
+
+## Best Practices
+
+1. **Always start with specs** - Use `/new-spec` before coding
+2. **Follow the workflow** - Plan → Spec → Implement → Verify
+3. **Update roadmap** - Keep `@agent-os/product/roadmap.md` current
+4. **Use dated folders** - Specs use `YYYY-MM-DD-name` format
+5. **Verify implementation** - Use verifier agents to check work
+
+## Getting Help
+
+- Documentation: https://buildermethods.com/agent-os
+- GitHub: https://github.com/buildermethods/agent-os
+- Install updates: `~/agent-os/scripts/base-install.sh`
+
+---
+
+**This is the official Agent OS installation. No modifications have been made.**
