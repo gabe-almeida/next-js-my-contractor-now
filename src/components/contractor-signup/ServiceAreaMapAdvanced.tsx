@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { ComposableMap, Geographies, Geography, Marker, Annotation } from 'react-simple-maps';
+import { useMemo, useState, useEffect } from 'react';
+import { ComposableMap, Geographies, Geography, Marker, Annotation, ZoomableGroup } from 'react-simple-maps';
 import { MapPin, Hash, Building2, Map as MapIcon } from 'lucide-react';
 
 interface Location {
@@ -46,7 +46,23 @@ const CITY_COORDINATES: Record<string, { coordinates: [number, number]; state: s
   '10001': { coordinates: [-73.9967, 40.7505], state: 'NY' }, // Manhattan ZIP
 };
 
+// State center coordinates for zoom calculations
+const STATE_CENTERS: Record<string, [number, number]> = {
+  'MA': [-71.5, 42.2],
+  'CA': [-119.4, 37.0],
+  'NY': [-75.5, 42.9],
+  'TX': [-99.9, 31.5],
+  'FL': [-81.5, 27.6],
+};
+
 export default function ServiceAreaMapAdvanced({ locations, className }: ServiceAreaMapProps) {
+  // Default US center view
+  const DEFAULT_CENTER: [number, number] = [-96, 38];
+  const DEFAULT_ZOOM = 1;
+
+  const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
+  const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
+
   const selectedStates = useMemo(() => {
     const states = new Set<string>();
     locations.forEach(location => {
@@ -73,10 +89,90 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
       .filter(Boolean);
   }, [locations]);
 
+  // Calculate optimal zoom and center based on selected locations
+  useEffect(() => {
+    if (locations.length === 0) {
+      // Reset to default US view
+      setMapCenter(DEFAULT_CENTER);
+      setMapZoom(DEFAULT_ZOOM);
+      return;
+    }
+
+    // Collect all coordinates
+    const allCoords: [number, number][] = [];
+
+    locations.forEach(location => {
+      // Get coordinates from city/zip markers
+      const cityCoord = CITY_COORDINATES[location.id];
+      if (cityCoord) {
+        allCoords.push(cityCoord.coordinates);
+      }
+
+      // Get state center if it's a state selection
+      if (location.type === 'state' && location.state) {
+        const stateCenter = STATE_CENTERS[location.state];
+        if (stateCenter) {
+          allCoords.push(stateCenter);
+        }
+      }
+
+      // For locations with state, also get state center as fallback
+      if (location.state && !cityCoord) {
+        const stateCenter = STATE_CENTERS[location.state];
+        if (stateCenter) {
+          allCoords.push(stateCenter);
+        }
+      }
+    });
+
+    if (allCoords.length === 0) {
+      setMapCenter(DEFAULT_CENTER);
+      setMapZoom(DEFAULT_ZOOM);
+      return;
+    }
+
+    // Calculate bounding box
+    const lons = allCoords.map(c => c[0]);
+    const lats = allCoords.map(c => c[1]);
+
+    const minLon = Math.min(...lons);
+    const maxLon = Math.max(...lons);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+
+    // Calculate center
+    const centerLon = (minLon + maxLon) / 2;
+    const centerLat = (minLat + maxLat) / 2;
+
+    // Calculate zoom based on spread
+    const lonSpread = maxLon - minLon;
+    const latSpread = maxLat - minLat;
+    const maxSpread = Math.max(lonSpread, latSpread);
+
+    // Determine zoom level based on geographic spread
+    let zoom = DEFAULT_ZOOM;
+    if (allCoords.length === 1) {
+      zoom = 4; // Single location - zoom in close
+    } else if (maxSpread < 2) {
+      zoom = 5; // Very small area (single city area)
+    } else if (maxSpread < 5) {
+      zoom = 3.5; // Small area (few cities in same region)
+    } else if (maxSpread < 10) {
+      zoom = 2.5; // Medium area (state level)
+    } else if (maxSpread < 20) {
+      zoom = 1.8; // Large area (multi-state region)
+    } else {
+      zoom = 1.2; // Very large area (coast to coast)
+    }
+
+    setMapCenter([centerLon, centerLat]);
+    setMapZoom(zoom);
+  }, [locations]);
+
 
   return (
     <div className={`${className} relative bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden`}>
-      {/* React Simple Maps US Map */}
+      {/* React Simple Maps US Map with animated zoom */}
       <div className="relative w-full h-full min-h-[400px]">
         <ComposableMap
           projection="geoAlbersUsa"
@@ -87,88 +183,101 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
           height={610}
           style={{ width: '100%', height: '100%' }}
         >
-          <Geographies geography="/data/us-states.json">
-            {({ geographies }) =>
-              geographies.map((geo) => {
-                const isSelected = selectedStates.has(geo.id);
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    fill={isSelected ? '#1877F2' : '#E5E7EB'}
-                    fillOpacity={isSelected ? 0.7 : 0.3}
-                    stroke="#9CA3AF"
-                    strokeWidth={0.5}
-                    style={{
-                      default: {
-                        outline: 'none',
-                      },
-                      hover: {
-                        outline: 'none',
-                        fill: isSelected ? '#1565C0' : '#D1D5DB',
-                      },
-                      pressed: {
-                        outline: 'none',
-                      },
-                    }}
-                  />
-                );
-              })
-            }
-          </Geographies>
+          <ZoomableGroup
+            center={mapCenter}
+            zoom={mapZoom}
+            minZoom={0.8}
+            maxZoom={8}
+            translateExtent={[[-200, -200], [1200, 800]]}
+          >
+            <Geographies geography="/data/us-states.json">
+              {({ geographies }) =>
+                geographies.map((geo) => {
+                  const isSelected = selectedStates.has(geo.id);
+                  return (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      fill={isSelected ? '#1877F2' : '#E5E7EB'}
+                      fillOpacity={isSelected ? 0.7 : 0.3}
+                      stroke="#9CA3AF"
+                      strokeWidth={0.5}
+                      style={{
+                        default: {
+                          outline: 'none',
+                          transition: 'fill 0.3s ease, fill-opacity 0.3s ease',
+                        },
+                        hover: {
+                          outline: 'none',
+                          fill: isSelected ? '#1565C0' : '#D1D5DB',
+                        },
+                        pressed: {
+                          outline: 'none',
+                        },
+                      }}
+                    />
+                  );
+                })
+              }
+            </Geographies>
 
-          {/* City and ZIP Code Markers */}
-          {cityMarkers.map((location, index) => (
-            <Marker key={location?.id} coordinates={location?.coordinates}>
-              <circle
-                r={location?.type === 'zipcode' ? 4 : 6}
-                fill={
-                  location?.type === 'city' ? '#1877F2' :
-                  location?.type === 'zipcode' ? '#10B981' : '#F59E0B'
-                }
-                stroke="white"
-                strokeWidth={2}
-                opacity={0.9}
-                style={{
-                  animation: `pulse 2s infinite`,
-                  animationDelay: `${index * 0.3}s`
-                }}
-              />
-            </Marker>
-          ))}
+            {/* City and ZIP Code Markers */}
+            {cityMarkers.map((location, index) => (
+              <Marker key={location?.id} coordinates={location?.coordinates}>
+                <circle
+                  r={location?.type === 'zipcode' ? 4 : 6}
+                  fill={
+                    location?.type === 'city' ? '#1877F2' :
+                    location?.type === 'zipcode' ? '#10B981' : '#F59E0B'
+                  }
+                  stroke="white"
+                  strokeWidth={2}
+                  opacity={0.9}
+                  style={{
+                    animation: `pulse 2s infinite`,
+                    animationDelay: `${index * 0.3}s`
+                  }}
+                />
+              </Marker>
+            ))}
 
-          {/* City Labels */}
-          {cityMarkers.slice(0, 10).map((location) => ( // Limit to first 10 to avoid clutter
-            <Annotation
-              key={`label-${location?.id}`}
-              subject={location?.coordinates}
-              dx={15}
-              dy={-10}
-              connector={false}
-            >
-              <text
-                textAnchor="start"
-                fontSize={12}
-                fill="#374151"
-                fontWeight="500"
-                className="drop-shadow-sm"
-                style={{ 
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.8))'
-                }}
+            {/* City Labels */}
+            {cityMarkers.slice(0, 10).map((location) => ( // Limit to first 10 to avoid clutter
+              <Annotation
+                key={`label-${location?.id}`}
+                subject={location?.coordinates}
+                dx={15}
+                dy={-10}
+                connector={false}
               >
-                {location?.displayName}
-              </text>
-            </Annotation>
-          ))}
+                <text
+                  textAnchor="start"
+                  fontSize={12}
+                  fill="#374151"
+                  fontWeight="500"
+                  className="drop-shadow-sm"
+                  style={{
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.8))'
+                  }}
+                >
+                  {location?.displayName}
+                </text>
+              </Annotation>
+            ))}
+          </ZoomableGroup>
         </ComposableMap>
 
-        {/* Pulse animation styles */}
-        <style jsx>{`
+        {/* Pulse animation and zoom transition styles */}
+        <style jsx global>{`
           @keyframes pulse {
             0% { opacity: 0.9; transform: scale(1); }
             50% { opacity: 0.7; transform: scale(1.1); }
             100% { opacity: 0.9; transform: scale(1); }
+          }
+          /* Smooth zoom/pan animation for the map */
+          .rsm-zoomable-group {
+            transition: transform 0.5s ease-out;
           }
         `}</style>
       </div>

@@ -217,29 +217,32 @@ export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: Se
                 <span className="text-2xl">{currentService.icon}</span>
                 <h3 className="text-xl font-semibold">{currentService.displayName}</h3>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentServiceIndex(Math.max(0, currentServiceIndex - 1))}
-                  disabled={currentServiceIndex === 0}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Prev
-                </Button>
-                <span className="text-sm text-gray-500">
-                  Service {currentServiceIndex + 1} of {selectedServices.length}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentServiceIndex(Math.min(selectedServices.length - 1, currentServiceIndex + 1))}
-                  disabled={currentServiceIndex === selectedServices.length - 1}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Only show service navigation when multiple services selected */}
+              {selectedServices.length > 1 && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentServiceIndex(Math.max(0, currentServiceIndex - 1))}
+                    disabled={currentServiceIndex === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Prev
+                  </Button>
+                  <span className="text-sm text-gray-500">
+                    Service {currentServiceIndex + 1} of {selectedServices.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentServiceIndex(Math.min(selectedServices.length - 1, currentServiceIndex + 1))}
+                    disabled={currentServiceIndex === selectedServices.length - 1}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
