@@ -35,115 +35,39 @@ export default function ServicesPage() {
         {
           id: 'service-1',
           name: 'Windows',
-          description: 'Window replacement and installation services',
+          displayName: 'Window Services',
           active: true,
-          formSchema: [
-            {
-              id: 'field-1',
-              type: 'text',
-              label: 'ZIP Code',
-              name: 'zipCode',
-              required: true,
-              validation: {
-                pattern: '^\\d{5}$',
-                message: 'Please enter a valid 5-digit ZIP code'
-              }
-            },
-            {
-              id: 'field-2',
-              type: 'number',
-              label: 'Number of Windows',
-              name: 'numberOfWindows',
-              required: true,
-              validation: {
-                min: 1,
-                max: 50,
-                message: 'Please enter a number between 1 and 50'
-              }
-            },
-            {
-              id: 'field-3',
-              type: 'select',
-              label: 'Project Scope',
-              name: 'projectScope',
-              required: true,
-              options: ['Replace existing windows', 'New construction', 'Add windows', 'Repair windows']
-            }
-          ],
+          formSchema: {
+            title: 'Window Services Form',
+            fields: [],
+            validationRules: []
+          },
           createdAt: new Date('2024-01-15'),
           updatedAt: new Date('2024-01-20')
         },
         {
           id: 'service-2',
           name: 'Bathrooms',
-          description: 'Bathroom remodeling and renovation services',
+          displayName: 'Bathroom Services',
           active: true,
-          formSchema: [
-            {
-              id: 'field-4',
-              type: 'text',
-              label: 'ZIP Code',
-              name: 'zipCode',
-              required: true,
-              validation: {
-                pattern: '^\\d{5}$',
-                message: 'Please enter a valid 5-digit ZIP code'
-              }
-            },
-            {
-              id: 'field-5',
-              type: 'number',
-              label: 'Number of Bathrooms',
-              name: 'numberOfBathrooms',
-              required: true,
-              validation: {
-                min: 1,
-                max: 10,
-                message: 'Please enter a number between 1 and 10'
-              }
-            },
-            {
-              id: 'field-6',
-              type: 'radio',
-              label: 'Bathroom Type',
-              name: 'bathroomType',
-              required: true,
-              options: ['Full bathroom', 'Half bathroom', 'Master bathroom', 'Guest bathroom']
-            }
-          ],
+          formSchema: {
+            title: 'Bathroom Services Form',
+            fields: [],
+            validationRules: []
+          },
           createdAt: new Date('2024-01-10'),
           updatedAt: new Date('2024-01-15')
         },
         {
           id: 'service-3',
           name: 'Roofing',
-          description: 'Roofing repair, replacement, and installation',
+          displayName: 'Roofing Services',
           active: false,
-          formSchema: [
-            {
-              id: 'field-7',
-              type: 'text',
-              label: 'ZIP Code',
-              name: 'zipCode',
-              required: true,
-              validation: {
-                pattern: '^\\d{5}$',
-                message: 'Please enter a valid 5-digit ZIP code'
-              }
-            },
-            {
-              id: 'field-8',
-              type: 'number',
-              label: 'Square Footage',
-              name: 'squareFootage',
-              required: true,
-              validation: {
-                min: 100,
-                max: 10000,
-                message: 'Please enter square footage between 100 and 10,000'
-              }
-            }
-          ],
+          formSchema: {
+            title: 'Roofing Services Form',
+            fields: [],
+            validationRules: []
+          },
           createdAt: new Date('2024-01-05'),
           updatedAt: new Date('2024-01-12')
         }
@@ -209,7 +133,7 @@ export default function ServicesPage() {
 
   const filteredServices = services.filter(service =>
     service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service.description.toLowerCase().includes(searchQuery.toLowerCase())
+    service.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (showForm) {
@@ -308,7 +232,7 @@ export default function ServicesPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="text-sm text-gray-600">
-                    <strong>Form Fields:</strong> {service.formSchema.length}
+                    <strong>Form Fields:</strong> {service.formSchema.fields.length}
                   </div>
                   
                   <div className="text-sm text-gray-600">

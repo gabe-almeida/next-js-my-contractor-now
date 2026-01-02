@@ -2,6 +2,8 @@ import { processQueue } from '@/lib/redis';
 import { prisma } from '@/lib/db';
 import { AppError } from '@/lib/utils';
 import { AuctionEngine } from '@/lib/auction/engine';
+import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service';
+import { LeadStatus, ChangeSource } from '@/types/database';
 import type { LeadData, ServiceType, ComplianceData } from '@/lib/templates/types';
 
 // Helper function to convert Prisma lead to LeadData format
@@ -65,6 +67,15 @@ async function processLead(job: any) {
       return;
     }
 
+    // Record PENDING → PROCESSING transition in history
+    await recordSystemStatusChange(
+      leadId,
+      LeadStatus.PENDING,
+      LeadStatus.PROCESSING,
+      'Auction started by worker',
+      ChangeSource.SYSTEM
+    );
+
     // Get lead with service type (no longer pre-loading buyers)
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
@@ -90,7 +101,7 @@ async function processLead(job: any) {
     // Update lead based on auction result (with atomic checks to prevent race conditions)
     if (auctionResult.winningBuyerId && auctionResult.postResult?.success) {
       // Only mark as SOLD if POST was successful and still PROCESSING
-      await prisma.lead.updateMany({
+      const soldResult = await prisma.lead.updateMany({
         where: {
           id: leadId,
           status: 'PROCESSING' // Only update if still in processing state
@@ -102,10 +113,21 @@ async function processLead(job: any) {
         },
       });
 
+      // Record history only if update succeeded
+      if (soldResult.count > 0) {
+        await recordSystemStatusChange(
+          leadId,
+          LeadStatus.PROCESSING,
+          LeadStatus.SOLD,
+          `Sold to buyer ${auctionResult.winningBuyerId} for $${auctionResult.winningBidAmount}`,
+          ChangeSource.SYSTEM
+        );
+      }
+
       console.log(`Lead ${leadId} sold to buyer ${auctionResult.winningBuyerId} for $${auctionResult.winningBidAmount}`);
     } else if (auctionResult.winningBuyerId && !auctionResult.postResult?.success) {
       // Auction had winner but POST failed
-      await prisma.lead.updateMany({
+      const failedResult = await prisma.lead.updateMany({
         where: {
           id: leadId,
           status: 'PROCESSING'
@@ -113,16 +135,41 @@ async function processLead(job: any) {
         data: { status: 'DELIVERY_FAILED' },
       });
 
+      // Record history only if update succeeded
+      if (failedResult.count > 0) {
+        await recordSystemStatusChange(
+          leadId,
+          LeadStatus.PROCESSING,
+          LeadStatus.DELIVERY_FAILED,
+          `Delivery failed to buyer ${auctionResult.winningBuyerId}: ${auctionResult.postResult?.error || 'Unknown error'}`,
+          ChangeSource.SYSTEM
+        );
+      }
+
       console.log(`Lead ${leadId} auction won by ${auctionResult.winningBuyerId} but delivery failed`);
     } else {
       // No winner or no eligible buyers
-      await prisma.lead.updateMany({
+      const rejectedResult = await prisma.lead.updateMany({
         where: {
           id: leadId,
           status: 'PROCESSING'
         },
         data: { status: 'REJECTED' },
       });
+
+      // Record history only if update succeeded
+      if (rejectedResult.count > 0) {
+        const reason = auctionResult.participantCount === 0
+          ? 'No eligible buyers found for auction'
+          : 'No winning bids received';
+        await recordSystemStatusChange(
+          leadId,
+          LeadStatus.PROCESSING,
+          LeadStatus.REJECTED,
+          reason,
+          ChangeSource.SYSTEM
+        );
+      }
 
       console.log(`Lead ${leadId} rejected - ${auctionResult.participantCount === 0 ? 'no eligible buyers' : 'no winning bids'}`);
     }
@@ -134,13 +181,24 @@ async function processLead(job: any) {
 
     try {
       // Only update to REJECTED if still PROCESSING (atomic check)
-      await prisma.lead.updateMany({
+      const errorResult = await prisma.lead.updateMany({
         where: {
           id: leadId,
           status: 'PROCESSING'
         },
         data: { status: 'REJECTED' },
       });
+
+      // Record history if update succeeded
+      if (errorResult.count > 0) {
+        await recordSystemStatusChange(
+          leadId,
+          LeadStatus.PROCESSING,
+          LeadStatus.REJECTED,
+          `Processing error: ${(error as Error).message}`,
+          ChangeSource.SYSTEM
+        );
+      }
     } catch (updateError) {
       console.error(`Failed to update lead ${leadId} status to REJECTED:`, updateError);
     }

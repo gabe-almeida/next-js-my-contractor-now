@@ -172,6 +172,26 @@ export class RedisCache {
       await cacheRedis.del(...keys);
     }
   }
+
+  static async sadd(key: string, ...members: string[]): Promise<number> {
+    return await cacheRedis.sadd(key, ...members);
+  }
+
+  static async smembers(key: string): Promise<string[]> {
+    return await cacheRedis.smembers(key);
+  }
+
+  static async srem(key: string, ...members: string[]): Promise<number> {
+    return await cacheRedis.srem(key, ...members);
+  }
+
+  static async incrbyfloat(key: string, increment: number): Promise<string> {
+    return await cacheRedis.incrbyfloat(key, increment);
+  }
+
+  static async expire(key: string, seconds: number): Promise<number> {
+    return await cacheRedis.expire(key, seconds);
+  }
 }
 
 export default redis;

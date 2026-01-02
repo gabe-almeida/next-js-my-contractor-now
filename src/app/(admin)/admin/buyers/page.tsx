@@ -5,6 +5,7 @@ import { BuyerForm } from '@/components/admin/BuyerForm';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Buyer, BuyerServiceConfig, ServiceType } from '@/types';
+import { BuyerType } from '@/types/database';
 import { 
   Plus, 
   Edit, 
@@ -42,8 +43,9 @@ export default function BuyersPage() {
         {
           id: 'service-1',
           name: 'Windows',
-          description: 'Window services',
-          formSchema: { 
+          displayName: 'Window Services',
+          formSchema: {
+            title: 'Window Services Form',
             fields: [],
             validationRules: []
           },
@@ -54,8 +56,9 @@ export default function BuyersPage() {
         {
           id: 'service-2',
           name: 'Bathrooms',
-          description: 'Bathroom services',
-          formSchema: { 
+          displayName: 'Bathroom Services',
+          formSchema: {
+            title: 'Bathroom Services Form',
             fields: [],
             validationRules: []
           },
@@ -66,8 +69,9 @@ export default function BuyersPage() {
         {
           id: 'service-3',
           name: 'Roofing',
-          description: 'Roofing services',
-          formSchema: { 
+          displayName: 'Roofing Services',
+          formSchema: {
+            title: 'Roofing Services Form',
             fields: [],
             validationRules: []
           },
@@ -82,13 +86,14 @@ export default function BuyersPage() {
         {
           id: 'buyer-1',
           name: 'HomeAdvisor',
+          type: BuyerType.NETWORK,
           apiUrl: 'https://api.homeadvisor.com/leads',
           authConfig: {
             type: 'bearer',
-            credentials: {
-              token: 'ha_token_123'
-            }
+            bearerToken: 'ha_token_123'
           },
+          pingTimeout: 5000,
+          postTimeout: 10000,
           active: true,
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-15')
@@ -96,27 +101,33 @@ export default function BuyersPage() {
         {
           id: 'buyer-2',
           name: 'Modernize',
+          type: BuyerType.NETWORK,
           apiUrl: 'https://api.modernize.com/leads',
           authConfig: {
             type: 'basic',
             username: 'modernize_api',
             password: 'mod_pass_456'
           },
+          pingTimeout: 5000,
+          postTimeout: 10000,
           active: true,
-          createdAt: new Date('2024-01-05'),
+          createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-20')
         },
         {
           id: 'buyer-3',
           name: 'Angi',
+          type: BuyerType.NETWORK,
           apiUrl: 'https://api.angi.com/leads',
           authConfig: {
             type: 'custom',
-            headers: {
+            customHeaders: {
               'X-API-Key': 'angi_key_789',
               'X-Partner-ID': 'partner_123'
             }
           },
+          pingTimeout: 5000,
+          postTimeout: 10000,
           active: false,
           createdAt: new Date('2024-01-10'),
           updatedAt: new Date('2024-01-18')
@@ -131,18 +142,25 @@ export default function BuyersPage() {
           serviceTypeId: 'service-1',
           active: true,
           pingTemplate: {
-            mappings: [],
-            includeCompliance: false
+            url: '/api/ping',
+            method: 'POST',
+            headers: {},
+            body: {},
+            timeout: 5000
           },
           postTemplate: {
-            mappings: [],
-            includeCompliance: true
+            url: '/api/post',
+            method: 'POST',
+            headers: {},
+            body: {},
+            timeout: 10000
           },
+          fieldMappings: [],
+          requiresTrustedForm: false,
+          requiresJornaya: false,
           minBid: 25,
           maxBid: 75,
-          priority: 8,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date()
         },
         {
           id: 'config-2',
@@ -150,18 +168,25 @@ export default function BuyersPage() {
           serviceTypeId: 'service-2',
           active: true,
           pingTemplate: {
-            mappings: [],
-            includeCompliance: true
+            url: '/api/ping',
+            method: 'POST',
+            headers: {},
+            body: {},
+            timeout: 5000
           },
           postTemplate: {
-            mappings: [],
-            includeCompliance: true
+            url: '/api/post',
+            method: 'POST',
+            headers: {},
+            body: {},
+            timeout: 10000
           },
+          fieldMappings: [],
+          requiresTrustedForm: true,
+          requiresJornaya: false,
           minBid: 30,
           maxBid: 90,
-          priority: 7,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date()
         },
         {
           id: 'config-3',
@@ -169,18 +194,25 @@ export default function BuyersPage() {
           serviceTypeId: 'service-1',
           active: true,
           pingTemplate: {
-            mappings: [],
-            includeCompliance: false
+            url: '/api/ping',
+            method: 'POST',
+            headers: {},
+            body: {},
+            timeout: 5000
           },
           postTemplate: {
-            mappings: [],
-            includeCompliance: true
+            url: '/api/post',
+            method: 'POST',
+            headers: {},
+            body: {},
+            timeout: 10000
           },
+          fieldMappings: [],
+          requiresTrustedForm: false,
+          requiresJornaya: false,
           minBid: 20,
           maxBid: 60,
-          priority: 6,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date()
         }
       ];
       

@@ -161,20 +161,22 @@ export class AuctionEngine {
       const responseTime = Date.now() - startTime;
       const responseData = await response.json();
 
-      // Log transaction
+      // Extract bid amount from response BEFORE logging
+      const bidAmount = this.extractBidAmount(responseData, buyer);
+
+      // Validate bid against pricing rules
+      const validatedBid = this.validateBid(bidAmount, serviceConfig);
+
+      // Log transaction with bid amount included
       await this.logTransaction(lead.id, buyer.id, 'PING', {
         request: payload,
         response: responseData,
         statusCode: response.status,
         responseTime,
-        success: response.ok
+        success: response.ok,
+        bidAmount: validatedBid,
+        originalBidAmount: bidAmount
       });
-
-      // Extract bid amount from response
-      const bidAmount = this.extractBidAmount(responseData, buyer);
-
-      // Validate bid against pricing rules
-      const validatedBid = this.validateBid(bidAmount, serviceConfig);
 
       return {
         buyerId: buyer.id,

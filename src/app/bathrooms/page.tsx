@@ -20,7 +20,8 @@ export default function BathroomsPage() {
           complianceData: {
             tcpaConsent: true,
             tcpaTimestamp: new Date().toISOString(),
-            tcpaConsentText: 'User agreed to be contacted by contractors and service providers'
+            tcpaConsentText: 'User agreed to be contacted by contractors and service providers',
+            attribution: answers.attribution // Marketing attribution data (utm params, click IDs, etc)
           }
         })
       });

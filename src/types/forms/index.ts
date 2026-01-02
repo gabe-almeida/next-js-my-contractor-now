@@ -66,6 +66,38 @@ export interface FormStyling {
   borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
+export interface AttributionData {
+  // UTM Parameters
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  // Click IDs
+  fbclid?: string;
+  fbc?: string;
+  fbp?: string;
+  gclid?: string;
+  wbraid?: string;
+  gbraid?: string;
+  msclkid?: string;
+  ttclid?: string;
+  li_fat_id?: string;
+  twclid?: string;
+  rdt_cid?: string;
+  irclickid?: string;
+  // Analytics
+  _ga?: string;
+  _gid?: string;
+  // Page context
+  landing_page?: string;
+  referrer?: string;
+  referrer_domain?: string;
+  first_touch_timestamp?: string;
+  session_id?: string;
+  raw_query_params?: Record<string, string>;
+}
+
 export interface FormSubmission {
   formId: string;
   data: Record<string, any>;
@@ -82,6 +114,7 @@ export interface FormSubmission {
     referrer: string;
     submissionTime: number;
   };
+  attribution?: AttributionData;
 }
 
 export interface FormValidationError {

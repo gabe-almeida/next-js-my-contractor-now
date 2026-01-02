@@ -4,6 +4,9 @@ import { RedisCache } from '@/config/redis';
 import { logger, logBuyerInteraction } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { verifyWebhookAuth } from '@/lib/middleware/webhook-auth';
+import { prisma } from '@/lib/prisma';
+import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service';
+import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 
 // Webhook endpoint for buyer responses
 async function handleBuyerWebhook(
@@ -213,7 +216,7 @@ async function handlePostResponse(
   requestId: string
 ) {
   const validStatuses = ['delivered', 'failed', 'duplicate', 'invalid'];
-  
+
   if (!validStatuses.includes(status)) {
     return errorResponse(
       'INVALID_POST_STATUS',
@@ -223,38 +226,92 @@ async function handlePostResponse(
       requestId
     );
   }
-  
-  // Update lead status based on post response
-  const lead = await RedisCache.get(`lead:${leadId}`);
-  if (lead) {
-    if (status === 'delivered') {
-      lead.status = 'sold';
-      await updateLeadRevenue(leadId, buyer);
-    } else {
-      lead.status = 'rejected';
+
+  // Get current lead from database
+  const dbLead = await prisma.lead.findUnique({
+    where: { id: leadId }
+  });
+
+  if (!dbLead) {
+    return errorResponse(
+      'LEAD_NOT_FOUND',
+      'Lead not found in database',
+      { leadId },
+      'leadId',
+      requestId
+    );
+  }
+
+  const oldStatus = dbLead.status as LeadStatus;
+  let newStatus: LeadStatus;
+  let newDisposition: LeadDisposition | undefined;
+  let historyReason: string;
+
+  // Map webhook status to database status
+  if (status === 'delivered') {
+    newStatus = LeadStatus.SOLD;
+    newDisposition = LeadDisposition.DELIVERED;
+    historyReason = `Lead delivered to buyer ${buyer}`;
+    await updateLeadRevenue(leadId, buyer);
+  } else if (status === 'duplicate') {
+    newStatus = LeadStatus.DUPLICATE;
+    historyReason = `Buyer ${buyer} reported duplicate: ${reason || 'No reason provided'}`;
+  } else {
+    // failed or invalid
+    newStatus = LeadStatus.REJECTED;
+    historyReason = `Buyer ${buyer} rejected: ${reason || status}`;
+  }
+
+  // Update database with optimistic locking
+  const updateResult = await prisma.lead.updateMany({
+    where: {
+      id: leadId,
+      status: oldStatus // Only update if status hasn't changed
+    },
+    data: {
+      status: newStatus,
+      ...(newDisposition && { disposition: newDisposition }),
+      updatedAt: new Date()
     }
-    
+  });
+
+  // Record history if update succeeded
+  if (updateResult.count > 0) {
+    await recordSystemStatusChange(
+      leadId,
+      oldStatus,
+      newStatus,
+      historyReason,
+      ChangeSource.WEBHOOK
+    );
+  }
+
+  // Also update Redis cache for consistency
+  const lead = await RedisCache.get<{ status: string; updatedAt: Date; [key: string]: unknown }>(`lead:${leadId}`);
+  if (lead) {
+    lead.status = newStatus;
     lead.updatedAt = new Date();
     await RedisCache.set(`lead:${leadId}`, lead, 3600);
   }
-  
+
   // Store post response
   await storePostResponse(leadId, buyer, status, reason, body);
-  
+
   logger.info('Post response received from buyer', {
     leadId,
     buyer,
     status,
+    newStatus,
     reason,
     requestId
   });
-  
+
   return successResponse({
     message: 'Post response processed successfully',
     leadId,
     buyer,
     status,
-    leadStatus: lead?.status
+    leadStatus: newStatus
   }, requestId);
 }
 
@@ -310,7 +367,7 @@ async function storeBidResponse(leadId: string, buyer: string, bid: number, body
   await RedisCache.set(`bid:${leadId}:${buyer}`, bidData, 86400); // Keep for 24 hours
   
   // Add to auction queue
-  await RedisCache.redis.sadd(`auction:${leadId}:bids`, `${buyer}:${bid}`);
+  await RedisCache.sadd(`auction:${leadId}:bids`, `${buyer}:${bid}`);
 }
 
 async function storeBidRejection(leadId: string, buyer: string, reason: string) {
@@ -352,15 +409,15 @@ async function storeStatusUpdate(leadId: string, buyer: string, status: string, 
 
 async function updateLeadRevenue(leadId: string, buyer: string) {
   // Get the winning bid amount
-  const bidData = await RedisCache.get(`bid:${leadId}:${buyer}`);
-  
+  const bidData = await RedisCache.get<{ bid?: number; [key: string]: unknown }>(`bid:${leadId}:${buyer}`);
+
   if (bidData && bidData.bid) {
     // Update revenue tracking
     const today = new Date().toISOString().split('T')[0];
     const revenueKey = `revenue:daily:${today}`;
-    
-    await RedisCache.redis.incrbyfloat(revenueKey, bidData.bid);
-    await RedisCache.redis.expire(revenueKey, 86400 * 90); // Keep for 90 days
+
+    await RedisCache.incrbyfloat(revenueKey, bidData.bid);
+    await RedisCache.expire(revenueKey, 86400 * 90); // Keep for 90 days
   }
 }
 

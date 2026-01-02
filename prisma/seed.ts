@@ -9,6 +9,7 @@ async function main() {
 
   // Clear existing data (in development only)
   console.log('🗑️  Clearing existing data...')
+  await prisma.leadStatusHistory.deleteMany()
   await prisma.complianceAuditLog.deleteMany()
   await prisma.transaction.deleteMany()
   await prisma.lead.deleteMany()
@@ -17,7 +18,42 @@ async function main() {
   await prisma.buyer.deleteMany()
   await prisma.zipCodeMetadata.deleteMany()
   await prisma.serviceType.deleteMany()
+  await prisma.adminUser.deleteMany()
   console.log('✅ Cleared existing data\n')
+
+  // ==========================================
+  // 0. ADMIN USERS (for Lead Accounting)
+  // ==========================================
+  console.log('👤 Creating admin users...')
+
+  const superAdmin = await prisma.adminUser.create({
+    data: {
+      email: 'admin@mycontractornow.com',
+      name: 'Super Admin',
+      role: 'SUPER_ADMIN',
+      active: true
+    }
+  })
+
+  const adminUser = await prisma.adminUser.create({
+    data: {
+      email: 'sarah@mycontractornow.com',
+      name: 'Sarah',
+      role: 'ADMIN',
+      active: true
+    }
+  })
+
+  const supportUser = await prisma.adminUser.create({
+    data: {
+      email: 'mike@mycontractornow.com',
+      name: 'Mike',
+      role: 'SUPPORT',
+      active: true
+    }
+  })
+
+  console.log(`✅ Created 3 admin users\n`)
 
   // ==========================================
   // 1. SERVICE TYPES
@@ -990,6 +1026,7 @@ async function main() {
   console.log('=' .repeat(50))
   console.log('🎉 Database seeding completed successfully!\n')
   console.log('Summary:')
+  console.log(`- Admin Users: 3`)
   console.log(`- Service Types: 4`)
   console.log(`- Buyers: 5`)
   console.log(`- ZIP Codes: ${zipCodes.length}`)

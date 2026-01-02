@@ -3,15 +3,21 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { RedisCache } from '@/config/redis';
 import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
-import { ServiceType } from '@/types';
+import { ServiceType, FormFieldOption } from '@/types';
+
+// Helper to convert string array to FormFieldOption array
+const toOptions = (strings: string[]): FormFieldOption[] =>
+  strings.map(s => ({ value: s.toLowerCase().replace(/[^a-z0-9]+/g, '_'), label: s }));
 
 // Mock data - same as parent route for consistency
 const defaultServiceTypes: ServiceType[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440001',
     name: 'Windows',
+    displayName: 'Window Services',
     description: 'Window replacement, repair, and installation services',
     formSchema: {
+      title: 'Window Services Intake Form',
       fields: [
         {
           id: 'numberOfWindows',
@@ -28,7 +34,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'checkbox',
           label: 'What types of windows?',
           required: true,
-          options: ['Single-hung', 'Double-hung', 'Casement', 'Sliding', 'Bay', 'Bow']
+          options: toOptions(['Single-hung', 'Double-hung', 'Casement', 'Sliding', 'Bay', 'Bow'])
         },
         {
           id: 'projectScope',
@@ -36,7 +42,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'radio',
           label: 'What type of project is this?',
           required: true,
-          options: ['Replacement', 'New Installation', 'Repair']
+          options: toOptions(['Replacement', 'New Installation', 'Repair'])
         },
         {
           id: 'currentWindowAge',
@@ -44,7 +50,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'How old are your current windows?',
           required: false,
-          options: ['0-5 years', '5-10 years', '10-20 years', '20+ years']
+          options: toOptions(['0-5 years', '5-10 years', '10-20 years', '20+ years'])
         },
         {
           id: 'budget',
@@ -52,7 +58,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'What is your estimated budget?',
           required: false,
-          options: ['Under $5,000', '$5,000-$15,000', '$15,000-$30,000', '$30,000+']
+          options: toOptions(['Under $5,000', '$5,000-$15,000', '$15,000-$30,000', '$30,000+'])
         }
       ],
       validationRules: [
@@ -75,8 +81,10 @@ const defaultServiceTypes: ServiceType[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440002',
     name: 'Bathrooms',
+    displayName: 'Bathroom Services',
     description: 'Bathroom remodeling, renovation, and fixture installation',
     formSchema: {
+      title: 'Bathroom Services Intake Form',
       fields: [
         {
           id: 'numberOfBathrooms',
@@ -93,7 +101,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'What type of bathroom?',
           required: true,
-          options: ['Full bathroom', 'Half bathroom', 'Master bathroom', 'Guest bathroom']
+          options: toOptions(['Full bathroom', 'Half bathroom', 'Master bathroom', 'Guest bathroom'])
         },
         {
           id: 'projectScope',
@@ -101,7 +109,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'radio',
           label: 'What type of project is this?',
           required: true,
-          options: ['Full remodel', 'Partial remodel', 'Fixtures only', 'Vanity only']
+          options: toOptions(['Full remodel', 'Partial remodel', 'Fixtures only', 'Vanity only'])
         },
         {
           id: 'fixturesNeeded',
@@ -109,7 +117,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'checkbox',
           label: 'Which fixtures need work?',
           required: true,
-          options: ['Toilet', 'Sink', 'Shower', 'Bathtub', 'Vanity', 'Tiles', 'Lighting']
+          options: toOptions(['Toilet', 'Sink', 'Shower', 'Bathtub', 'Vanity', 'Tiles', 'Lighting'])
         },
         {
           id: 'currentCondition',
@@ -117,7 +125,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'Current condition of the bathroom?',
           required: false,
-          options: ['Excellent', 'Good', 'Fair', 'Poor']
+          options: toOptions(['Excellent', 'Good', 'Fair', 'Poor'])
         },
         {
           id: 'budget',
@@ -125,7 +133,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'What is your estimated budget?',
           required: false,
-          options: ['Under $10,000', '$10,000-$25,000', '$25,000-$50,000', '$50,000+']
+          options: toOptions(['Under $10,000', '$10,000-$25,000', '$25,000-$50,000', '$50,000+'])
         }
       ],
       validationRules: [
@@ -148,8 +156,10 @@ const defaultServiceTypes: ServiceType[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440003',
     name: 'Roofing',
+    displayName: 'Roofing Services',
     description: 'Roof replacement, repair, and installation services',
     formSchema: {
+      title: 'Roofing Services Intake Form',
       fields: [
         {
           id: 'squareFootage',
@@ -166,7 +176,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'What type of roof do you have?',
           required: true,
-          options: ['Asphalt Shingles', 'Metal', 'Tile', 'Slate', 'Wood', 'Flat']
+          options: toOptions(['Asphalt Shingles', 'Metal', 'Tile', 'Slate', 'Wood', 'Flat'])
         },
         {
           id: 'projectType',
@@ -174,7 +184,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'radio',
           label: 'What type of project is this?',
           required: true,
-          options: ['Replacement', 'Repair', 'New Installation']
+          options: toOptions(['Replacement', 'Repair', 'New Installation'])
         },
         {
           id: 'hasLeaks',
@@ -182,7 +192,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'radio',
           label: 'Does your roof currently have leaks?',
           required: true,
-          options: ['Yes', 'No', 'Not sure']
+          options: toOptions(['Yes', 'No', 'Not sure'])
         },
         {
           id: 'hasMissingShingles',
@@ -190,7 +200,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'radio',
           label: 'Are there missing or damaged shingles?',
           required: true,
-          options: ['Yes', 'No', 'Not sure']
+          options: toOptions(['Yes', 'No', 'Not sure'])
         },
         {
           id: 'ageOfRoof',
@@ -198,7 +208,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'How old is your current roof?',
           required: true,
-          options: ['0-5 years', '5-10 years', '10-20 years', '20+ years']
+          options: toOptions(['0-5 years', '5-10 years', '10-20 years', '20+ years'])
         },
         {
           id: 'urgency',
@@ -206,7 +216,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'How urgent is this project?',
           required: false,
-          options: ['Emergency', 'Urgent', 'Planned']
+          options: toOptions(['Emergency', 'Urgent', 'Planned'])
         },
         {
           id: 'budget',
@@ -214,7 +224,7 @@ const defaultServiceTypes: ServiceType[] = [
           type: 'select',
           label: 'What is your estimated budget?',
           required: false,
-          options: ['Under $15,000', '$15,000-$30,000', '$30,000-$60,000', '$60,000+']
+          options: toOptions(['Under $15,000', '$15,000-$30,000', '$30,000-$60,000', '$60,000+'])
         }
       ],
       validationRules: [
@@ -264,7 +274,7 @@ async function handleGetServiceType(
     
     if (!serviceType) {
       // Find in default data
-      serviceType = defaultServiceTypes.find(st => st.id === id);
+      serviceType = defaultServiceTypes.find(st => st.id === id) ?? null;
       
       if (!serviceType) {
         const response = errorResponse(
@@ -310,7 +320,7 @@ async function handleGetServiceType(
         type: 'radio' as const,
         label: 'Do you own or rent your home?',
         required: true,
-        options: ['Own', 'Rent']
+        options: toOptions(['Own', 'Rent'])
       },
       {
         id: 'timeframe',
@@ -318,7 +328,7 @@ async function handleGetServiceType(
         type: 'select' as const,
         label: 'When do you want to start this project?',
         required: true,
-        options: ['Immediately', 'Within 1-3 months', 'Within 3-6 months', '6+ months']
+        options: toOptions(['Immediately', 'Within 1-3 months', 'Within 3-6 months', '6+ months'])
       },
       {
         id: 'firstName',

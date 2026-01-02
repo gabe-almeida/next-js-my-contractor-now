@@ -5,6 +5,12 @@ import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { Lead, Transaction } from '@/types';
 import { prisma } from '@/lib/prisma';
+import {
+  changeLeadStatus,
+  getValidNextStatuses,
+  getValidNextDispositions
+} from '@/lib/services/lead-accounting-service';
+import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 
 // Get specific lead with full details
 async function handleGetLead(
@@ -162,7 +168,13 @@ async function handleGetLead(
   }
 }
 
-// Update lead status (admin operation)
+/**
+ * Update lead status (admin operation)
+ *
+ * WHY: Allows super admins to change lead status with full audit trail.
+ * WHEN: Admin needs to scrub, reject, or manually change a lead's state.
+ * HOW: Uses centralized lead-accounting-service for validation and history.
+ */
 async function handleUpdateLeadStatus(
   req: EnhancedRequest,
   { params }: { params: { id: string } }
@@ -172,93 +184,97 @@ async function handleUpdateLeadStatus(
 
   try {
     const body = await req.json();
-    const { status, reason } = body;
+    const { status, disposition, reason, adminUserId } = body;
 
-    // Validate status
-    const validStatuses = ['PENDING', 'PROCESSING', 'AUCTIONED', 'SOLD', 'REJECTED', 'EXPIRED'];
-    const statusUpper = status?.toUpperCase();
+    // Validate status - now includes SCRUBBED and DUPLICATE
+    const validStatuses = Object.values(LeadStatus);
+    const statusUpper = status?.toUpperCase() as LeadStatus;
 
     if (!statusUpper || !validStatuses.includes(statusUpper)) {
-      const response = errorResponse(
-        'INVALID_STATUS',
-        'Invalid lead status',
-        { status, validStatuses },
-        'status',
-        requestId
+      return NextResponse.json(
+        errorResponse(
+          'INVALID_STATUS',
+          'Invalid lead status',
+          { status, validStatuses },
+          'status',
+          requestId
+        ),
+        { status: 400 }
       );
-      return NextResponse.json(response, { status: 400 });
     }
 
-    // Get existing lead
-    const lead = await prisma.lead.findUnique({
-      where: { id }
-    });
-
-    if (!lead) {
-      const response = errorResponse(
-        'LEAD_NOT_FOUND',
-        'Lead not found',
-        { id },
-        'id',
-        requestId
-      );
-      return NextResponse.json(response, { status: 404 });
-    }
-
-    // Check if status transition is valid
-    const validTransitions = getValidStatusTransitions(lead.status);
-    if (!validTransitions.includes(statusUpper)) {
-      const response = errorResponse(
-        'INVALID_STATUS_TRANSITION',
-        `Cannot transition from ${lead.status} to ${statusUpper}`,
-        { currentStatus: lead.status, requestedStatus: statusUpper, validTransitions },
-        'status',
-        requestId
-      );
-      return NextResponse.json(response, { status: 400 });
-    }
-
-    // Update lead in database
-    const updatedLead = await prisma.lead.update({
-      where: { id },
-      data: {
-        status: statusUpper
+    // Validate disposition if provided
+    let dispositionUpper: LeadDisposition | undefined;
+    if (disposition) {
+      const validDispositions = Object.values(LeadDisposition);
+      dispositionUpper = disposition.toUpperCase() as LeadDisposition;
+      if (!validDispositions.includes(dispositionUpper)) {
+        return NextResponse.json(
+          errorResponse(
+            'INVALID_DISPOSITION',
+            'Invalid lead disposition',
+            { disposition, validDispositions },
+            'disposition',
+            requestId
+          ),
+          { status: 400 }
+        );
       }
+    }
+
+    // Require reason for admin changes
+    if (!reason || reason.trim().length === 0) {
+      return NextResponse.json(
+        errorResponse(
+          'MISSING_REASON',
+          'Reason is required for status changes',
+          undefined,
+          'reason',
+          requestId
+        ),
+        { status: 400 }
+      );
+    }
+
+    // Use centralized service for atomic update with history
+    const result = await changeLeadStatus({
+      leadId: id,
+      newStatus: statusUpper,
+      newDisposition: dispositionUpper,
+      reason: reason.trim(),
+      adminUserId,
+      changeSource: ChangeSource.ADMIN,
+      ipAddress: req.context.ip
     });
 
-    // Create compliance audit log entry
-    await prisma.complianceAuditLog.create({
-      data: {
-        leadId: id,
-        eventType: 'ADMIN_STATUS_CHANGE',
-        eventData: JSON.stringify({
-          oldStatus: lead.status,
-          newStatus: statusUpper,
-          reason
-        }),
-        ipAddress: req.context.ip
-      }
-    });
+    if (!result.success) {
+      return NextResponse.json(
+        errorResponse(
+          'STATUS_CHANGE_FAILED',
+          result.error || 'Failed to update status',
+          undefined,
+          undefined,
+          requestId
+        ),
+        { status: 400 }
+      );
+    }
 
     // Clear related caches
     await RedisCache.delete(`lead:${id}`);
 
-    // Log status change
-    logger.info('Lead status updated by admin', {
-      leadId: id,
-      oldStatus: lead.status,
-      newStatus: statusUpper,
-      reason,
-      requestId
-    });
-
-    const response = successResponse({
-      leadId: id,
-      status: updatedLead.status,
-      updatedAt: updatedLead.updatedAt
-    }, requestId);
-
-    return NextResponse.json(response);
+    return NextResponse.json(
+      successResponse({
+        leadId: id,
+        status: result.lead?.status,
+        disposition: result.lead?.disposition,
+        updatedAt: result.lead?.updatedAt,
+        historyEntry: {
+          id: result.historyEntry?.id,
+          createdAt: result.historyEntry?.createdAt
+        }
+      }, requestId)
+    );
 
   } catch (error) {
     logger.error('Lead status update error', {
@@ -268,15 +284,10 @@ async function handleUpdateLeadStatus(
       leadId: id
     });
 
-    const response = errorResponse(
-      'UPDATE_ERROR',
-      'Failed to update lead status',
-      undefined,
-      undefined,
-      requestId
+    return NextResponse.json(
+      errorResponse('UPDATE_ERROR', 'Failed to update lead status', undefined, undefined, requestId),
+      { status: 500 }
     );
-
-    return NextResponse.json(response, { status: 500 });
   }
 }
 
@@ -337,18 +348,7 @@ function calculateLeadQuality(formData: any, lead: any): number {
   return Math.min(100, Math.max(0, score));
 }
 
-function getValidStatusTransitions(currentStatus: string): string[] {
-  const transitions: Record<string, string[]> = {
-    'PENDING': ['PROCESSING', 'REJECTED'],
-    'PROCESSING': ['AUCTIONED', 'REJECTED'],
-    'AUCTIONED': ['SOLD', 'EXPIRED'],
-    'SOLD': [], // Terminal state
-    'REJECTED': [], // Terminal state
-    'EXPIRED': ['PROCESSING'] // Can reprocess expired leads
-  };
-
-  return transitions[currentStatus] || [];
-}
+// Note: Status transition validation now handled by lead-accounting-service
 
 // Export route handlers with admin authentication
 export const GET = withMiddleware(

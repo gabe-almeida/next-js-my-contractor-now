@@ -48,24 +48,25 @@ async function handleGetServiceZones(req: EnhancedRequest): Promise<NextResponse
   const url = new URL(req.url);
   
   try {
-    // Parse query parameters
-    const queryParams = Object.fromEntries(url.searchParams.entries());
-    
+    // Parse query parameters - use Record<string, unknown> to allow type conversions
+    const rawParams = Object.fromEntries(url.searchParams.entries());
+    const queryParams: Record<string, unknown> = { ...rawParams };
+
     // Convert string parameters to appropriate types
-    if (queryParams.active !== undefined) {
-      queryParams.active = queryParams.active === 'true';
+    if (rawParams.active !== undefined) {
+      queryParams.active = rawParams.active === 'true';
     }
-    if (queryParams.includeRelations !== undefined) {
-      queryParams.includeRelations = queryParams.includeRelations === 'true';
+    if (rawParams.includeRelations !== undefined) {
+      queryParams.includeRelations = rawParams.includeRelations === 'true';
     }
-    if (queryParams.page) {
-      queryParams.page = parseInt(queryParams.page);
+    if (rawParams.page) {
+      queryParams.page = parseInt(rawParams.page);
     }
-    if (queryParams.limit) {
-      queryParams.limit = parseInt(queryParams.limit);
+    if (rawParams.limit) {
+      queryParams.limit = parseInt(rawParams.limit);
     }
-    if (queryParams.zipCodes) {
-      queryParams.zipCodes = queryParams.zipCodes.split(',');
+    if (rawParams.zipCodes) {
+      queryParams.zipCodes = rawParams.zipCodes.split(',');
     }
 
     // Validate query parameters

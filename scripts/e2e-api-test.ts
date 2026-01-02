@@ -53,7 +53,7 @@ async function apiRequest(
 }
 
 // Test helper
-async function test(name: string, fn: () => Promise<void>) {
+async function runTest(name: string, fn: () => Promise<void>) {
   const start = Date.now();
   try {
     await fn();
@@ -95,10 +95,10 @@ async function runTests() {
   const testBuyerName = `E2E Test Contractor ${timestamp}`;
   const testZipCode = `${Math.floor(10000 + Math.random() * 90000)}`; // Random 5-digit ZIP
 
-  let createdBuyerId: string;
-  let createdConfigId: string;
-  let createdZipCodeId: string;
-  let testLeadId: string;
+  let createdBuyerId: string | undefined;
+  let createdConfigId: string | undefined;
+  let createdZipCodeId: string | undefined;
+  let testLeadId: string | undefined;
 
   // ===========================================
   // PRE-TEST CLEANUP
@@ -126,7 +126,7 @@ async function runTests() {
   // ===========================================
   console.log('\n📋 Testing Buyer Management APIs...\n');
 
-  await test('GET /api/admin/buyers - List all buyers', async () => {
+  await runTest('GET /api/admin/buyers - List all buyers', async () => {
     const res = await apiRequest('/api/admin/buyers');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -136,7 +136,7 @@ async function runTests() {
     console.log(`   Found ${res.data.data.buyers.length} buyers`);
   });
 
-  await test('GET /api/admin/buyers?type=NETWORK - Filter by type', async () => {
+  await runTest('GET /api/admin/buyers?type=NETWORK - Filter by type', async () => {
     const res = await apiRequest('/api/admin/buyers?type=NETWORK');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -145,14 +145,14 @@ async function runTests() {
     console.log(`   Found ${networkBuyers.length} network buyers`);
   });
 
-  await test('GET /api/admin/buyers?search=Home - Search by name', async () => {
+  await runTest('GET /api/admin/buyers?search=Home - Search by name', async () => {
     const res = await apiRequest('/api/admin/buyers?search=Home');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
     console.log(`   Found ${res.data.data.buyers.length} buyers matching "Home"`);
   });
 
-  await test('GET /api/admin/buyers?page=1&limit=5 - Pagination', async () => {
+  await runTest('GET /api/admin/buyers?page=1&limit=5 - Pagination', async () => {
     const res = await apiRequest('/api/admin/buyers?page=1&limit=5');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.data.buyers.length <= 5, 'Should return max 5 buyers');
@@ -160,7 +160,7 @@ async function runTests() {
     console.log(`   Page 1: ${res.data.data.buyers.length} buyers`);
   });
 
-  await test('POST /api/admin/buyers - Create new buyer', async () => {
+  await runTest('POST /api/admin/buyers - Create new buyer', async () => {
     const res = await apiRequest('/api/admin/buyers', {
       method: 'POST',
       body: JSON.stringify({
@@ -188,7 +188,7 @@ async function runTests() {
     console.log(`   Created buyer: ${createdBuyerId}`);
   });
 
-  await test('GET /api/admin/buyers/[id] - Get specific buyer', async () => {
+  await runTest('GET /api/admin/buyers/[id] - Get specific buyer', async () => {
     const res = await apiRequest(`/api/admin/buyers/${createdBuyerId}`);
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -198,7 +198,7 @@ async function runTests() {
     console.log(`   Retrieved buyer with ${res.data.data.serviceConfigs.length} configs`);
   });
 
-  await test('PUT /api/admin/buyers/[id] - Update buyer', async () => {
+  await runTest('PUT /api/admin/buyers/[id] - Update buyer', async () => {
     const res = await apiRequest(`/api/admin/buyers/${createdBuyerId}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -213,7 +213,7 @@ async function runTests() {
     console.log(`   Updated buyer phone and active status`);
   });
 
-  await test('POST /api/admin/buyers - Duplicate name validation', async () => {
+  await runTest('POST /api/admin/buyers - Duplicate name validation', async () => {
     const res = await apiRequest('/api/admin/buyers', {
       method: 'POST',
       body: JSON.stringify({
@@ -236,7 +236,7 @@ async function runTests() {
   // ===========================================
   console.log('\n📋 Testing Service Configuration APIs...\n');
 
-  await test('GET /api/admin/buyers/service-configs?buyerId=X - List configs', async () => {
+  await runTest('GET /api/admin/buyers/service-configs?buyerId=X - List configs', async () => {
     const res = await apiRequest(`/api/admin/buyers/service-configs?buyerId=${createdBuyerId}`);
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -244,7 +244,7 @@ async function runTests() {
     console.log(`   Found ${res.data.data.configs.length} service configs`);
   });
 
-  await test('POST /api/admin/buyers/service-configs - Create config', async () => {
+  await runTest('POST /api/admin/buyers/service-configs - Create config', async () => {
     // Get first service type
     const serviceTypes = await apiRequest('/api/admin/buyers/service-configs');
     const firstServiceTypeId = '1fefd5b3-f999-4ea0-b967-0142a5a71ee1'; // Windows from seed
@@ -271,7 +271,7 @@ async function runTests() {
     console.log(`   Created service config: ${createdConfigId}`);
   });
 
-  await test('PUT /api/admin/buyers/service-configs/[id] - Update config', async () => {
+  await runTest('PUT /api/admin/buyers/service-configs/[id] - Update config', async () => {
     const res = await apiRequest(`/api/admin/buyers/service-configs/${createdConfigId}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -290,7 +290,7 @@ async function runTests() {
   // ===========================================
   console.log('\n📋 Testing ZIP Code Management APIs...\n');
 
-  await test('POST /api/admin/buyers/service-zip-codes - Create ZIP code', async () => {
+  await runTest('POST /api/admin/buyers/service-zip-codes - Create ZIP code', async () => {
     const res = await apiRequest('/api/admin/buyers/service-zip-codes', {
       method: 'POST',
       body: JSON.stringify({
@@ -305,7 +305,7 @@ async function runTests() {
     console.log(`   Created ZIP code: ${testZipCode}`);
   });
 
-  await test('GET /api/admin/buyers/service-zip-codes?buyerId=X - List ZIP codes', async () => {
+  await runTest('GET /api/admin/buyers/service-zip-codes?buyerId=X - List ZIP codes', async () => {
     const res = await apiRequest(`/api/admin/buyers/service-zip-codes?buyerId=${createdBuyerId}`);
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -313,7 +313,7 @@ async function runTests() {
     console.log(`   Found ${res.data.data.zipCodes.length} ZIP codes for buyer`);
   });
 
-  await test('GET /api/admin/buyers/service-zip-codes?zipCode=X - Search by ZIP', async () => {
+  await runTest('GET /api/admin/buyers/service-zip-codes?zipCode=X - Search by ZIP', async () => {
     const res = await apiRequest(`/api/admin/buyers/service-zip-codes?zipCode=${testZipCode}`);
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.data.zipCodes.length >= 1, 'Should find the ZIP code we created');
@@ -325,7 +325,7 @@ async function runTests() {
   // ===========================================
   console.log('\n📋 Testing Lead Management APIs...\n');
 
-  await test('GET /api/admin/leads - List all leads', async () => {
+  await runTest('GET /api/admin/leads - List all leads', async () => {
     const res = await apiRequest('/api/admin/leads');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -336,7 +336,7 @@ async function runTests() {
     console.log(`   Found ${res.data.data.leads.length} leads`);
   });
 
-  await test('GET /api/admin/leads?status=SOLD - Filter by status', async () => {
+  await runTest('GET /api/admin/leads?status=SOLD - Filter by status', async () => {
     const res = await apiRequest('/api/admin/leads?status=SOLD');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -345,7 +345,7 @@ async function runTests() {
     console.log(`   Found ${soldLeads.length} SOLD leads`);
   });
 
-  await test('GET /api/admin/leads?serviceTypeId=X - Filter by service type', async () => {
+  await runTest('GET /api/admin/leads?serviceTypeId=X - Filter by service type', async () => {
     const serviceTypeId = '550e8400-e29b-41d4-a716-446655440001';
     const res = await apiRequest(`/api/admin/leads?serviceTypeId=${serviceTypeId}`);
     assert(res.ok, `Request failed: ${res.error}`);
@@ -353,7 +353,7 @@ async function runTests() {
     console.log(`   Found ${res.data.data.leads.length} leads for service type`);
   });
 
-  await test('GET /api/admin/leads?startDate=X&endDate=Y - Date range filter', async () => {
+  await runTest('GET /api/admin/leads?startDate=X&endDate=Y - Date range filter', async () => {
     const endDate = new Date().toISOString().split('T')[0];
     const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const res = await apiRequest(`/api/admin/leads?startDate=${startDate}&endDate=${endDate}`);
@@ -362,7 +362,7 @@ async function runTests() {
     console.log(`   Found ${res.data.data.leads.length} leads in last 7 days`);
   });
 
-  await test('GET /api/admin/leads?page=1&limit=10 - Pagination', async () => {
+  await runTest('GET /api/admin/leads?page=1&limit=10 - Pagination', async () => {
     const res = await apiRequest('/api/admin/leads?page=1&limit=10');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.data.leads.length <= 10, 'Should return max 10 leads');
@@ -370,7 +370,7 @@ async function runTests() {
     console.log(`   Page 1: ${res.data.data.leads.length} leads`);
   });
 
-  await test('GET /api/admin/leads?sortBy=createdAt&sortOrder=asc - Sorting', async () => {
+  await runTest('GET /api/admin/leads?sortBy=createdAt&sortOrder=asc - Sorting', async () => {
     const res = await apiRequest('/api/admin/leads?sortBy=createdAt&sortOrder=asc');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.data.sort.sortBy === 'createdAt', 'Sort by should be createdAt');
@@ -378,7 +378,7 @@ async function runTests() {
     console.log(`   Sorted by createdAt ascending`);
   });
 
-  await test('GET /api/admin/leads/[id] - Get specific lead', async () => {
+  await runTest('GET /api/admin/leads/[id] - Get specific lead', async () => {
     const res = await apiRequest(`/api/admin/leads/${testLeadId}`);
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -389,7 +389,7 @@ async function runTests() {
     console.log(`   Retrieved lead with ${res.data.data.transactions.length} transactions`);
   });
 
-  await test('PUT /api/admin/leads/[id] - Update lead status (invalid transition)', async () => {
+  await runTest('PUT /api/admin/leads/[id] - Update lead status (invalid transition)', async () => {
     const res = await apiRequest(`/api/admin/leads/${testLeadId}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -401,7 +401,7 @@ async function runTests() {
     console.log(`   Correctly rejected invalid status`);
   });
 
-  await test('GET /api/admin/leads?analytics=true - Lead analytics', async () => {
+  await runTest('GET /api/admin/leads?analytics=true - Lead analytics', async () => {
     const res = await apiRequest('/api/admin/leads?analytics=true&period=7d');
     assert(res.ok, `Request failed: ${res.error}`);
     assert(res.data.success, 'Response success should be true');
@@ -417,7 +417,7 @@ async function runTests() {
   // ===========================================
   console.log('\n📋 Testing Data Security & Masking...\n');
 
-  await test('Lead data masking - Email/Phone masked in list view', async () => {
+  await runTest('Lead data masking - Email/Phone masked in list view', async () => {
     const res = await apiRequest('/api/admin/leads?limit=1');
     const lead = res.data.data.leads[0];
     if (lead.formData.email) {
@@ -430,7 +430,7 @@ async function runTests() {
     }
   });
 
-  await test('Buyer auth config - Only type returned, not credentials', async () => {
+  await runTest('Buyer auth config - Only type returned, not credentials', async () => {
     const res = await apiRequest(`/api/admin/buyers/${createdBuyerId}`);
     assert(res.data.data.authType, 'Should include auth type');
     assert(res.data.data.credentialKeys, 'Should include credential keys');
@@ -443,19 +443,19 @@ async function runTests() {
   // ===========================================
   console.log('\n📋 Testing Error Handling...\n');
 
-  await test('GET /api/admin/buyers/[id] - Invalid UUID format', async () => {
+  await runTest('GET /api/admin/buyers/[id] - Invalid UUID format', async () => {
     const res = await apiRequest('/api/admin/buyers/invalid-uuid');
     assertEqual(res.status, 400, 'Should return 400 Bad Request');
     console.log(`   Correctly rejected invalid UUID`);
   });
 
-  await test('GET /api/admin/buyers/[id] - Non-existent buyer', async () => {
+  await runTest('GET /api/admin/buyers/[id] - Non-existent buyer', async () => {
     const res = await apiRequest('/api/admin/buyers/550e8400-0000-0000-0000-000000000000');
     assertEqual(res.status, 404, 'Should return 404 Not Found');
     console.log(`   Correctly returned 404 for non-existent buyer`);
   });
 
-  await test('GET /api/admin/leads/[id] - Non-existent lead', async () => {
+  await runTest('GET /api/admin/leads/[id] - Non-existent lead', async () => {
     const res = await apiRequest('/api/admin/leads/550e8400-0000-0000-0000-000000000000');
     assertEqual(res.status, 404, 'Should return 404 Not Found');
     console.log(`   Correctly returned 404 for non-existent lead`);

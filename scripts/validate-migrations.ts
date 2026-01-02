@@ -221,13 +221,14 @@ async function validateDataIntegrity(): Promise<ValidationResult> {
     });
     
     // Check foreign key integrity
-    const foreignKeyCheck = await prisma.$queryRaw`PRAGMA foreign_key_check()`;
+    const foreignKeyCheck = await prisma.$queryRaw`PRAGMA foreign_key_check()` as unknown[];
+    const fkViolations = Array.isArray(foreignKeyCheck) ? foreignKeyCheck.length : 0;
     checks.push({
       name: 'Foreign Key Integrity',
-      passed: Array.isArray(foreignKeyCheck) && foreignKeyCheck.length === 0,
-      message: Array.isArray(foreignKeyCheck) && foreignKeyCheck.length === 0
-        ? 'No foreign key violations' 
-        : `${foreignKeyCheck.length} foreign key violations found`,
+      passed: fkViolations === 0,
+      message: fkViolations === 0
+        ? 'No foreign key violations'
+        : `${fkViolations} foreign key violations found`,
       details: foreignKeyCheck
     });
     

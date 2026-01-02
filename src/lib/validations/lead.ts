@@ -12,6 +12,42 @@ export const timeframeSchema = z.enum([
   'planning_phase'
 ]);
 
+// Attribution data schema for marketing tracking
+export const attributionDataSchema = z.object({
+  // UTM Parameters
+  utm_source: z.string().optional(),
+  utm_medium: z.string().optional(),
+  utm_campaign: z.string().optional(),
+  utm_content: z.string().optional(),
+  utm_term: z.string().optional(),
+  // Facebook
+  fbclid: z.string().optional(),
+  fbc: z.string().optional(),
+  fbp: z.string().optional(),
+  // Google
+  gclid: z.string().optional(),
+  wbraid: z.string().optional(),
+  gbraid: z.string().optional(),
+  _ga: z.string().optional(),
+  _gid: z.string().optional(),
+  // Microsoft
+  msclkid: z.string().optional(),
+  // TikTok
+  ttclid: z.string().optional(),
+  // Other platforms
+  li_fat_id: z.string().optional(),
+  twclid: z.string().optional(),
+  rdt_cid: z.string().optional(),
+  irclickid: z.string().optional(),
+  // Page context
+  landing_page: z.string().optional(),
+  referrer: z.string().optional(),
+  referrer_domain: z.string().optional(),
+  first_touch_timestamp: z.string().optional(),
+  session_id: z.string().optional(),
+  raw_query_params: z.record(z.string()).optional(),
+}).optional();
+
 // Compliance data schema
 export const complianceDataSchema = z.object({
   trustedFormCertUrl: z.string().url().optional(),
@@ -23,6 +59,7 @@ export const complianceDataSchema = z.object({
   ipAddress: z.string().ip().optional(),
   userAgent: z.string().optional(),
   fingerprint: z.string().optional(),
+  attribution: attributionDataSchema,
 }).optional();
 
 // Base lead schema

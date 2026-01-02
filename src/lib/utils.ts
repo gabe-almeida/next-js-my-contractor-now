@@ -100,3 +100,42 @@ export const getHttpStatusFromError = (code: string): number => {
   };
   return statusMap[code] || 500;
 };
+
+/**
+ * WHY: Centralizes error handling for API routes
+ * WHEN: Use in catch blocks of API route handlers
+ * HOW: Extracts message and appropriate HTTP status from various error types
+ */
+export const handleApiError = (error: unknown): { message: string; statusCode: number } => {
+  // Handle Prisma errors
+  if (error && typeof error === 'object' && 'code' in error) {
+    const prismaError = error as { code: string; meta?: { target?: string[] } };
+
+    switch (prismaError.code) {
+      case 'P2002': // Unique constraint violation
+        return { message: 'A record with this value already exists', statusCode: 409 };
+      case 'P2025': // Record not found
+        return { message: 'Record not found', statusCode: 404 };
+      case 'P2003': // Foreign key constraint failed
+        return { message: 'Related record not found', statusCode: 400 };
+      case 'P2014': // Required relation violation
+        return { message: 'Cannot delete record with dependent relations', statusCode: 409 };
+    }
+  }
+
+  // Handle AppError
+  if (error instanceof AppError) {
+    return {
+      message: error.message,
+      statusCode: error.code ? getHttpStatusFromError(error.code) : 500
+    };
+  }
+
+  // Handle standard Error
+  if (error instanceof Error) {
+    return { message: error.message, statusCode: 500 };
+  }
+
+  // Handle unknown errors
+  return { message: 'An unexpected error occurred', statusCode: 500 };
+};

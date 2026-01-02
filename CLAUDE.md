@@ -169,14 +169,76 @@ Users add project-specific preferences here that apply to all specs and implemen
 
 <!-- START_PROJECT_NOTES -->
 
-**No project-specific notes have been added yet.**
+## 🚨 MANDATORY: Investigate Before Implementation
 
-Use `/gabe-os/edit-project-notes` from the main menu to add custom preferences such as:
-- Preferred tools/libraries for this project
-- Project-specific coding patterns
-- Permission system considerations
-- Database query preferences
-- API integration guidelines
+**ALWAYS investigate the codebase AND database before planning ANY feature:**
+
+### Step 1: Database Investigation
+```bash
+# Check current Prisma schema for existing models
+cat prisma/schema.prisma
+
+# Check what tables exist in PostgreSQL
+npx prisma db pull --print
+```
+
+### Step 2: Codebase Investigation
+```bash
+# Search for existing services
+find src/lib/services -name "*.ts" -o -name "*.tsx"
+
+# Search for existing API routes
+find src/app/api -type d
+
+# Search for existing components
+find src/components -name "*.tsx"
+
+# Search for existing utilities
+find src/lib -name "*.ts"
+```
+
+### Step 3: Reuse Existing Patterns
+Before creating new code, check:
+- `src/lib/services/` - Existing service patterns
+- `src/lib/prisma.ts` - Database connection
+- `src/types/database.ts` - Existing TypeScript types
+- `src/components/ui/` - Existing UI components
+
+## 🔒 DRY Architecture Requirements
+
+**This project STRICTLY follows DRY principles:**
+
+1. **Centralized Services** - All business logic in `src/lib/services/`
+2. **Shared Types** - All TypeScript types in `src/types/`
+3. **Reusable Components** - All UI components in `src/components/`
+4. **Common Utilities** - All helpers in `src/lib/`
+
+**NEVER duplicate:**
+- Route handlers (parameterize instead)
+- Validation logic (extract to shared validators)
+- API response formatting (use consistent patterns)
+- Database queries (use service layer)
+- UI components (compose from existing)
+
+## 📊 Database Stack
+
+- **PostgreSQL** running on localhost:5432
+- **Prisma ORM** for all database access
+- **prisma/schema.prisma** - Single source of truth for schema
+- **src/types/database.ts** - TypeScript interfaces aligned with Prisma
+
+**Database workflow:**
+1. Modify `prisma/schema.prisma`
+2. Run `npx prisma db push` or `npx prisma migrate dev`
+3. Update `src/types/database.ts` to match
+4. Run `npx prisma generate` to update client
+
+## 🏗️ Existing Services (Reuse These!)
+
+- `src/lib/services/lead-accounting-service.ts` - Lead status changes with history
+- `src/lib/prisma.ts` - Database connection singleton
+- `src/lib/logger.ts` - Centralized logging
+- `src/lib/security/` - Encryption and webhook signatures
 
 <!-- END_PROJECT_NOTES -->
 

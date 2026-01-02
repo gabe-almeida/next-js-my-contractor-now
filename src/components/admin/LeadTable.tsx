@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Lead, LeadStatus } from '@/types';
+import { LeadDisposition } from '@/types/database';
 import { Button } from '@/components/ui/Button';
 import { 
   Eye, 
@@ -28,6 +29,7 @@ export function LeadTable({
 }: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
+  const [dispositionFilter, setDispositionFilter] = useState<LeadDisposition | 'ALL'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<keyof Lead>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -36,14 +38,16 @@ export function LeadTable({
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
     let filtered = leads.filter(lead => {
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         lead.zipCode.includes(searchQuery) ||
         lead.serviceType?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.id.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
+      const matchesDisposition = dispositionFilter === 'ALL' ||
+        (lead as any).disposition === dispositionFilter;
+
+      return matchesSearch && matchesStatus && matchesDisposition;
     });
 
     // Sort leads
@@ -57,7 +61,7 @@ export function LeadTable({
     });
 
     return filtered;
-  }, [leads, searchQuery, statusFilter, sortField, sortDirection]);
+  }, [leads, searchQuery, statusFilter, dispositionFilter, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedLeads.length / itemsPerPage);
@@ -74,18 +78,42 @@ export function LeadTable({
   };
 
   const getStatusBadge = (status: LeadStatus) => {
-    const styles = {
+    const styles: Record<string, string> = {
       PENDING: 'status-indicator status-pending',
       PROCESSING: 'status-indicator status-processing',
+      AUCTIONED: 'status-indicator status-success',
       AUCTION_COMPLETE: 'status-indicator status-success',
+      SOLD: 'status-indicator status-posted',
       POSTED: 'status-indicator status-posted',
+      REJECTED: 'status-indicator status-failed',
+      EXPIRED: 'status-indicator status-failed',
       FAILED: 'status-indicator status-failed',
-      REJECTED: 'status-indicator status-failed'
+      SCRUBBED: 'px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800',
+      DUPLICATE: 'px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800'
     };
 
     return (
-      <span className={styles[status]}>
+      <span className={styles[status] || 'status-indicator status-pending'}>
         {status.replace('_', ' ')}
+      </span>
+    );
+  };
+
+  const getDispositionBadge = (disposition: string | undefined) => {
+    if (!disposition) return null;
+
+    const styles: Record<string, string> = {
+      NEW: 'bg-gray-100 text-gray-700',
+      DELIVERED: 'bg-green-100 text-green-700',
+      RETURNED: 'bg-yellow-100 text-yellow-700',
+      DISPUTED: 'bg-orange-100 text-orange-700',
+      CREDITED: 'bg-blue-100 text-blue-700',
+      WRITTEN_OFF: 'bg-red-100 text-red-700'
+    };
+
+    return (
+      <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[disposition] || 'bg-gray-100'}`}>
+        {disposition.replace('_', ' ')}
       </span>
     );
   };
@@ -161,10 +189,28 @@ export function LeadTable({
               <option value="ALL">All Status</option>
               <option value="PENDING">Pending</option>
               <option value="PROCESSING">Processing</option>
-              <option value="AUCTION_COMPLETE">Auction Complete</option>
-              <option value="POSTED">Posted</option>
-              <option value="FAILED">Failed</option>
+              <option value="AUCTIONED">Auctioned</option>
+              <option value="SOLD">Sold</option>
               <option value="REJECTED">Rejected</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="SCRUBBED">Scrubbed</option>
+              <option value="DUPLICATE">Duplicate</option>
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <select
+              value={dispositionFilter}
+              onChange={(e) => setDispositionFilter(e.target.value as LeadDisposition | 'ALL')}
+              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="ALL">All Disposition</option>
+              <option value="NEW">New</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="RETURNED">Returned</option>
+              <option value="DISPUTED">Disputed</option>
+              <option value="CREDITED">Credited</option>
+              <option value="WRITTEN_OFF">Written Off</option>
             </select>
           </div>
         </div>
@@ -196,6 +242,7 @@ export function LeadTable({
               <th>Service</th>
               <th>ZIP Code</th>
               <th>Status</th>
+              <th>Disposition</th>
               <th>Compliance</th>
               <th>Winning Bid</th>
               <th>Actions</th>
@@ -221,6 +268,7 @@ export function LeadTable({
                 </td>
                 <td className="font-mono">{lead.zipCode}</td>
                 <td>{getStatusBadge(lead.status)}</td>
+                <td>{getDispositionBadge((lead as any).disposition)}</td>
                 <td>{getComplianceIndicator(lead)}</td>
                 <td>
                   {lead.winningBid ? (

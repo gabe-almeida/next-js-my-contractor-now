@@ -355,15 +355,33 @@ export interface BuyerPostResponse {
 // Analytics and Reporting Types
 export interface DashboardMetrics {
   totalLeads: number;
-  totalLeadsChange: number;
+  totalLeadsChange?: number;
   conversionRate: number;
-  conversionRateChange: number;
-  averageBidAmount: number;
-  averageBidChange: number;
-  activeBuyers: number;
-  activeBuyersChange: number;
-  complianceScore: number;
-  timeframe: string;
+  conversionRateChange?: number;
+  averageBidAmount?: number;
+  averageBidChange?: number;
+  activeBuyers?: number;
+  activeBuyersChange?: number;
+  complianceScore?: number;
+  timeframe?: string;
+  // Additional dashboard fields
+  leadsToday?: number;
+  successfulPosts?: number;
+  totalRevenue?: number;
+  averageBid?: number;
+  trustedFormCoverage?: number;
+  jornayaCoverage?: number;
+  fullComplianceRate?: number;
+}
+
+// Generic chart data type for flexible charting
+export interface ChartData {
+  label: string;
+  value?: number;
+  revenue?: number;
+  leads?: number;
+  category?: string;
+  [key: string]: string | number | undefined;
 }
 
 export interface LeadVolumeData {

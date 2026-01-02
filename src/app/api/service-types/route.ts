@@ -63,12 +63,12 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // Create the service type
+    // Create the service type (formSchema stored as JSON string in database)
     const serviceType = await prisma.serviceType.create({
       data: {
         name,
         displayName,
-        formSchema,
+        formSchema: JSON.stringify(formSchema),
         active: true,
       },
     });

@@ -4,6 +4,7 @@ import { RedisCache } from '@/config/redis';
 import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { Lead, LeadStatus } from '@/types';
+import { LeadDisposition } from '@/types/database';
 import { prisma } from '@/lib/prisma';
 
 // Admin leads management endpoint
@@ -15,6 +16,7 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
   const page = parseInt(url.searchParams.get('page') || '1');
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100); // Max 100 per page
   const status = url.searchParams.get('status') as LeadStatus | null;
+  const disposition = url.searchParams.get('disposition') as LeadDisposition | null;
   const serviceTypeId = url.searchParams.get('serviceTypeId');
   const startDate = url.searchParams.get('startDate');
   const endDate = url.searchParams.get('endDate');
@@ -27,6 +29,7 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
       page,
       limit,
       status,
+      disposition,
       serviceTypeId,
       startDate,
       endDate,
@@ -45,6 +48,10 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
 
       if (status) {
         where.status = status.toUpperCase();
+      }
+
+      if (disposition) {
+        where.disposition = disposition.toUpperCase();
       }
 
       if (serviceTypeId) {
@@ -119,6 +126,7 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
             serviceTypeId: lead.serviceTypeId,
             serviceType: lead.serviceType,
             status: lead.status,
+            disposition: lead.disposition,
             formData: {
               // Include only non-sensitive form data
               firstName: parsedFormData.firstName,
@@ -133,6 +141,8 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
             },
             winningBuyer: lead.winningBuyer,
             winningBid: lead.winningBid,
+            creditAmount: lead.creditAmount,
+            creditIssuedAt: lead.creditIssuedAt,
             leadQualityScore: lead.leadQualityScore,
             createdAt: lead.createdAt,
             updatedAt: lead.updatedAt
@@ -148,6 +158,7 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
         },
         filters: {
           status,
+          disposition,
           serviceTypeId,
           startDate,
           endDate
@@ -283,7 +294,7 @@ async function handleGetLeadAnalytics(req: EnhancedRequest): Promise<NextRespons
       ]);
 
       // Calculate summary
-      const totalRevenue = transactions.reduce((sum, t) => sum + (t._sum.bidAmount || 0), 0);
+      const totalRevenue = transactions.reduce((sum, t) => sum + Number(t._sum.bidAmount ?? 0), 0);
       const soldLeads = statusCounts.find(s => s.status === 'SOLD')?._count || 0;
       const conversionRate = totalLeads > 0 ? (soldLeads / totalLeads) : 0;
       const averageValue = soldLeads > 0 ? totalRevenue / soldLeads : 0;

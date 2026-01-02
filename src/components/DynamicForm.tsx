@@ -8,6 +8,7 @@ import { getTCPAConfig, createTCPAConsent, TCPAConsent } from '@/config/tcpa';
 import TCPACheckbox from '@/components/forms/compliance/TCPACheckbox';
 import AddressAutocomplete from '@/components/forms/inputs/AddressAutocomplete';
 import Header from '@/components/layout/Header';
+import { getAttributionData, AttributionData } from '@/utils/attribution';
 
 interface DynamicFormProps {
   flow: QuestionFlow;
@@ -20,7 +21,15 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
+  // Capture attribution data once on mount (no race conditions - synchronous capture)
+  const [attribution] = useState<AttributionData>(() => {
+    if (typeof window !== 'undefined') {
+      return getAttributionData();
+    }
+    return {};
+  });
+
   // TCPA configuration and form validation
   const tcpaConfig = getTCPAConfig(buyerId);
   const { formData, validation, updateField, formatPhoneField, isSubmitEnabled } = useFormValidation(tcpaConfig.isRequired);
@@ -82,7 +91,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
   const handleComplete = async (allAnswers: { [key: string]: any }) => {
     setIsSubmitting(true);
     try {
-      await onComplete(allAnswers);
+      // Include attribution data with the form answers
+      const answersWithAttribution = {
+        ...allAnswers,
+        attribution
+      };
+      await onComplete(answersWithAttribution);
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);

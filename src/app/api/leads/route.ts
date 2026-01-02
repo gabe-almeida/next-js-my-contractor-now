@@ -10,6 +10,7 @@ import {
   roofingFormSchema
 } from '@/lib/validations/lead';
 import { sanitizeFormData } from '@/lib/security/sanitize';
+import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,8 +62,8 @@ export async function POST(request: NextRequest) {
           // Log successful validation
           console.log('TrustedForm certificate validated:', {
             certUrl: complianceData.trustedFormCertUrl,
-            isValid: trustedFormComplianceReport.isValid,
-            riskLevel: trustedFormComplianceReport.riskAssessment.level,
+            isCompliant: trustedFormComplianceReport.isCompliant,
+            complianceScore: trustedFormComplianceReport.complianceScore,
           });
         } else {
           // Certificate not found - log warning but continue
@@ -135,13 +136,10 @@ export async function POST(request: NextRequest) {
         validated: trustedFormValidation !== null,
         validatedAt: trustedFormValidation ? new Date().toISOString() : undefined,
         complianceReport: trustedFormComplianceReport ? {
-          isValid: trustedFormComplianceReport.isValid,
-          riskLevel: trustedFormComplianceReport.riskAssessment.level,
-          score: trustedFormComplianceReport.riskAssessment.score,
-          warnings: trustedFormComplianceReport.warnings,
-          certificateAge: trustedFormComplianceReport.metadata.certificateAge,
-          pageUrl: trustedFormValidation?.pageUrl,
-          claimedAt: trustedFormValidation?.claimedAt,
+          isCompliant: trustedFormComplianceReport.isCompliant,
+          complianceScore: trustedFormComplianceReport.complianceScore,
+          pageUrl: trustedFormComplianceReport.formUrl,
+          certId: trustedFormComplianceReport.certId,
         } : undefined,
       } : undefined,
       jornayaData: complianceData.jornayaLeadId ? {
@@ -154,6 +152,38 @@ export async function POST(request: NextRequest) {
         text: complianceData.tcpaConsentText || 'User provided TCPA consent',
       } : undefined,
       fingerprint: complianceData.fingerprint,
+      // Marketing attribution data
+      attribution: complianceData.attribution ? {
+        // UTM parameters
+        utm_source: complianceData.attribution.utm_source,
+        utm_medium: complianceData.attribution.utm_medium,
+        utm_campaign: complianceData.attribution.utm_campaign,
+        utm_content: complianceData.attribution.utm_content,
+        utm_term: complianceData.attribution.utm_term,
+        // Click IDs
+        fbclid: complianceData.attribution.fbclid,
+        fbc: complianceData.attribution.fbc,
+        fbp: complianceData.attribution.fbp,
+        gclid: complianceData.attribution.gclid,
+        wbraid: complianceData.attribution.wbraid,
+        gbraid: complianceData.attribution.gbraid,
+        msclkid: complianceData.attribution.msclkid,
+        ttclid: complianceData.attribution.ttclid,
+        li_fat_id: complianceData.attribution.li_fat_id,
+        twclid: complianceData.attribution.twclid,
+        rdt_cid: complianceData.attribution.rdt_cid,
+        irclickid: complianceData.attribution.irclickid,
+        // Analytics
+        _ga: complianceData.attribution._ga,
+        _gid: complianceData.attribution._gid,
+        // Page context
+        landing_page: complianceData.attribution.landing_page,
+        referrer: complianceData.attribution.referrer,
+        referrer_domain: complianceData.attribution.referrer_domain,
+        first_touch_timestamp: complianceData.attribution.first_touch_timestamp,
+        session_id: complianceData.attribution.session_id,
+        raw_query_params: complianceData.attribution.raw_query_params,
+      } : undefined,
     } : null;
 
     // Calculate lead quality score
@@ -163,9 +193,9 @@ export async function POST(request: NextRequest) {
     if (leadComplianceData?.trustedFormData) {
       if (trustedFormComplianceReport) {
         // Valid certificate with compliance report
-        const riskScore = trustedFormComplianceReport.riskAssessment.score;
-        if (riskScore >= 80) leadQualityScore += 25; // High quality
-        else if (riskScore >= 60) leadQualityScore += 15; // Medium quality
+        const complianceScore = trustedFormComplianceReport.complianceScore;
+        if (complianceScore >= 80) leadQualityScore += 25; // High quality
+        else if (complianceScore >= 60) leadQualityScore += 15; // Medium quality
         else leadQualityScore += 5; // Low quality but present
       } else {
         // Certificate provided but not validated (TrustedForm down or cert not found)
@@ -189,11 +219,27 @@ export async function POST(request: NextRequest) {
           ownsHome,
           timeframe,
           status: 'PENDING',
+          disposition: 'NEW',
           trustedFormCertUrl: complianceData?.trustedFormCertUrl || null,
           trustedFormCertId: complianceData?.trustedFormCertId || null,
           jornayaLeadId: complianceData?.jornayaLeadId || null,
           complianceData: leadComplianceData ? JSON.stringify(leadComplianceData) : null,
           leadQualityScore,
+        },
+      });
+
+      // Record initial status history (system-generated lead creation)
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: lead.id,
+          adminUserId: null,
+          oldStatus: null,
+          newStatus: LeadStatus.PENDING,
+          oldDisposition: null,
+          newDisposition: LeadDisposition.NEW,
+          reason: 'Lead submitted via web form',
+          changeSource: ChangeSource.SYSTEM,
+          ipAddress: request.ip || request.headers.get('x-forwarded-for') || null,
         },
       });
 

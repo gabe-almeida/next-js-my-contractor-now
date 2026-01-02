@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Transaction, TransactionStatus } from '@/types';
+import { Transaction } from '@/types';
+import { TransactionActionType, TransactionStatus } from '@/types/database';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { 
@@ -43,8 +44,10 @@ export default function TransactionsPage() {
       // Mock transaction data
       const mockTransactions: Transaction[] = Array.from({ length: 100 }, (_, i) => {
         const isRecent = i < 20;
-        const status = (['SUCCESS', 'FAILED', 'PENDING', 'TIMEOUT'] as const)[Math.floor(Math.random() * 4)];
-        const actionType = (['PING', 'POST'] as const)[Math.floor(Math.random() * 2)];
+        const statuses: TransactionStatus[] = [TransactionStatus.SUCCESS, TransactionStatus.FAILED, TransactionStatus.PENDING, TransactionStatus.TIMEOUT];
+        const status = statuses[Math.floor(Math.random() * 4)] ?? TransactionStatus.PENDING;
+        const actionTypes: TransactionActionType[] = [TransactionActionType.PING, TransactionActionType.POST];
+        const actionType = actionTypes[Math.floor(Math.random() * 2)] ?? TransactionActionType.PING;
         
         return {
           id: `txn-${String(i + 1).padStart(6, '0')}`,
@@ -54,20 +57,23 @@ export default function TransactionsPage() {
           payload: {
             zipCode: String(Math.floor(Math.random() * 90000) + 10000),
             serviceType: ['Windows', 'Bathrooms', 'Roofing'][Math.floor(Math.random() * 3)],
-            ...(actionType === 'PING' ? { bidRequest: true } : { leadData: 'full_lead_data' })
+            ...(actionType === TransactionActionType.PING ? { bidRequest: true } : { leadData: 'full_lead_data' })
           },
-          response: status === 'SUCCESS' ? {
+          response: status === TransactionStatus.SUCCESS ? {
             success: true,
-            bidAmount: actionType === 'PING' ? Math.floor(Math.random() * 80) + 20 : undefined,
+            bidAmount: actionType === TransactionActionType.PING ? Math.floor(Math.random() * 80) + 20 : undefined,
             message: 'Lead processed successfully'
-          } : status === 'FAILED' ? {
+          } : status === TransactionStatus.FAILED ? {
             success: false,
             error: 'Invalid lead data',
             code: 'VALIDATION_ERROR'
           } : undefined,
           status,
           responseTime: Math.floor(Math.random() * 5000) + 500,
-          errorMessage: status === 'FAILED' ? 'Validation failed: Missing required field' : undefined,
+          errorMessage: status === TransactionStatus.FAILED ? 'Validation failed: Missing required field' : undefined,
+          complianceIncluded: Math.random() > 0.2,
+          trustedFormPresent: Math.random() > 0.3,
+          jornayaPresent: Math.random() > 0.4,
           createdAt: new Date(Date.now() - (isRecent ? Math.random() * 60 * 60 * 1000 : Math.random() * 7 * 24 * 60 * 60 * 1000))
         };
       });
@@ -147,9 +153,9 @@ export default function TransactionsPage() {
 
   // Calculate summary stats
   const totalTransactions = filteredTransactions.length;
-  const successfulTransactions = filteredTransactions.filter(t => t.status === 'SUCCESS').length;
-  const failedTransactions = filteredTransactions.filter(t => t.status === 'FAILED').length;
-  const avgResponseTime = filteredTransactions.reduce((sum, t) => sum + t.responseTime, 0) / totalTransactions || 0;
+  const successfulTransactions = filteredTransactions.filter(t => t.status === TransactionStatus.SUCCESS).length;
+  const failedTransactions = filteredTransactions.filter(t => t.status === TransactionStatus.FAILED).length;
+  const avgResponseTime = filteredTransactions.reduce((sum, t) => sum + (t.responseTime ?? 0), 0) / totalTransactions || 0;
 
   return (
     <div className="space-y-6">
@@ -346,10 +352,10 @@ export default function TransactionsPage() {
                       </td>
                       <td>
                         <span className={`font-medium ${
-                          transaction.responseTime < 1000 ? 'text-green-600' :
-                          transaction.responseTime < 3000 ? 'text-yellow-600' : 'text-red-600'
+                          (transaction.responseTime ?? 0) < 1000 ? 'text-green-600' :
+                          (transaction.responseTime ?? 0) < 3000 ? 'text-yellow-600' : 'text-red-600'
                         }`}>
-                          {transaction.responseTime}ms
+                          {transaction.responseTime ?? 0}ms
                         </span>
                       </td>
                       <td>

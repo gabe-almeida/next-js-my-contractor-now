@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 import { MapPin, Building2, Map, Hash, Check, FileText, Download, Edit, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
 
 interface Location {
   id: string;

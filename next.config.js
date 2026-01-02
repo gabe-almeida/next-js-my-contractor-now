@@ -6,6 +6,14 @@ function generateNonce() {
 }
 
 const nextConfig = {
+  // Transpile recharts for proper ESM handling
+  transpilePackages: ['recharts', 'react-smooth', 'd3-scale', 'd3-shape'],
+
+  // Exclude problematic packages from server-side bundling
+  experimental: {
+    serverComponentsExternalPackages: ['rate-limiter-flexible'],
+  },
+
   async headers() {
     return [
       {
@@ -74,6 +82,14 @@ const nextConfig = {
         tls: false,
       };
     }
+
+    // Ignore .d.ts files from rate-limiter-flexible to prevent parsing errors
+    config.module.rules.push({
+      test: /\.d\.ts$/,
+      include: /node_modules\/rate-limiter-flexible/,
+      use: 'ignore-loader',
+    });
+
     return config;
   },
 };

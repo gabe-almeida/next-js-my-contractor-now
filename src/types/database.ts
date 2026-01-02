@@ -15,7 +15,31 @@ export enum LeadStatus {
   AUCTIONED = 'AUCTIONED',
   SOLD = 'SOLD',
   REJECTED = 'REJECTED',
-  EXPIRED = 'EXPIRED'
+  EXPIRED = 'EXPIRED',
+  DELIVERY_FAILED = 'DELIVERY_FAILED',
+  SCRUBBED = 'SCRUBBED',
+  DUPLICATE = 'DUPLICATE'
+}
+
+export enum LeadDisposition {
+  NEW = 'NEW',
+  DELIVERED = 'DELIVERED',
+  RETURNED = 'RETURNED',
+  DISPUTED = 'DISPUTED',
+  CREDITED = 'CREDITED',
+  WRITTEN_OFF = 'WRITTEN_OFF'
+}
+
+export enum AdminUserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  SUPPORT = 'SUPPORT'
+}
+
+export enum ChangeSource {
+  SYSTEM = 'SYSTEM',
+  ADMIN = 'ADMIN',
+  WEBHOOK = 'WEBHOOK'
 }
 
 export enum TransactionActionType {
@@ -204,11 +228,12 @@ export interface ServiceType {
   id: string;
   name: string;
   displayName: string;
+  description?: string;
   formSchema: FormSchema; // Parsed JSON from string
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Relations
   leads?: Lead[];
   buyerServiceConfigs?: BuyerServiceConfig[];
@@ -280,14 +305,21 @@ export interface Lead {
   jornayaLeadId?: string | null;
   complianceData?: ComplianceData | null; // Parsed JSON from string
   leadQualityScore?: number | null;
+  // Accounting fields
+  disposition: LeadDisposition;
+  creditAmount?: number | null;
+  creditIssuedAt?: Date | null;
+  creditIssuedById?: string | null;
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Relations
   serviceType?: ServiceType;
   winningBuyer?: Buyer | null;
   transactions?: Transaction[];
   complianceAudits?: ComplianceAuditLog[];
+  statusHistory?: LeadStatusHistory[];
 }
 
 export interface Transaction {
@@ -335,6 +367,39 @@ export interface ZipCodeMetadata {
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Admin User & Lead Accounting types
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminUserRole;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  statusChanges?: LeadStatusHistory[];
+}
+
+export interface LeadStatusHistory {
+  id: string;
+  leadId: string;
+  adminUserId?: string | null;
+  oldStatus?: LeadStatus | null;
+  newStatus: LeadStatus;
+  oldDisposition?: LeadDisposition | null;
+  newDisposition?: LeadDisposition | null;
+  reason?: string | null;
+  creditAmount?: number | null;
+  changeSource: ChangeSource;
+  ipAddress?: string | null;
+  createdAt: Date;
+
+  // Relations
+  lead?: Lead;
+  adminUser?: AdminUser | null;
 }
 
 // Utility types for API responses

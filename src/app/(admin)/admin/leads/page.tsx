@@ -1,104 +1,157 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Admin Leads Page
+ *
+ * WHY: Central management interface for all leads in the system.
+ *      Allows admins to view, filter, and manage lead status.
+ *
+ * WHEN: Accessed via Admin Dashboard → Leads navigation.
+ *
+ * HOW: Fetches leads from API with filtering/pagination,
+ *      displays in LeadTable, opens LeadDetailModal on click.
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { LeadTable } from '@/components/admin/LeadTable';
+import { LeadDetailModal } from '@/components/admin/LeadDetailModal';
 import { Lead } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { 
-  RefreshCw, 
+import {
+  RefreshCw,
   Filter,
-  Calendar,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  DollarSign,
+  FileText
 } from 'lucide-react';
+
+// Temporary admin user ID - in production this would come from auth context
+const ADMIN_USER_ID = 'admin-user-1';
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    totalLeads: 0,
+    pendingLeads: 0,
+    soldLeads: 0,
+    scrubbedLeads: 0,
+    totalRevenue: 0
+  });
 
-  // Mock data - replace with actual API calls
-  useEffect(() => {
-    const fetchLeads = async () => {
-      setLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock lead data
-      const mockLeads: Lead[] = Array.from({ length: 25 }, (_, i) => ({
-        id: `lead-${String(i + 1).padStart(4, '0')}`,
-        serviceTypeId: 'service-1',
-        serviceType: {
-          id: 'service-1',
-          name: ['Windows', 'Bathrooms', 'Roofing', 'Kitchens', 'HVAC'][i % 5],
-          description: 'Service description',
-          formSchema: [],
-          active: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        formData: {
-          customerName: `Customer ${i + 1}`,
-          email: `customer${i + 1}@email.com`,
-          phone: `555-${String(Math.floor(Math.random() * 9000) + 1000)}`
-        },
-        zipCode: String(Math.floor(Math.random() * 90000) + 10000),
-        ownsHome: Math.random() > 0.3,
-        timeframe: ['ASAP', '1-2 weeks', '1-3 months', '3+ months'][Math.floor(Math.random() * 4)],
-        status: (['PENDING', 'PROCESSING', 'AUCTION_COMPLETE', 'POSTED', 'FAILED'] as const)[Math.floor(Math.random() * 5)],
-        trustedFormCertUrl: Math.random() > 0.1 ? `https://cert.trustedform.com/cert${i}` : undefined,
-        trustedFormCertId: Math.random() > 0.1 ? `cert${i}` : undefined,
-        jornayaLeadId: Math.random() > 0.15 ? `jornaya${i}` : undefined,
-        complianceData: {
-          userAgent: 'Mozilla/5.0...',
-          timestamp: new Date().toISOString(),
-          ipAddress: `192.168.1.${i + 1}`,
-          tcpaConsent: true,
-          privacyPolicyAccepted: true,
-          submissionSource: 'web_form'
-        },
-        auctionCompleted: Math.random() > 0.3,
-        winningBuyerId: Math.random() > 0.3 ? `buyer-${Math.floor(Math.random() * 3) + 1}` : undefined,
-        winningBid: Math.random() > 0.3 ? Math.floor(Math.random() * 100) + 20 : undefined,
-        totalBids: Math.floor(Math.random() * 5) + 1,
-        createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date()
+  const fetchLeads = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/admin/leads?limit=100', {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch leads');
+      }
+
+      const data = await response.json();
+
+      // Transform API response to match Lead type
+      const transformedLeads: Lead[] = (data.data?.leads || []).map((lead: any) => ({
+        id: lead.id,
+        serviceTypeId: lead.serviceTypeId,
+        serviceType: lead.serviceType,
+        formData: lead.formData || {},
+        zipCode: lead.formData?.zipCode || '',
+        ownsHome: lead.formData?.ownsHome || false,
+        timeframe: lead.formData?.timeframe || '',
+        status: lead.status,
+        disposition: lead.disposition,
+        trustedFormCertUrl: lead.trustedFormCertUrl,
+        trustedFormCertId: lead.trustedFormCertId,
+        jornayaLeadId: lead.jornayaLeadId,
+        winningBuyerId: lead.winningBuyer?.id,
+        winningBid: lead.winningBid ? Number(lead.winningBid) : undefined,
+        creditAmount: lead.creditAmount ? Number(lead.creditAmount) : undefined,
+        leadQualityScore: lead.leadQualityScore,
+        createdAt: new Date(lead.createdAt),
+        updatedAt: new Date(lead.updatedAt)
       }));
-      
-      setLeads(mockLeads);
-      setLoading(false);
-      setLastRefresh(new Date());
-    };
 
-    fetchLeads();
+      setLeads(transformedLeads);
+
+      // Calculate stats
+      const pending = transformedLeads.filter(l => l.status === 'PENDING').length;
+      const sold = transformedLeads.filter(l => l.status === 'SOLD').length;
+      const scrubbed = transformedLeads.filter(l => l.status === 'SCRUBBED').length;
+      const revenue = transformedLeads
+        .filter(l => l.winningBid)
+        .reduce((sum, l) => sum + (l.winningBid || 0), 0);
+
+      setStats({
+        totalLeads: transformedLeads.length,
+        pendingLeads: pending,
+        soldLeads: sold,
+        scrubbedLeads: scrubbed,
+        totalRevenue: revenue
+      });
+
+      setLastRefresh(new Date());
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
   const handleRefresh = () => {
-    setLoading(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setLoading(false);
-      setLastRefresh(new Date());
-    }, 1000);
+    fetchLeads();
   };
 
   const handleViewDetails = (leadId: string) => {
-    // Navigate to lead details page or open modal
-    console.log('View details for lead:', leadId);
+    setSelectedLeadId(leadId);
   };
 
-  const handleExport = () => {
+  const handleCloseModal = () => {
+    setSelectedLeadId(null);
+  };
+
+  const handleLeadUpdated = () => {
+    // Refresh leads list when a lead is updated
+    fetchLeads();
+  };
+
+  const handleExport = async () => {
     // Export leads to CSV
-    console.log('Exporting leads...');
-  };
+    const headers = ['ID', 'Service', 'ZIP', 'Status', 'Disposition', 'Winning Bid', 'Created'];
+    const rows = leads.map(lead => [
+      lead.id,
+      lead.serviceType?.name || '',
+      lead.zipCode,
+      lead.status,
+      (lead as any).disposition || '',
+      lead.winningBid?.toFixed(2) || '',
+      new Date(lead.createdAt).toISOString()
+    ]);
 
-  // Calculate metrics
-  const totalLeads = leads.length;
-  const pendingLeads = leads.filter(l => l.status === 'PENDING').length;
-  const completedAuctions = leads.filter(l => l.auctionCompleted).length;
-  const failedLeads = leads.filter(l => l.status === 'FAILED').length;
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -108,7 +161,7 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Lead Management</h1>
           <p className="text-gray-500">Monitor and manage all incoming leads</p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <div className="text-sm text-gray-500">
             Last updated: {lastRefresh.toLocaleTimeString()}
@@ -125,65 +178,81 @@ export default function LeadsPage() {
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+          <div>
+            <p className="text-red-800 font-medium">Failed to load leads</p>
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+          <Button variant="outline" onClick={handleRefresh} className="ml-auto">
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
               Total Leads
             </CardTitle>
-            <Filter className="h-4 w-4 text-gray-400" />
+            <FileText className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalLeads}</div>
-            <p className="text-xs text-gray-500">
-              All leads in system
-            </p>
+            <div className="text-2xl font-bold">{stats.totalLeads}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
-              Pending Processing
+              Pending
             </CardTitle>
-            <Calendar className="h-4 w-4 text-gray-400" />
+            <Filter className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{pendingLeads}</div>
-            <p className="text-xs text-gray-500">
-              Awaiting auction
-            </p>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pendingLeads}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
-              Completed Auctions
+              Sold
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-gray-400" />
+            <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{completedAuctions}</div>
-            <p className="text-xs text-gray-500">
-              Successfully auctioned
-            </p>
+            <div className="text-2xl font-bold text-green-600">{stats.soldLeads}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
-              Failed Leads
+              Scrubbed
             </CardTitle>
-            <AlertCircle className="h-4 w-4 text-gray-400" />
+            <AlertCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{failedLeads}</div>
-            <p className="text-xs text-gray-500">
-              Requires attention
-            </p>
+            <div className="text-2xl font-bold text-red-600">{stats.scrubbedLeads}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Revenue
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              ${stats.totalRevenue.toFixed(2)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -195,6 +264,16 @@ export default function LeadsPage() {
         onViewDetails={handleViewDetails}
         onExport={handleExport}
       />
+
+      {/* Lead Detail Modal */}
+      {selectedLeadId && (
+        <LeadDetailModal
+          leadId={selectedLeadId}
+          adminUserId={ADMIN_USER_ID}
+          onClose={handleCloseModal}
+          onLeadUpdated={handleLeadUpdated}
+        />
+      )}
     </div>
   );
 }

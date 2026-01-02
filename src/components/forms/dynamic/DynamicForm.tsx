@@ -14,6 +14,7 @@ import { FormSubmitButton } from '../base/FormSubmitButton';
 import { FormProgress } from '../base/FormProgress';
 import { evaluateConditional } from '@/utils/forms/conditionals';
 import { cn } from '@/utils/cn';
+import { getAttributionData, AttributionData } from '@/utils/attribution';
 
 export interface DynamicFormProps {
   config: FormConfig;
@@ -47,6 +48,14 @@ export const DynamicForm = memo(function DynamicForm({
   } = useFormState(config, initialData);
 
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+
+  // Capture attribution data on mount (first touch)
+  const [attribution] = useState<AttributionData>(() => {
+    if (typeof window !== 'undefined') {
+      return getAttributionData();
+    }
+    return {};
+  });
 
   // Filter visible sections based on conditionals
   const visibleSections = useMemo(() => {
@@ -118,7 +127,8 @@ export const DynamicForm = memo(function DynamicForm({
           pageUrl: window.location.href,
           referrer: document.referrer,
           submissionTime: Date.now()
-        }
+        },
+        attribution
       };
 
       await onSubmit(submission);

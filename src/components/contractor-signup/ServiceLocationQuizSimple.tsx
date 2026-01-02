@@ -3,8 +3,8 @@
 import { useState, useCallback } from 'react';
 import { Search, X, MapPin, Building2, Map, Hash, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import ServiceAreaMapAdvanced from './ServiceAreaMapAdvanced';
 
 interface Location {
