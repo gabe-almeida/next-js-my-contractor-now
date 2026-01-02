@@ -275,6 +275,10 @@ async function handlePostResponse(
     }
   });
 
+  // Track the actual final status applied to the database
+  let finalStatus: LeadStatus = newStatus;
+  let forceUpdated = false;
+
   // Record history if update succeeded
   if (updateResult.count > 0) {
     await recordSystemStatusChange(
@@ -284,12 +288,56 @@ async function handlePostResponse(
       historyReason,
       ChangeSource.WEBHOOK
     );
+  } else {
+    // Race condition detected - status changed between read and update
+    // Re-fetch to see current state and log the conflict
+    const currentLead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { status: true }
+    });
+
+    logger.warn('Webhook update skipped due to race condition', {
+      leadId,
+      buyer,
+      attemptedTransition: `${oldStatus} → ${newStatus}`,
+      currentStatus: currentLead?.status || 'unknown',
+      webhookStatus: status,
+      requestId
+    });
+
+    // If buyer says delivery failed but we marked as SOLD, this is critical
+    // The buyer's response should take precedence since they know if delivery succeeded
+    if ((status === 'failed' || status === 'invalid') && currentLead?.status === 'SOLD') {
+      logger.error('CRITICAL: Buyer reports delivery failure but lead marked SOLD', {
+        leadId,
+        buyer,
+        reason,
+        requestId
+      });
+      // Force update to DELIVERY_FAILED since buyer response is authoritative
+      await prisma.lead.update({
+        where: { id: leadId },
+        data: {
+          status: LeadStatus.DELIVERY_FAILED,
+          updatedAt: new Date()
+        }
+      });
+      await recordSystemStatusChange(
+        leadId,
+        LeadStatus.SOLD,
+        LeadStatus.DELIVERY_FAILED,
+        `Buyer ${buyer} reported delivery failure (overriding SOLD): ${reason || status}`,
+        ChangeSource.WEBHOOK
+      );
+      finalStatus = LeadStatus.DELIVERY_FAILED;
+      forceUpdated = true;
+    }
   }
 
   // Also update Redis cache for consistency
   const lead = await RedisCache.get<{ status: string; updatedAt: Date; [key: string]: unknown }>(`lead:${leadId}`);
   if (lead) {
-    lead.status = newStatus;
+    lead.status = finalStatus;
     lead.updatedAt = new Date();
     await RedisCache.set(`lead:${leadId}`, lead, 3600);
   }
@@ -301,7 +349,8 @@ async function handlePostResponse(
     leadId,
     buyer,
     status,
-    newStatus,
+    finalStatus,
+    forceUpdated,
     reason,
     requestId
   });
@@ -311,7 +360,8 @@ async function handlePostResponse(
     leadId,
     buyer,
     status,
-    leadStatus: newStatus
+    leadStatus: finalStatus,
+    forceUpdated
   }, requestId);
 }
 

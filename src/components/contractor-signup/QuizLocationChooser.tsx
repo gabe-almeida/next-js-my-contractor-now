@@ -539,7 +539,7 @@ export default function QuizLocationChooser({
 
           <Button
             onClick={handleNextStep}
-            disabled={!canProceed && currentStep.minSelections && currentStep.minSelections > 0}
+            disabled={!canProceed && Boolean(currentStep.minSelections && currentStep.minSelections > 0)}
             className="flex items-center space-x-2"
           >
             <span>{isLastStep ? 'Complete Quiz' : 'Next Step'}</span>

@@ -14,13 +14,17 @@ export default function WindowsPage() {
         body: JSON.stringify({
           serviceTypeId: 'windows',
           formData: answers,
-          zipCode: answers.address?.zipCode || '00000', // Extract ZIP from address object
+          // Extract ZIP from address object (address can be string or {address, zipCode} object)
+          zipCode: typeof answers.address === 'object'
+            ? answers.address?.zipCode
+            : answers.zipCode || answers.address,
           ownsHome: answers.isHomeowner === 'yes',
           timeframe: answers.timeline,
           complianceData: {
-            tcpaConsent: true,
-            tcpaTimestamp: new Date().toISOString(),
-            tcpaConsentText: 'User agreed to be contacted by contractors and service providers',
+            // Use actual TCPA consent from form - NEVER hardcode compliance data
+            tcpaConsent: answers.tcpaConsent?.consented ?? false,
+            tcpaTimestamp: answers.tcpaConsent?.timestamp || new Date().toISOString(),
+            tcpaConsentText: answers.tcpaConsent?.text || 'TCPA consent not properly captured',
             attribution: answers.attribution // Marketing attribution data (utm params, click IDs, etc)
           }
         })

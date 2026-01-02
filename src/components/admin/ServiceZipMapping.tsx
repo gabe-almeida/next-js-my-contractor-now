@@ -47,7 +47,7 @@ export function ServiceZipMapping({
   // Handle individual zip code toggle
   const handleToggleZipCode = async (zipCodeId: string) => {
     try {
-      setLoading(prev => new Set([...prev, zipCodeId]));
+      setLoading(prev => new Set([...Array.from(prev), zipCodeId]));
 
       const zipCode = zipCodes.find(z => z.id === zipCodeId);
       if (!zipCode) return;
@@ -94,7 +94,7 @@ export function ServiceZipMapping({
     }
 
     try {
-      setLoading(prev => new Set([...prev, zipCodeId]));
+      setLoading(prev => new Set([...Array.from(prev), zipCodeId]));
 
       const response = await fetch(
         `/api/admin/buyers/${buyerId}/zip-codes?ids=${zipCodeId}`,

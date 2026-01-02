@@ -6,26 +6,33 @@ import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service
 import { LeadStatus, ChangeSource } from '@/types/database';
 import type { LeadData, ServiceType, ComplianceData } from '@/lib/templates/types';
 
+// Safe JSON parse with fallback - prevents worker crash on malformed data
+function safeJsonParse<T>(value: unknown, fallback: T, fieldName: string): T {
+  if (typeof value !== 'string') {
+    return value as T;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.error(`Failed to parse ${fieldName} JSON:`, error);
+    return fallback;
+  }
+}
+
 // Helper function to convert Prisma lead to LeadData format
 function convertToLeadData(lead: any): LeadData {
   const serviceType: ServiceType = {
     id: lead.serviceType.id,
     name: lead.serviceType.name,
-    formSchema: typeof lead.serviceType.formSchema === 'string'
-      ? JSON.parse(lead.serviceType.formSchema)
-      : lead.serviceType.formSchema,
+    formSchema: safeJsonParse(lead.serviceType.formSchema, {}, 'formSchema'),
     active: lead.serviceType.active,
   };
 
   const complianceData: ComplianceData | undefined = lead.complianceData
-    ? (typeof lead.complianceData === 'string'
-        ? JSON.parse(lead.complianceData)
-        : lead.complianceData)
+    ? safeJsonParse<ComplianceData | undefined>(lead.complianceData, undefined, 'complianceData')
     : undefined;
 
-  const formData = typeof lead.formData === 'string'
-    ? JSON.parse(lead.formData)
-    : lead.formData;
+  const formData = safeJsonParse(lead.formData, {}, 'formData');
 
   return {
     id: lead.id,

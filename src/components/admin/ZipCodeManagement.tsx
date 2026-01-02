@@ -43,7 +43,10 @@ const zipCodeFormSchema = z.object({
   maxLeadsPerDay: z.number().int().min(1).optional(),
 });
 
-type ZipCodeFormData = z.infer<typeof zipCodeFormSchema>;
+// Input type (raw form values before zod transform)
+type ZipCodeFormInput = z.input<typeof zipCodeFormSchema>;
+// Output type (validated data after zod transform)
+type ZipCodeFormData = z.output<typeof zipCodeFormSchema>;
 
 interface ZipCodeManagementProps {
   buyerId: string;
@@ -77,19 +80,23 @@ export function ZipCodeManagement({
     watch,
     setValue,
     reset
-  } = useForm<ZipCodeFormData>({
+  } = useForm<ZipCodeFormInput>({
     resolver: zodResolver(zipCodeFormSchema),
     defaultValues: {
-      priority: 5
+      zipCodes: '',
+      serviceTypeId: '',
+      priority: 5,
+      maxLeadsPerDay: undefined
     }
   });
 
-  const watchedZipCodes = watch('zipCodes');
+  // watch returns the raw input value (string), not the transformed value
+  const watchedZipCodes = watch('zipCodes') as unknown as string | undefined;
   const watchedServiceId = watch('serviceTypeId');
 
   // Parse and preview zip codes
   React.useEffect(() => {
-    if (typeof watchedZipCodes === 'string' && watchedZipCodes.trim()) {
+    if (watchedZipCodes && watchedZipCodes.trim()) {
       const parsed = watchedZipCodes
         .split(/[,\s\n]+/)
         .map(zip => zip.trim())
@@ -100,8 +107,8 @@ export function ZipCodeManagement({
     }
   }, [watchedZipCodes]);
 
-  // Handle form submission
-  const onSubmit = async (data: ZipCodeFormData) => {
+  // Handle form submission - data.zipCodes is transformed from string to string[] by zod
+  const onSubmit = async (data: { serviceTypeId: string; zipCodes: string[]; priority: number; maxLeadsPerDay?: number }) => {
     try {
       setLoading(true);
       setError(null);
@@ -248,7 +255,7 @@ export function ZipCodeManagement({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit(onSubmit as any)} className="p-6 space-y-6">
             {/* Service Selection */}
             <div className="form-group">
               <label className="form-label">Service Type *</label>

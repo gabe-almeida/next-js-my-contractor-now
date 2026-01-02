@@ -9,16 +9,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ServiceType, FormField } from '@/types';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 
+const formFieldOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+});
+
 const formFieldSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(['text', 'number', 'select', 'checkbox', 'textarea', 'radio']),
+  type: z.enum(['text', 'number', 'select', 'checkbox', 'textarea', 'radio', 'date', 'email', 'phone', 'multiselect']),
   label: z.string().min(1, 'Label is required'),
   name: z.string().min(1, 'Name is required'),
   required: z.boolean(),
-  options: z.array(z.string()).optional(),
+  options: z.array(formFieldOptionSchema).optional(),
+  placeholder: z.string().optional(),
   validation: z.object({
     min: z.number().optional(),
     max: z.number().optional(),
+    minLength: z.number().optional(),
+    maxLength: z.number().optional(),
     pattern: z.string().optional(),
     message: z.string().optional(),
   }).optional(),
@@ -60,7 +68,7 @@ export function ServiceForm({
       name: service?.name || '',
       description: service?.description || '',
       active: service?.active ?? true,
-      formFields: service?.formSchema || [
+      formFields: service?.formSchema?.fields || [
         {
           type: 'text',
           label: 'ZIP Code',

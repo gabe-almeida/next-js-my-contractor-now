@@ -232,7 +232,7 @@ export function AddMappingModal({
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="default"
             onClick={handleAdd}
             disabled={!selectedSource || !targetField.trim()}
             className="inline-flex items-center gap-2"
