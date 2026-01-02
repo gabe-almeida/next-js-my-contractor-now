@@ -14,6 +14,11 @@ import {
   createEmptyFieldMappingConfig,
 } from "@/types/field-mapping";
 import { decrypt } from "@/lib/security/encryption";
+import {
+  BuyerConfig,
+  BuyerServiceConfig,
+  TemplateMapping,
+} from "../templates/types";
 
 /**
  * Database-loaded buyer configuration
@@ -25,12 +30,42 @@ import { decrypt } from "@/lib/security/encryption";
 export interface DatabaseBuyerConfig {
   id: string;
   name: string;
-  slug: string;
   apiUrl: string | null;
   active: boolean;
   authConfig: DatabaseAuthConfig;
   globalSettings: DatabaseGlobalSettings;
-  metadata: Record<string, unknown>;
+  pingTimeout: number;
+  postTimeout: number;
+  complianceFieldMappings: ComplianceFieldMappings | null;
+}
+
+/**
+ * Compliance field mappings from database
+ * Allows each buyer to specify their preferred field names
+ */
+export interface ComplianceFieldMappings {
+  trustedForm?: {
+    certUrl?: string[];
+    certId?: string[];
+  };
+  jornaya?: {
+    leadId?: string[];
+  };
+  tcpa?: {
+    consent?: string[];
+    timestamp?: string[];
+  };
+  technical?: {
+    ipAddress?: string[];
+    userAgent?: string[];
+    timestamp?: string[];
+  };
+  geo?: {
+    latitude?: string[];
+    longitude?: string[];
+    city?: string[];
+    state?: string[];
+  };
 }
 
 /**
@@ -113,19 +148,20 @@ export async function loadBuyerConfig(
     }
   }
 
-  // Load from database
+  // Load from database with all necessary fields
   const buyer = await prisma.buyer.findUnique({
     where: { id: buyerId },
     select: {
       id: true,
       name: true,
-      slug: true,
       apiUrl: true,
       authConfig: true,
       webhookSecret: true,
       active: true,
       createdAt: true,
-      metadata: true,
+      pingTimeout: true,
+      postTimeout: true,
+      complianceFieldMappings: true,
     },
   });
 
@@ -164,9 +200,20 @@ export async function loadBuyerConfig(
     }
   }
 
+  // Parse compliance field mappings if present
+  let complianceFieldMappings: ComplianceFieldMappings | null = null;
+  if (buyer.complianceFieldMappings) {
+    try {
+      complianceFieldMappings = JSON.parse(buyer.complianceFieldMappings);
+    } catch (error) {
+      console.error(`Failed to parse compliance field mappings for buyer ${buyerId}:`, error);
+    }
+  }
+
   // Build global settings with defaults
+  // Use buyer's configured timeouts, falling back to defaults
   const globalSettings: DatabaseGlobalSettings = {
-    defaultTimeout: 5000,
+    defaultTimeout: buyer.pingTimeout * 1000 || 5000, // Convert seconds to ms
     maxConcurrentRequests: 50,
     rateLimiting: {
       requestsPerMinute: 100,
@@ -180,25 +227,16 @@ export async function loadBuyerConfig(
     },
   };
 
-  // Parse metadata if present
-  let metadata: Record<string, unknown> = {};
-  if (buyer.metadata) {
-    try {
-      metadata = JSON.parse(buyer.metadata);
-    } catch {
-      // Ignore parse errors
-    }
-  }
-
   const config: DatabaseBuyerConfig = {
     id: buyer.id,
     name: buyer.name,
-    slug: buyer.slug,
     apiUrl: buyer.apiUrl,
     active: buyer.active,
     authConfig,
     globalSettings,
-    metadata,
+    pingTimeout: buyer.pingTimeout * 1000, // Convert seconds to ms
+    postTimeout: buyer.postTimeout * 1000, // Convert seconds to ms
+    complianceFieldMappings,
   };
 
   // Update cache
@@ -448,6 +486,198 @@ export function invalidateServiceConfigCache(buyerId: string, serviceTypeId: str
 export function clearAllCaches(): void {
   buyerCache.clear();
   serviceConfigCache.clear();
+}
+
+/**
+ * Convert database buyer config to auction engine BuyerConfig type
+ *
+ * WHY: The auction engine expects BuyerConfig type from templates/types.ts
+ * WHEN: When loading a buyer from database instead of hardcoded registry
+ * HOW: Map database fields to expected BuyerConfig structure
+ *
+ * @param dbConfig - Database buyer configuration
+ * @param serviceConfigs - Service configurations for this buyer
+ * @returns BuyerConfig compatible with auction engine
+ */
+export function toBuyerConfig(
+  dbConfig: DatabaseBuyerConfig,
+  serviceConfigs: BuyerServiceConfig[]
+): BuyerConfig {
+  // Use database compliance field mappings if available, otherwise use defaults
+  const complianceFieldMappings = dbConfig.complianceFieldMappings || {
+    trustedForm: {
+      certUrl: ["trustedform_cert_url", "tf_certificate", "xxTrustedFormCertUrl"],
+      certId: ["trustedform_cert_id", "tf_cert_id", "xxTrustedFormToken"],
+    },
+    jornaya: {
+      leadId: ["jornaya_lead_id", "leadid_token", "universal_leadid"],
+    },
+    tcpa: {
+      consent: ["tcpa_consent", "consent_given"],
+      timestamp: ["consent_date", "tcpa_timestamp"],
+    },
+    technical: {
+      ipAddress: ["ip_address", "client_ip"],
+      userAgent: ["user_agent"],
+      timestamp: ["submit_timestamp"],
+    },
+  };
+
+  return {
+    id: dbConfig.id,
+    name: dbConfig.name,
+    slug: dbConfig.name.toLowerCase().replace(/\s+/g, "-"),
+    apiUrl: dbConfig.apiUrl || "",
+    authConfig: {
+      type: dbConfig.authConfig.type,
+      credentials: dbConfig.authConfig.credentials,
+      headers: dbConfig.authConfig.headers,
+    },
+    active: dbConfig.active,
+    serviceConfigs,
+    globalSettings: {
+      defaultTimeout: dbConfig.globalSettings.defaultTimeout,
+      maxConcurrentRequests: dbConfig.globalSettings.maxConcurrentRequests,
+      rateLimiting: dbConfig.globalSettings.rateLimiting,
+      failoverSettings: {
+        enabled: true,
+        maxFailures: 3,
+        cooldownPeriod: 300000,
+      },
+      complianceRequirements: {
+        requireTrustedForm: dbConfig.globalSettings.complianceRequirements.requireTrustedForm,
+        requireJornaya: dbConfig.globalSettings.complianceRequirements.requireJornaya,
+        requireTcpaConsent: dbConfig.globalSettings.complianceRequirements.requireTcpaConsent,
+        additionalRequirements: [],
+      },
+      // Use database compliance field mappings or defaults
+      complianceFieldMappings,
+    },
+    metadata: {
+      loadedFromDatabase: true,
+      loadedAt: new Date().toISOString(),
+    },
+  };
+}
+
+/**
+ * Convert database service config to auction engine BuyerServiceConfig type
+ *
+ * WHY: The auction engine expects BuyerServiceConfig type from templates/types.ts
+ * WHEN: When loading service config from database instead of hardcoded registry
+ * HOW: Map database fields and parse JSON templates into expected structure
+ *
+ * @param dbConfig - Database service configuration
+ * @returns BuyerServiceConfig compatible with auction engine
+ */
+export function toServiceConfig(
+  dbConfig: DatabaseServiceConfig
+): BuyerServiceConfig {
+  // Build ping template from field mapping config
+  const pingMappings: TemplateMapping[] = [];
+  const postMappings: TemplateMapping[] = [];
+
+  // Convert field mappings from database format to TemplateMapping format
+  // FieldMapping uses includeInPing/includeInPost booleans
+  for (const mapping of dbConfig.fieldMappingConfig.mappings) {
+    const templateMapping: TemplateMapping = {
+      sourceField: mapping.sourceField,
+      targetField: mapping.targetField,
+      required: mapping.required || false,
+      transform: mapping.transform || undefined,
+      defaultValue: mapping.defaultValue,
+    };
+
+    // Add to appropriate template based on includeIn flags
+    if (mapping.includeInPing) {
+      pingMappings.push(templateMapping);
+    }
+    if (mapping.includeInPost) {
+      postMappings.push(templateMapping);
+    }
+  }
+
+  // Include static fields as additionalFields in the templates
+  const staticFields = dbConfig.fieldMappingConfig.staticFields || {};
+
+  return {
+    buyerId: dbConfig.buyerId,
+    serviceTypeId: dbConfig.serviceTypeId,
+    serviceTypeName: dbConfig.serviceTypeName,
+    active: dbConfig.active,
+    priority: dbConfig.priority,
+    pricing: {
+      basePrice: dbConfig.minBid,
+      priceModifiers: [],
+      maxBid: dbConfig.maxBid,
+      minBid: dbConfig.minBid,
+      currency: "USD",
+    },
+    pingTemplate: {
+      mappings: pingMappings,
+      includeCompliance: dbConfig.requiresTrustedForm || dbConfig.requiresJornaya,
+      additionalFields: staticFields,
+    },
+    postTemplate: {
+      mappings: postMappings,
+      includeCompliance: true, // Always include compliance in POST
+      additionalFields: staticFields,
+    },
+    webhookConfig: {
+      pingUrl: dbConfig.webhookConfig.pingUrl,
+      postUrl: dbConfig.webhookConfig.postUrl,
+      timeouts: dbConfig.webhookConfig.timeouts,
+      retryPolicy: {
+        maxAttempts: 3,
+        backoffStrategy: "exponential",
+        baseDelay: 1000,
+        maxDelay: 10000,
+      },
+    },
+  };
+}
+
+/**
+ * Load buyer configuration from database and convert to auction engine types
+ *
+ * WHY: Get buyer + service configs in the format expected by auction engine
+ * WHEN: When BuyerConfigurationRegistry doesn't have the buyer (database-only buyers)
+ * HOW: Load from database using existing functions, then convert using adapters
+ *
+ * @param buyerId - The buyer ID to load
+ * @param serviceTypeId - The service type ID
+ * @returns BuyerConfig and BuyerServiceConfig for auction engine, or null if not found
+ */
+export async function loadBuyerConfigForAuction(
+  buyerId: string,
+  serviceTypeId: string
+): Promise<{ buyerConfig: BuyerConfig; serviceConfig: BuyerServiceConfig } | null> {
+  // Load buyer from database
+  const dbBuyerConfig = await loadBuyerConfig(buyerId);
+  if (!dbBuyerConfig) {
+    return null;
+  }
+
+  // Load service config from database
+  const dbServiceConfig = await loadServiceConfig(buyerId, serviceTypeId);
+  if (!dbServiceConfig) {
+    return null;
+  }
+
+  // Use buyer-level timeouts if service-level ones are default values
+  // This allows buyer-level timeout settings to apply when templates don't specify
+  if (dbServiceConfig.webhookConfig.timeouts.ping === 3000) {
+    dbServiceConfig.webhookConfig.timeouts.ping = dbBuyerConfig.pingTimeout;
+  }
+  if (dbServiceConfig.webhookConfig.timeouts.post === 8000) {
+    dbServiceConfig.webhookConfig.timeouts.post = dbBuyerConfig.postTimeout;
+  }
+
+  // Convert to auction engine types
+  const serviceConfig = toServiceConfig(dbServiceConfig);
+  const buyerConfig = toBuyerConfig(dbBuyerConfig, [serviceConfig]);
+
+  return { buyerConfig, serviceConfig };
 }
 
 /**

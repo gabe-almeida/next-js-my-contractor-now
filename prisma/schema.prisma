@@ -35,6 +35,7 @@ model Buyer {
   postTimeout             Int                   @default(60) @map("post_timeout")
   active                  Boolean               @default(true)
   complianceFieldMappings String?               @map("compliance_field_mappings")
+  responseMappingConfig   String?               @map("response_mapping_config")
   contactName             String?               @map("contact_name")
   contactEmail            String?               @map("contact_email")
   contactPhone            String?               @map("contact_phone")

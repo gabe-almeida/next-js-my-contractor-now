@@ -55,16 +55,16 @@ class BuyerConfigurationRegistry {
    */
   static getBuyersForService(serviceTypeId: string): BuyerConfig[] {
     const buyers: BuyerConfig[] = [];
-    
-    for (const [buyerId, buyer] of this.configs) {
+
+    Array.from(this.configs.values()).forEach((buyer) => {
       const hasService = buyer.serviceConfigs.some(
         sc => sc.serviceTypeId === serviceTypeId && sc.active
       );
       if (hasService && buyer.active) {
         buyers.push(buyer);
       }
-    }
-    
+    });
+
     return buyers.sort((a, b) => {
       // Sort by priority of service configuration
       const aConfig = this.getServiceConfig(a.id, serviceTypeId);

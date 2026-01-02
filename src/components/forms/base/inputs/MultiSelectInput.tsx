@@ -9,7 +9,7 @@ interface MultiSelectInputProps {
   name: string;
   value: string[];
   onChange: (value: string[]) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   options: FormFieldOption[];
   placeholder?: string;
   disabled?: boolean;
@@ -53,7 +53,7 @@ export function MultiSelectInput({
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        onBlur();
+        onBlur?.();
       }
     }
 
@@ -100,7 +100,7 @@ export function MultiSelectInput({
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
       setIsOpen(false);
-      onBlur();
+      onBlur?.();
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       handleToggle();

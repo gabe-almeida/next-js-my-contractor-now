@@ -25,10 +25,12 @@ import {
   MapPin,
   Home,
   CheckCircle,
+  XCircle,
   Shield,
   TrendingUp,
   Globe,
-  MousePointer
+  MousePointer,
+  Activity
 } from 'lucide-react';
 import { LeadStatusHistory } from './LeadStatusHistory';
 import { ChangeStatusModal } from './ChangeStatusModal';
@@ -61,6 +63,29 @@ interface AttributionData {
   first_touch_timestamp?: string;
   session_id?: string;
   raw_query_params?: Record<string, string>;
+}
+
+interface TransactionItem {
+  id: string;
+  buyerId: string;
+  actionType: 'PING' | 'POST' | 'PING_WEBHOOK' | 'POST_WEBHOOK' | 'STATUS_UPDATE';
+  status: string;
+  bidAmount: number | null;
+  responseTime: number | null;
+  createdAt: string;
+}
+
+interface AuctionResults {
+  winningBuyerId: string;
+  winningBid: number;
+  allBids: Array<{
+    buyerId: string;
+    bid: number;
+    accepted: boolean;
+    responseTime: number | null;
+  }>;
+  totalResponseTime: number;
+  status: string;
 }
 
 interface LeadDetail {
@@ -99,6 +124,8 @@ interface LeadDetail {
       attribution?: AttributionData;
     };
   };
+  transactions?: TransactionItem[];
+  auctionResults?: AuctionResults | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -268,7 +295,7 @@ export function LeadDetailModal({
                     </Button>
                     {canIssueCredit && (
                       <Button
-                        variant="primary"
+                        variant="default"
                         onClick={() => setShowIssueCredit(true)}
                         className="bg-green-600 hover:bg-green-700"
                       >
@@ -614,6 +641,115 @@ export function LeadDetailModal({
                           </div>
                         )}
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Auction Participation / Transaction History */}
+                {lead.transactions && lead.transactions.length > 0 && (
+                  <div className="bg-white border rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                      <Activity className="h-4 w-4 mr-2" />
+                      Auction Participation ({lead.transactions.length} transactions)
+                    </h4>
+
+                    {/* Auction Summary */}
+                    {lead.auctionResults && (
+                      <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500 block">Total Bids</span>
+                            <span className="font-semibold">{lead.auctionResults.allBids?.length || 0}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block">Winning Bid</span>
+                            <span className="font-semibold text-green-600">
+                              ${lead.auctionResults.winningBid?.toFixed(2) || '-'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block">Total Response Time</span>
+                            <span className="font-semibold">{lead.auctionResults.totalResponseTime}ms</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block">Auction Status</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              lead.auctionResults.status === 'completed'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {lead.auctionResults.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Transaction Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Type</th>
+                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Buyer</th>
+                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Status</th>
+                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Bid</th>
+                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Response</th>
+                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lead.transactions.map((tx) => (
+                            <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-2">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  tx.actionType === 'PING'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : tx.actionType === 'POST'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : tx.actionType === 'PING_WEBHOOK'
+                                    ? 'bg-cyan-100 text-cyan-800'
+                                    : tx.actionType === 'POST_WEBHOOK'
+                                    ? 'bg-indigo-100 text-indigo-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {tx.actionType.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="py-2 px-2">
+                                <a
+                                  href={`/admin/buyers/${tx.buyerId}`}
+                                  className="text-blue-600 hover:text-blue-800 font-mono text-xs"
+                                >
+                                  {tx.buyerId.slice(0, 8)}...
+                                </a>
+                              </td>
+                              <td className="py-2 px-2">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  tx.status === 'SUCCESS'
+                                    ? 'bg-green-100 text-green-800'
+                                    : tx.status === 'FAILED'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {tx.status === 'SUCCESS' && <CheckCircle className="h-3 w-3 mr-1" />}
+                                  {tx.status === 'FAILED' && <XCircle className="h-3 w-3 mr-1" />}
+                                  {tx.status}
+                                </span>
+                              </td>
+                              <td className="py-2 px-2 text-gray-900">
+                                {tx.bidAmount ? `$${tx.bidAmount.toFixed(2)}` : '-'}
+                              </td>
+                              <td className="py-2 px-2 text-gray-600">
+                                {tx.responseTime ? `${tx.responseTime}ms` : '-'}
+                              </td>
+                              <td className="py-2 px-2 text-gray-500 text-xs">
+                                {new Date(tx.createdAt).toLocaleTimeString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 )}

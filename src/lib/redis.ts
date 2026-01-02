@@ -5,7 +5,6 @@ const globalForRedis = globalThis as unknown as {
 };
 
 export const redis = globalForRedis.redis ?? new Redis(process.env.REDIS_URL!, {
-  retryDelayOnFailover: 100,
   enableReadyCheck: false,
   maxRetriesPerRequest: 3,
   connectTimeout: 10000,

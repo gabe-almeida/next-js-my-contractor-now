@@ -43,8 +43,7 @@ export function useRadar(): UseRadarReturn {
 
         // Initialize Radar SDK with options as per documentation
         await Radar.initialize(publishableKey, {
-          debug: false,
-          desktopId: typeof window !== 'undefined' ? window.location.hostname : undefined
+          debug: false
         });
         
         radarRef.current = Radar;
@@ -90,14 +89,13 @@ export function useRadar(): UseRadarReturn {
       // Use the correct Radar.autocomplete API as per documentation
       const result = await radarRef.current.autocomplete({
         query: query.trim(),
-        limit: 10,
-        country: 'US'
+        limit: 10
       });
 
       secureLog.log('Radar autocomplete result received', { resultCount: Array.isArray(result) ? result.length : 1 });
 
       // Handle different possible response formats from Radar API
-      let addresses = [];
+      let addresses: any[] = [];
       if (result?.addresses && Array.isArray(result.addresses)) {
         addresses = result.addresses;
       } else if (Array.isArray(result)) {

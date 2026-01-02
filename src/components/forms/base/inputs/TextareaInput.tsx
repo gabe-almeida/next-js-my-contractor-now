@@ -8,7 +8,7 @@ interface TextareaInputProps {
   name: string;
   value: string;
   onChange: (value: string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   placeholder?: string;
   disabled?: boolean;
   rows?: number;
@@ -37,7 +37,7 @@ export function TextareaInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   const textareaClassName = cn(

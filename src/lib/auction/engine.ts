@@ -19,6 +19,8 @@ import {
 import { TemplateEngine } from '../templates/engine';
 import { BuyerConfigurationRegistry } from '../buyers/configurations';
 import { BuyerEligibilityService, EligibleBuyer } from '../services/buyer-eligibility-service';
+import { BuyerResponseParser } from '../buyers/response-parser';
+import { loadBuyerConfigForAuction } from '../field-mapping/database-buyer-loader';
 import { logger } from '../logger';
 
 export class AuctionEngine {
@@ -161,32 +163,43 @@ export class AuctionEngine {
       const responseTime = Date.now() - startTime;
       const responseData = await response.json();
 
-      // Extract bid amount from response BEFORE logging
-      const bidAmount = this.extractBidAmount(responseData, buyer);
+      // Use BuyerResponseParser to parse the response flexibly
+      const parsedResponse = await BuyerResponseParser.parsePingResponse(
+        buyer.id,
+        response.status,
+        responseData
+      );
 
       // Validate bid against pricing rules
-      const validatedBid = this.validateBid(bidAmount, serviceConfig);
+      const validatedBid = this.validateBid(parsedResponse.bidAmount, serviceConfig);
 
-      // Log transaction with bid amount included
+      // Determine success: parser says accepted AND bid is valid
+      const isSuccess = parsedResponse.status === 'accepted' && validatedBid > 0;
+
+      // Log transaction with parsed data
       await this.logTransaction(lead.id, buyer.id, 'PING', {
         request: payload,
         response: responseData,
         statusCode: response.status,
         responseTime,
-        success: response.ok,
+        success: isSuccess,
         bidAmount: validatedBid,
-        originalBidAmount: bidAmount
+        originalBidAmount: parsedResponse.bidAmount,
+        parsedStatus: parsedResponse.status,
+        rawStatus: parsedResponse.rawStatus
       });
 
       return {
         buyerId: buyer.id,
         bidAmount: validatedBid,
-        success: response.ok && validatedBid > 0,
+        success: isSuccess,
         responseTime,
         metadata: {
           statusCode: response.status,
-          originalBid: bidAmount,
-          validated: validatedBid > 0
+          originalBid: parsedResponse.bidAmount,
+          validated: validatedBid > 0,
+          parsedStatus: parsedResponse.status,
+          rawStatus: parsedResponse.rawStatus
         }
       };
 
@@ -303,7 +316,7 @@ export class AuctionEngine {
       const eligibilityResult = await BuyerEligibilityService.getEligibleBuyers({
         serviceTypeId: lead.serviceTypeId,
         zipCode: lead.zipCode,
-        leadValue: lead.estimatedValue,
+        leadValue: undefined,
         maxParticipants: config.maxParticipants,
         requireMinBid: config.requireMinimumBid,
         minBidThreshold: config.minimumBid
@@ -321,19 +334,36 @@ export class AuctionEngine {
       const eligibleBuyers: EligibleBuyerWithConfig[] = [];
 
       for (const eligibleBuyer of eligibilityResult.eligible) {
-        // Get the buyer configuration
-        const buyerConfig = BuyerConfigurationRegistry.get(eligibleBuyer.buyerId);
-        const serviceConfig = BuyerConfigurationRegistry.getServiceConfig(
+        // Get the buyer configuration - first try hardcoded registry, then database
+        let buyerConfig = BuyerConfigurationRegistry.get(eligibleBuyer.buyerId);
+        let serviceConfig = BuyerConfigurationRegistry.getServiceConfig(
           eligibleBuyer.buyerId,
           lead.serviceTypeId
         );
 
+        // If not in hardcoded registry, load from database
+        // This allows contractors and admin-configured buyers to participate
         if (!buyerConfig || !serviceConfig) {
-          logger.warn('Buyer configuration not found', {
-            buyerId: eligibleBuyer.buyerId,
-            serviceTypeId: lead.serviceTypeId
-          });
-          continue;
+          const dbConfig = await loadBuyerConfigForAuction(
+            eligibleBuyer.buyerId,
+            lead.serviceTypeId
+          );
+
+          if (dbConfig) {
+            buyerConfig = dbConfig.buyerConfig;
+            serviceConfig = dbConfig.serviceConfig;
+            logger.info('Loaded buyer configuration from database', {
+              buyerId: eligibleBuyer.buyerId,
+              serviceTypeId: lead.serviceTypeId,
+              buyerName: buyerConfig.name
+            });
+          } else {
+            logger.warn('Buyer configuration not found in registry or database', {
+              buyerId: eligibleBuyer.buyerId,
+              serviceTypeId: lead.serviceTypeId
+            });
+            continue;
+          }
         }
 
         // Additional compliance and restriction checks
@@ -550,10 +580,12 @@ export class AuctionEngine {
   }
 
   /**
-   * Extract bid amount from buyer response
+   * @deprecated Use BuyerResponseParser.parsePingResponse() instead.
+   * This method is kept for backwards compatibility but is no longer called.
+   * The new parser supports configurable field names per buyer.
    */
-  private static extractBidAmount(responseData: any, buyer: BuyerConfig): number {
-    // Different buyers may use different field names for bid amount
+  private static extractBidAmount(responseData: any, _buyer: BuyerConfig): number {
+    // Legacy implementation - use BuyerResponseParser instead
     const bidFields = [
       'bidAmount', 'bid_amount', 'price', 'cost',
       'offer', 'amount', 'value', 'lead_price'
@@ -568,13 +600,8 @@ export class AuctionEngine {
       }
     }
 
-    // If no bid amount found but response indicates interest, use base price
     if (responseData.interested === true || responseData.accept === true) {
-      const serviceConfig = BuyerConfigurationRegistry.getServiceConfig(
-        buyer.id,
-        'default' // This would need to be passed in properly
-      );
-      return serviceConfig?.pricing.basePrice || 0;
+      return 0; // Would need base price from service config
     }
 
     return 0;
@@ -774,7 +801,7 @@ export class AuctionEngine {
         }
       });
 
-      return winningTransaction?.bidAmount || 0;
+      return winningTransaction?.bidAmount ? Number(winningTransaction.bidAmount) : 0;
     } catch (error) {
       logger.error('Failed to get winning bid', {
         leadId,
@@ -985,7 +1012,7 @@ interface AuctionState {
   leadId: string;
   serviceTypeId: string;
   startTime: number;
-  buyers: EligibleBuyer[];
+  buyers: EligibleBuyerWithConfig[];
   bids: BidResponse[];
   winner?: BidResponse;
   status: 'running' | 'completed' | 'failed' | 'cancelled';

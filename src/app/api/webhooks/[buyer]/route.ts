@@ -7,6 +7,8 @@ import { verifyWebhookAuth } from '@/lib/middleware/webhook-auth';
 import { prisma } from '@/lib/prisma';
 import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
+import { BuyerResponseParser } from '@/lib/buyers/response-parser';
+import { NormalizedPingStatus, NormalizedPostStatus } from '@/types/response-mapping';
 
 // Webhook endpoint for buyer responses
 async function handleBuyerWebhook(
@@ -69,9 +71,12 @@ async function handleBuyerWebhook(
       return NextResponse.json(response, { status: 403 });
     }
     
-    // Validate lead exists
-    const leadData = await RedisCache.get(`lead:${leadId}`);
-    if (!leadData) {
+    // Validate lead exists in database (source of truth)
+    const leadExists = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { id: true }
+    });
+    if (!leadExists) {
       const response = errorResponse(
         'LEAD_NOT_FOUND',
         'Lead not found',
@@ -81,7 +86,7 @@ async function handleBuyerWebhook(
       );
       return NextResponse.json(response, { status: 404 });
     }
-    
+
     // Process webhook based on action type
     let webhookResponse;
     
@@ -146,83 +151,133 @@ async function handleBuyerWebhook(
 // Handle ping response (bid submission)
 async function handlePingResponse(
   leadId: string,
-  buyer: string,
-  status: string,
+  buyerName: string,
+  rawStatus: string,
   bid: number,
   body: any,
   requestId: string
 ) {
-  const validStatuses = ['accepted', 'rejected', 'error'];
-  
-  if (!validStatuses.includes(status)) {
+  // Get buyer ID from name for parser lookup
+  const buyerRecord = await prisma.buyer.findFirst({
+    where: { name: { equals: buyerName, mode: 'insensitive' } },
+    select: { id: true }
+  });
+
+  // Use BuyerResponseParser to normalize the status using buyer's configured mappings
+  // Pass 200 as HTTP status since webhook was received successfully
+  const parsedResponse = await BuyerResponseParser.parsePingResponse(
+    buyerRecord?.id || buyerName,
+    200,
+    { status: rawStatus, bid, ...body }
+  );
+
+  const normalizedStatus: NormalizedPingStatus = parsedResponse.status;
+  const extractedBid = parsedResponse.bidAmount || bid;
+
+  // Ensure we have buyer ID for database persistence
+  const buyerId = buyerRecord?.id;
+  if (!buyerId) {
+    logger.error('Buyer ID not found for webhook transaction', { buyerName, leadId });
     return errorResponse(
-      'INVALID_PING_STATUS',
-      'Invalid ping response status',
-      { status, validStatuses },
-      'status',
+      'BUYER_NOT_FOUND',
+      'Buyer record not found',
+      { buyerName },
+      'buyer',
       requestId
     );
   }
-  
-  if (status === 'accepted') {
+
+  if (normalizedStatus === 'accepted') {
     // Validate bid amount
-    if (!bid || typeof bid !== 'number' || bid <= 0) {
+    if (!extractedBid || extractedBid <= 0) {
       return errorResponse(
         'INVALID_BID',
         'Invalid bid amount for accepted ping',
-        { bid },
+        { bid: extractedBid, rawStatus, normalizedStatus },
         'bid',
         requestId
       );
     }
-    
-    // Store bid in auction system
-    await storeBidResponse(leadId, buyer, bid, body);
-    
+
+    // Store bid in auction system (now persists to database)
+    await storeBidResponse(leadId, buyerId, buyerName, extractedBid, body);
+
     logger.info('Bid received from buyer', {
       leadId,
-      buyer,
-      bid,
+      buyer: buyerName,
+      bid: extractedBid,
+      rawStatus,
+      normalizedStatus,
       requestId
     });
-  } else if (status === 'rejected') {
-    // Store rejection reason
-    await storeBidRejection(leadId, buyer, body.reason || 'No reason provided');
-    
+  } else if (normalizedStatus === 'rejected') {
+    // Store rejection reason (now persists to database)
+    await storeBidRejection(leadId, buyerId, buyerName, body.reason || 'No reason provided');
+
     logger.info('Lead rejected by buyer', {
       leadId,
-      buyer,
+      buyer: buyerName,
       reason: body.reason,
+      rawStatus,
+      normalizedStatus,
+      requestId
+    });
+  } else {
+    // Error status
+    logger.warn('Ping response error from buyer', {
+      leadId,
+      buyer: buyerName,
+      rawStatus,
+      normalizedStatus,
       requestId
     });
   }
-  
+
   return successResponse({
     message: 'Ping response processed successfully',
     leadId,
-    buyer,
-    status,
-    bid: status === 'accepted' ? bid : undefined
+    buyer: buyerName,
+    rawStatus,
+    normalizedStatus,
+    bid: normalizedStatus === 'accepted' ? extractedBid : undefined
   }, requestId);
 }
 
 // Handle post response (final lead delivery confirmation)
 async function handlePostResponse(
   leadId: string,
-  buyer: string,
-  status: string,
+  buyerName: string,
+  rawStatus: string,
   reason: string,
   body: any,
   requestId: string
 ) {
-  const validStatuses = ['delivered', 'failed', 'duplicate', 'invalid'];
+  // Get buyer ID from name for parser lookup
+  const buyerRecord = await prisma.buyer.findFirst({
+    where: { name: { equals: buyerName, mode: 'insensitive' } },
+    select: { id: true }
+  });
 
-  if (!validStatuses.includes(status)) {
+  // Use BuyerResponseParser to normalize the status using buyer's configured mappings
+  // Pass 200 as HTTP status since webhook was received successfully
+  const parsedResponse = await BuyerResponseParser.parsePostResponse(
+    buyerRecord?.id || buyerName,
+    200,
+    { status: rawStatus, reason, ...body }
+  );
+
+  const normalizedStatus: NormalizedPostStatus = parsedResponse.status;
+  const extractedReason = parsedResponse.reason || reason;
+
+  // Ensure we have buyer ID for database persistence
+  const buyerId = buyerRecord?.id;
+  if (!buyerId) {
+    logger.error('Buyer ID not found for webhook transaction', { buyerName, leadId });
     return errorResponse(
-      'INVALID_POST_STATUS',
-      'Invalid post response status',
-      { status, validStatuses },
-      'status',
+      'BUYER_NOT_FOUND',
+      'Buyer record not found',
+      { buyerName },
+      'buyer',
       requestId
     );
   }
@@ -247,19 +302,22 @@ async function handlePostResponse(
   let newDisposition: LeadDisposition | undefined;
   let historyReason: string;
 
-  // Map webhook status to database status
-  if (status === 'delivered') {
+  // Map normalized status to database status
+  if (normalizedStatus === 'delivered') {
     newStatus = LeadStatus.SOLD;
     newDisposition = LeadDisposition.DELIVERED;
-    historyReason = `Lead delivered to buyer ${buyer}`;
-    await updateLeadRevenue(leadId, buyer);
-  } else if (status === 'duplicate') {
+    historyReason = `Lead delivered to buyer ${buyerName}`;
+    await updateLeadRevenue(leadId, buyerName);
+  } else if (normalizedStatus === 'duplicate') {
     newStatus = LeadStatus.DUPLICATE;
-    historyReason = `Buyer ${buyer} reported duplicate: ${reason || 'No reason provided'}`;
-  } else {
-    // failed or invalid
+    historyReason = `Buyer ${buyerName} reported duplicate: ${extractedReason || 'No reason provided'}`;
+  } else if (normalizedStatus === 'invalid') {
     newStatus = LeadStatus.REJECTED;
-    historyReason = `Buyer ${buyer} rejected: ${reason || status}`;
+    historyReason = `Buyer ${buyerName} reported invalid lead: ${extractedReason || 'No reason provided'}`;
+  } else {
+    // failed
+    newStatus = LeadStatus.REJECTED;
+    historyReason = `Buyer ${buyerName} rejected: ${extractedReason || rawStatus}`;
   }
 
   // Update database with optimistic locking
@@ -298,20 +356,23 @@ async function handlePostResponse(
 
     logger.warn('Webhook update skipped due to race condition', {
       leadId,
-      buyer,
+      buyer: buyerName,
       attemptedTransition: `${oldStatus} → ${newStatus}`,
       currentStatus: currentLead?.status || 'unknown',
-      webhookStatus: status,
+      rawStatus,
+      normalizedStatus,
       requestId
     });
 
     // If buyer says delivery failed but we marked as SOLD, this is critical
     // The buyer's response should take precedence since they know if delivery succeeded
-    if ((status === 'failed' || status === 'invalid') && currentLead?.status === 'SOLD') {
+    if ((normalizedStatus === 'failed' || normalizedStatus === 'invalid') && currentLead?.status === 'SOLD') {
       logger.error('CRITICAL: Buyer reports delivery failure but lead marked SOLD', {
         leadId,
-        buyer,
-        reason,
+        buyer: buyerName,
+        reason: extractedReason,
+        rawStatus,
+        normalizedStatus,
         requestId
       });
       // Force update to DELIVERY_FAILED since buyer response is authoritative
@@ -326,7 +387,7 @@ async function handlePostResponse(
         leadId,
         LeadStatus.SOLD,
         LeadStatus.DELIVERY_FAILED,
-        `Buyer ${buyer} reported delivery failure (overriding SOLD): ${reason || status}`,
+        `Buyer ${buyerName} reported delivery failure (overriding SOLD): ${extractedReason || rawStatus}`,
         ChangeSource.WEBHOOK
       );
       finalStatus = LeadStatus.DELIVERY_FAILED;
@@ -342,24 +403,26 @@ async function handlePostResponse(
     await RedisCache.set(`lead:${leadId}`, lead, 3600);
   }
 
-  // Store post response
-  await storePostResponse(leadId, buyer, status, reason, body);
+  // Store post response (now persists to database)
+  await storePostResponse(leadId, buyerId, buyerName, rawStatus, extractedReason, body);
 
   logger.info('Post response received from buyer', {
     leadId,
-    buyer,
-    status,
+    buyer: buyerName,
+    rawStatus,
+    normalizedStatus,
     finalStatus,
     forceUpdated,
-    reason,
+    reason: extractedReason,
     requestId
   });
 
   return successResponse({
     message: 'Post response processed successfully',
     leadId,
-    buyer,
-    status,
+    buyer: buyerName,
+    rawStatus,
+    normalizedStatus,
     leadStatus: finalStatus,
     forceUpdated
   }, requestId);
@@ -368,93 +431,206 @@ async function handlePostResponse(
 // Handle status update
 async function handleStatusUpdate(
   leadId: string,
-  buyer: string,
+  buyerName: string,
   status: string,
   reason: string,
   body: any,
   requestId: string
 ) {
-  // Store status update
-  await storeStatusUpdate(leadId, buyer, status, reason, body);
-  
+  // Get buyer ID for database persistence
+  const buyerRecord = await prisma.buyer.findFirst({
+    where: { name: { equals: buyerName, mode: 'insensitive' } },
+    select: { id: true }
+  });
+
+  if (!buyerRecord?.id) {
+    logger.error('Buyer ID not found for webhook transaction', { buyerName, leadId });
+    return errorResponse(
+      'BUYER_NOT_FOUND',
+      'Buyer record not found',
+      { buyerName },
+      'buyer',
+      requestId
+    );
+  }
+
+  // Store status update (now persists to database)
+  await storeStatusUpdate(leadId, buyerRecord.id, buyerName, status, reason, body);
+
   logger.info('Status update received from buyer', {
     leadId,
-    buyer,
+    buyer: buyerName,
     status,
     reason,
     requestId
   });
-  
+
   return successResponse({
     message: 'Status update processed successfully',
     leadId,
-    buyer,
+    buyer: buyerName,
     status
   }, requestId);
 }
 
 // Helper functions
-async function getBuyerData(buyerName: string) {
-  // In real app, this would query the database
-  const buyers = [
-    { name: 'homeadvisor', active: true },
-    { name: 'modernize', active: true },
-    { name: 'angi', active: true }
-  ];
-  
-  return buyers.find(b => b.name.toLowerCase() === buyerName.toLowerCase());
+async function getBuyerData(buyerName: string): Promise<{ id: string; name: string; active: boolean } | null> {
+  const buyer = await prisma.buyer.findFirst({
+    where: {
+      name: { equals: buyerName, mode: 'insensitive' }
+    },
+    select: {
+      id: true,
+      name: true,
+      active: true
+    }
+  });
+
+  return buyer;
 }
 
-async function storeBidResponse(leadId: string, buyer: string, bid: number, body: any) {
+async function storeBidResponse(leadId: string, buyerId: string, buyerName: string, bid: number, body: any) {
   const bidData = {
     leadId,
-    buyer,
+    buyer: buyerName,
     bid,
     timestamp: new Date(),
     rawResponse: body
   };
-  
-  await RedisCache.set(`bid:${leadId}:${buyer}`, bidData, 86400); // Keep for 24 hours
-  
+
+  // Store in Redis for quick access during auction
+  await RedisCache.set(`bid:${leadId}:${buyerName}`, bidData, 86400); // Keep for 24 hours
+
   // Add to auction queue
-  await RedisCache.sadd(`auction:${leadId}:bids`, `${buyer}:${bid}`);
+  await RedisCache.sadd(`auction:${leadId}:bids`, `${buyerName}:${bid}`);
+
+  // CRITICAL: Persist to database for audit trail and admin visibility
+  await prisma.transaction.create({
+    data: {
+      leadId,
+      buyerId,
+      actionType: 'PING_WEBHOOK',
+      payload: JSON.stringify({ source: 'webhook', action: 'ping_response' }),
+      response: JSON.stringify(body),
+      status: 'SUCCESS',
+      bidAmount: bid,
+      responseTime: null, // Webhook doesn't provide response time
+      complianceIncluded: false,
+      trustedFormPresent: false,
+      jornayaPresent: false
+    }
+  });
 }
 
-async function storeBidRejection(leadId: string, buyer: string, reason: string) {
+async function storeBidRejection(leadId: string, buyerId: string, buyerName: string, reason: string) {
   const rejectionData = {
     leadId,
-    buyer,
+    buyer: buyerName,
     reason,
     timestamp: new Date()
   };
-  
-  await RedisCache.set(`rejection:${leadId}:${buyer}`, rejectionData, 86400);
+
+  // Store in Redis for quick lookup
+  await RedisCache.set(`rejection:${leadId}:${buyerName}`, rejectionData, 86400);
+
+  // CRITICAL: Persist to database for audit trail and admin visibility
+  await prisma.transaction.create({
+    data: {
+      leadId,
+      buyerId,
+      actionType: 'PING_WEBHOOK',
+      payload: JSON.stringify({ source: 'webhook', action: 'ping_response' }),
+      response: JSON.stringify({ status: 'rejected', reason }),
+      status: 'FAILED',
+      bidAmount: null,
+      responseTime: null,
+      errorMessage: reason,
+      complianceIncluded: false,
+      trustedFormPresent: false,
+      jornayaPresent: false
+    }
+  });
 }
 
-async function storePostResponse(leadId: string, buyer: string, status: string, reason: string, body: any) {
+async function storePostResponse(
+  leadId: string,
+  buyerId: string,
+  buyerName: string,
+  status: string,
+  reason: string | null,
+  body: any
+) {
   const postData = {
     leadId,
-    buyer,
+    buyer: buyerName,
     status,
-    reason,
+    reason: reason || null,
     timestamp: new Date(),
     rawResponse: body
   };
-  
-  await RedisCache.set(`post:${leadId}:${buyer}`, postData, 86400 * 7); // Keep for 7 days
+
+  // Store in Redis for quick lookup
+  await RedisCache.set(`post:${leadId}:${buyerName}`, postData, 86400 * 7); // Keep for 7 days
+
+  // Determine if this was a successful delivery
+  const isSuccess = status === 'delivered' || status === 'success' || status === 'accepted';
+
+  // CRITICAL: Persist to database for audit trail and admin visibility
+  await prisma.transaction.create({
+    data: {
+      leadId,
+      buyerId,
+      actionType: 'POST_WEBHOOK',
+      payload: JSON.stringify({ source: 'webhook', action: 'post_response' }),
+      response: JSON.stringify(body),
+      status: isSuccess ? 'SUCCESS' : 'FAILED',
+      bidAmount: null, // POST doesn't have bid amount
+      responseTime: null,
+      errorMessage: !isSuccess ? (reason || status) : null,
+      complianceIncluded: false,
+      trustedFormPresent: false,
+      jornayaPresent: false
+    }
+  });
 }
 
-async function storeStatusUpdate(leadId: string, buyer: string, status: string, reason: string, body: any) {
+async function storeStatusUpdate(
+  leadId: string,
+  buyerId: string,
+  buyerName: string,
+  status: string,
+  reason: string,
+  body: any
+) {
   const updateData = {
     leadId,
-    buyer,
+    buyer: buyerName,
     status,
     reason,
     timestamp: new Date(),
     rawResponse: body
   };
-  
-  await RedisCache.set(`update:${leadId}:${buyer}:${Date.now()}`, updateData, 86400 * 7);
+
+  // Store in Redis with timestamp key for history
+  await RedisCache.set(`update:${leadId}:${buyerName}:${Date.now()}`, updateData, 86400 * 7);
+
+  // CRITICAL: Persist to database for audit trail and admin visibility
+  await prisma.transaction.create({
+    data: {
+      leadId,
+      buyerId,
+      actionType: 'STATUS_UPDATE',
+      payload: JSON.stringify({ source: 'webhook', action: 'status_update' }),
+      response: JSON.stringify(body),
+      status: status.toUpperCase() === 'SUCCESS' ? 'SUCCESS' : 'INFO',
+      bidAmount: null,
+      responseTime: null,
+      errorMessage: reason || null,
+      complianceIncluded: false,
+      trustedFormPresent: false,
+      jornayaPresent: false
+    }
+  });
 }
 
 async function updateLeadRevenue(leadId: string, buyer: string) {

@@ -8,7 +8,7 @@ interface DateInputProps {
   name: string;
   value: string;
   onChange: (value: string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   placeholder?: string;
   disabled?: boolean;
   min?: string;
@@ -37,7 +37,7 @@ export function DateInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   const inputClassName = cn(

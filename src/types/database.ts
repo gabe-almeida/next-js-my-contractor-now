@@ -2,6 +2,7 @@
 // Aligned with Prisma schema and proper TypeScript typing
 
 import { ComplianceFieldMappings } from '@/lib/templates/types';
+import { ResponseMappingConfig } from './response-mapping';
 
 // Enums aligned with Prisma schema
 export enum BuyerType {
@@ -72,6 +73,7 @@ export interface Buyer {
   postTimeout: number;
   active: boolean;
   complianceFieldMappings?: ComplianceFieldMappings | null; // Parsed JSON from string
+  responseMappingConfig?: ResponseMappingConfig | null; // Parsed JSON from string
   createdAt: Date;
   updatedAt: Date;
 
@@ -89,6 +91,9 @@ export interface TemplateConfig {
   headers: Record<string, string>;
   body: Record<string, any>;
   timeout: number;
+  // Form-specific optional fields
+  includeCompliance?: boolean;
+  staticFields?: Record<string, any>;
 }
 
 export interface FieldMapping {
@@ -139,6 +144,7 @@ export interface BuyerServiceConfig {
   complianceConfig?: ComplianceConfig | null; // Parsed JSON from string
   minBid: number;
   maxBid: number;
+  priority: number;
   active: boolean;
   createdAt: Date;
   
@@ -192,9 +198,10 @@ export interface FormFieldConditional {
 export interface FormField {
   id: string;
   name: string;
-  type: 'text' | 'email' | 'phone' | 'number' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'date' | 'multiselect';
+  type: 'text' | 'email' | 'phone' | 'number' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'date' | 'multiselect' | 'tel';
   label: string;
   placeholder?: string;
+  description?: string;
   required: boolean;
   options?: FormFieldOption[];
   validation?: FormFieldValidation;

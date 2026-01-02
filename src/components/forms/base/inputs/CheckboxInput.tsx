@@ -9,7 +9,7 @@ interface CheckboxInputProps {
   name: string;
   value: string[];
   onChange: (value: string[]) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   options: FormFieldOption[];
   disabled?: boolean;
   className?: string;
@@ -37,7 +37,7 @@ export function CheckboxInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   const wrapperClassName = cn(
@@ -117,7 +117,7 @@ export function SingleCheckbox({
   name: string;
   value: boolean;
   onChange: (value: boolean) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   label: string;
   description?: string;
   disabled?: boolean;
@@ -131,7 +131,7 @@ export function SingleCheckbox({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   return (

@@ -43,7 +43,7 @@ interface ActivitySummary {
 interface TransactionItem {
   id: string;
   leadId: string;
-  actionType: 'PING' | 'POST';
+  actionType: 'PING' | 'POST' | 'PING_WEBHOOK' | 'POST_WEBHOOK' | 'STATUS_UPDATE';
   status: string;
   bidAmount: number | null;
   responseTime: number | null;
@@ -325,9 +325,15 @@ export function BuyerActivityTab({ buyerId, buyerName }: BuyerActivityTabProps) 
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                             tx.actionType === 'PING'
                               ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
+                              : tx.actionType === 'POST'
+                              ? 'bg-purple-100 text-purple-800'
+                              : tx.actionType === 'PING_WEBHOOK'
+                              ? 'bg-cyan-100 text-cyan-800'
+                              : tx.actionType === 'POST_WEBHOOK'
+                              ? 'bg-indigo-100 text-indigo-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {tx.actionType}
+                            {tx.actionType.replace('_', ' ')}
                           </span>
                         </td>
                         <td className="py-3 px-2">

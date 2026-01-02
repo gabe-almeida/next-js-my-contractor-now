@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ComplianceStatus } from '@/types/forms';
+import { ComplianceStatus } from '@/types/forms/index';
 
 export interface TrustedFormConfig {
   enabled: boolean;
@@ -143,12 +143,13 @@ export function TrustedFormProvider({
   // Add TrustedForm ping functionality
   useEffect(() => {
     if (config.pingData && status.initialized && status.url) {
+      const trustedFormUrl = status.url;
       const pingInterval = setInterval(() => {
         try {
           // Create a hidden iframe to ping TrustedForm
           const iframe = document.createElement('iframe');
           iframe.style.display = 'none';
-          iframe.src = status.url;
+          iframe.src = trustedFormUrl;
           document.body.appendChild(iframe);
           
           setTimeout(() => {

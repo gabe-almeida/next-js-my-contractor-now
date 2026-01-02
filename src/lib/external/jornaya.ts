@@ -1,13 +1,23 @@
 import { JornayaLeadData } from '@/types/api';
 import { AppError } from '@/lib/utils';
 
+// Extend Window interface for Jornaya
+declare global {
+  interface Window {
+    jornaya?: (...args: any[]) => void;
+    jornayaLeadId?: string;
+    getJornayaLeadId?: () => string | null;
+    setJornayaLeadIdField?: (fieldName: string) => void;
+  }
+}
+
 export class JornayaService {
   private static readonly pixelId = process.env.JORNAYA_PIXEL_ID;
   private static readonly baseUrl = 'https://leadid.jornaya.com';
 
   static generatePixelScript(): string {
     if (!this.pixelId) {
-      throw new AppError('Jornaya pixel ID not configured', 500);
+      throw new AppError('Jornaya pixel ID not configured', 'JORNAYA_NOT_CONFIGURED');
     }
 
     return `

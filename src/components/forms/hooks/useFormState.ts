@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { FormConfig, FormState, FormValidationError, ComplianceStatus } from '@/types/forms';
+import { FormConfig, FormState, FormValidationError, ComplianceStatus } from '@/types/forms/index';
 import { validateForm as validateFormFields } from '@/utils/forms/validation';
 
 export function useFormState(config: FormConfig, initialData: Record<string, any> = {}) {

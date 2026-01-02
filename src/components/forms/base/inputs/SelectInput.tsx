@@ -9,7 +9,7 @@ interface SelectInputProps {
   name: string;
   value: string;
   onChange: (value: string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   options: FormFieldOption[];
   placeholder?: string;
   disabled?: boolean;
@@ -36,7 +36,7 @@ export function SelectInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   const selectClassName = cn(

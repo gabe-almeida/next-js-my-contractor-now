@@ -42,7 +42,7 @@ export function FormField({
       disabled,
       placeholder: field.placeholder,
       'aria-describedby': field.description ? `${fieldId}-description` : undefined,
-      'aria-invalid': hasError,
+      'aria-invalid': !!hasError,
       'aria-required': field.required
     };
 

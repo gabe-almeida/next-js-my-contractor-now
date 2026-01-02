@@ -16,7 +16,7 @@ const formFieldOptionSchema = z.object({
 
 const formFieldSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(['text', 'number', 'select', 'checkbox', 'textarea', 'radio', 'date', 'email', 'phone', 'multiselect']),
+  type: z.enum(['text', 'number', 'select', 'checkbox', 'textarea', 'radio', 'date', 'email', 'phone', 'multiselect', 'tel']),
   label: z.string().min(1, 'Label is required'),
   name: z.string().min(1, 'Name is required'),
   required: z.boolean(),

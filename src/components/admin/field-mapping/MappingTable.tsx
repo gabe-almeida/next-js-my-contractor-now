@@ -47,7 +47,7 @@ export function MappingTable({
         </p>
         <Button
           type="button"
-          variant="primary"
+          variant="default"
           size="sm"
           onClick={onAddMapping}
           disabled={disabled}

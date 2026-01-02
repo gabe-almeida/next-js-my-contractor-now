@@ -160,6 +160,7 @@ export default function BuyersPage() {
           requiresJornaya: false,
           minBid: 25,
           maxBid: 75,
+          priority: 1,
           createdAt: new Date()
         },
         {
@@ -186,6 +187,7 @@ export default function BuyersPage() {
           requiresJornaya: false,
           minBid: 30,
           maxBid: 90,
+          priority: 1,
           createdAt: new Date()
         },
         {
@@ -212,6 +214,7 @@ export default function BuyersPage() {
           requiresJornaya: false,
           minBid: 20,
           maxBid: 60,
+          priority: 1,
           createdAt: new Date()
         }
       ];

@@ -7,7 +7,7 @@ export class RadarService {
 
   static async validateZipCode(zipCode: string): Promise<RadarValidationResponse> {
     if (!this.apiKey) {
-      throw new AppError('Radar API key not configured', 500);
+      throw new AppError('Radar API key not configured', 'RADAR_NOT_CONFIGURED');
     }
 
     try {
@@ -26,7 +26,7 @@ export class RadarService {
       if (!response.ok) {
         throw new AppError(
           `Radar API error: ${response.status} ${response.statusText}`,
-          response.status
+          `RADAR_API_ERROR_${response.status}`
         );
       }
 
@@ -57,13 +57,13 @@ export class RadarService {
       }
       
       console.error('Radar validation error:', error);
-      throw new AppError('Failed to validate ZIP code', 500);
+      throw new AppError('Failed to validate ZIP code', 'RADAR_VALIDATION_FAILED');
     }
   }
 
   static async getLocationDetails(latitude: number, longitude: number) {
     if (!this.apiKey) {
-      throw new AppError('Radar API key not configured', 500);
+      throw new AppError('Radar API key not configured', 'RADAR_NOT_CONFIGURED');
     }
 
     try {
@@ -81,7 +81,7 @@ export class RadarService {
       if (!response.ok) {
         throw new AppError(
           `Radar API error: ${response.status} ${response.statusText}`,
-          response.status
+          `RADAR_API_ERROR_${response.status}`
         );
       }
 
@@ -97,7 +97,7 @@ export class RadarService {
       }
       
       console.error('Radar reverse geocoding error:', error);
-      throw new AppError('Failed to get location details', 500);
+      throw new AppError('Failed to get location details', 'RADAR_GEOCODE_FAILED');
     }
   }
 
@@ -108,7 +108,7 @@ export class RadarService {
     zipCode: string;
   }) {
     if (!this.apiKey) {
-      throw new AppError('Radar API key not configured', 500);
+      throw new AppError('Radar API key not configured', 'RADAR_NOT_CONFIGURED');
     }
 
     try {
@@ -130,7 +130,7 @@ export class RadarService {
       if (!response.ok) {
         throw new AppError(
           `Radar API error: ${response.status} ${response.statusText}`,
-          response.status
+          `RADAR_API_ERROR_${response.status}`
         );
       }
 
@@ -147,7 +147,7 @@ export class RadarService {
       }
       
       console.error('Radar address validation error:', error);
-      throw new AppError('Failed to validate address', 500);
+      throw new AppError('Failed to validate address', 'RADAR_ADDRESS_FAILED');
     }
   }
 }

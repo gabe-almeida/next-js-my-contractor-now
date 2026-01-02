@@ -5,7 +5,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePerformance } from '@/hooks/usePerformance';
 import { useAccessibility } from '@/hooks/useAccessibility';
-import { FormConfig, FormState, FormSubmission } from '@/types/forms';
+import { FormConfig, FormState, FormSubmission } from '@/types/forms/index';
 import { useFormState } from '../hooks/useFormState';
 import { TrustedFormProvider } from '../compliance/TrustedFormProvider';
 import { JornayaProvider } from '../compliance/JornayaProvider';

@@ -93,11 +93,15 @@ export const sanitizeRequestBody = (body: any): any => {
 /**
  * JWT token configuration
  */
-const JWT_CONFIG = {
-  expiresIn: '1h',
-  algorithm: 'HS256' as const,
-  issuer: 'contractor-platform',
-  audience: 'contractor-platform-admin'
+const JWT_ALGORITHM: jwt.Algorithm = 'HS256';
+const JWT_ISSUER = 'contractor-platform';
+const JWT_AUDIENCE = 'contractor-platform-admin';
+
+const JWT_CONFIG: jwt.SignOptions = {
+  expiresIn: 3600, // 1 hour in seconds
+  algorithm: JWT_ALGORITHM,
+  issuer: JWT_ISSUER,
+  audience: JWT_AUDIENCE
 };
 
 /**
@@ -131,9 +135,9 @@ export const verifyJwtToken = (token: string): {
     }
     
     const payload = jwt.verify(token, secret, {
-      algorithms: [JWT_CONFIG.algorithm],
-      issuer: JWT_CONFIG.issuer,
-      audience: JWT_CONFIG.audience
+      algorithms: [JWT_ALGORITHM],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE
     });
     
     return { valid: true, payload };

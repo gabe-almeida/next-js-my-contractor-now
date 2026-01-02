@@ -62,7 +62,7 @@ export const usePerformance = (
   }, [componentName, trackRender, trackMemory, onMetricsCollected]);
 
   // Track interaction performance
-  const trackInteraction = useCallback((interactionName: string) => {
+  const measureInteraction = useCallback((interactionName: string) => {
     if (!trackInteraction) return () => {};
 
     const startTime = performance.now();
@@ -71,7 +71,7 @@ export const usePerformance = (
     return () => {
       if (interactionStartTime.current) {
         const interactionDelay = performance.now() - interactionStartTime.current;
-        
+
         // Report slow interactions (>100ms)
         if (interactionDelay > 100) {
           console.warn(
@@ -112,7 +112,7 @@ export const usePerformance = (
   }, []);
 
   return {
-    trackInteraction,
+    trackInteraction: measureInteraction,
     getMemoryUsage
   };
 };
@@ -205,12 +205,15 @@ export const useLazyLoad = (
 // Web Vitals tracking
 export const useWebVitals = () => {
   useEffect(() => {
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(console.log);
-      getFID(console.log);
-      getFCP(console.log);
-      getLCP(console.log);
-      getTTFB(console.log);
+    // Dynamic import with type suppression - gracefully falls back if not available
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - web-vitals is optional
+    import('web-vitals').then((webVitals: any) => {
+      webVitals.getCLS?.(console.log);
+      webVitals.getFID?.(console.log);
+      webVitals.getFCP?.(console.log);
+      webVitals.getLCP?.(console.log);
+      webVitals.getTTFB?.(console.log);
     }).catch(() => {
       // Graceful fallback if web-vitals is not available
       console.log('[Performance] Web Vitals tracking not available');

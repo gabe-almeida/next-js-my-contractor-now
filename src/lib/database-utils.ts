@@ -141,7 +141,7 @@ export async function createBuyerServiceZipCode(data: {
   active?: boolean;
 }) {
   // Format bid amounts
-  const bidValidation = validateBidRange(data.minBid, data.maxBid);
+  const bidValidation = validateBidRange(data.minBid ?? null, data.maxBid ?? null);
   
   if (!bidValidation.isValid) {
     throw new Error(`Invalid bid range for ZIP ${data.zipCode}: ${bidValidation.error}`);
@@ -233,7 +233,7 @@ export async function bulkUpdateBidAmounts(updates: Array<{
   const errors = [];
   
   for (const update of updates) {
-    const bidValidation = validateBidRange(update.minBid, update.maxBid);
+    const bidValidation = validateBidRange(update.minBid ?? null, update.maxBid ?? null);
     
     if (bidValidation.isValid) {
       validUpdates.push({

@@ -533,16 +533,16 @@ export class RetryHandler {
       }
     } else {
       // Clear all queues
-      for (const [key, queue] of this.retryQueues) {
+      Array.from(this.retryQueues.entries()).forEach(([key, queue]) => {
         clearedCount += queue.length;
-        
+
         // Clear associated timer
         const timer = this.retryTimers.get(key);
         if (timer) {
           clearTimeout(timer);
         }
-      }
-      
+      });
+
       this.retryQueues.clear();
       this.retryTimers.clear();
     }
@@ -555,9 +555,9 @@ export class RetryHandler {
    * Pause all retry operations
    */
   static pauseRetries(): void {
-    for (const [key, timer] of this.retryTimers) {
+    Array.from(this.retryTimers.values()).forEach((timer) => {
       clearTimeout(timer);
-    }
+    });
     this.retryTimers.clear();
     console.log('All retry operations paused');
   }
@@ -567,18 +567,18 @@ export class RetryHandler {
    */
   static resumeRetries(): void {
     const now = Date.now();
-    
-    for (const [queueKey, queue] of this.retryQueues) {
-      if (queue.length === 0) continue;
-      
+
+    Array.from(this.retryQueues.entries()).forEach(([queueKey, queue]) => {
+      if (queue.length === 0) return;
+
       const nextItem = queue.reduce((earliest, current) =>
         current.operation.scheduledTime < earliest.operation.scheduledTime ? current : earliest
       );
-      
+
       const delay = Math.max(0, nextItem.operation.scheduledTime - now);
       this.scheduleRetry(queueKey, delay);
-    }
-    
+    });
+
     console.log('Retry operations resumed');
   }
 }

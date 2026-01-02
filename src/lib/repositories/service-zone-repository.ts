@@ -10,6 +10,26 @@ import { RedisCache } from '../../config/redis';
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
+// Helper to convert Prisma BuyerServiceZipCode to ServiceZone
+// Handles both cases: with and without included relations
+function mapToServiceZone(record: any): ServiceZone {
+  return {
+    id: record.id,
+    buyerId: record.buyerId,
+    serviceTypeId: record.serviceTypeId,
+    zipCode: record.zipCode,
+    active: record.active,
+    priority: record.priority,
+    maxLeadsPerDay: record.maxLeadsPerDay,
+    minBid: record.minBid ? Number(record.minBid) : null,
+    maxBid: record.maxBid ? Number(record.maxBid) : null,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    buyer: record.buyer,
+    serviceType: record.serviceType,
+  };
+}
+
 export interface ServiceZone {
   id: string;
   buyerId: string;
@@ -17,9 +37,9 @@ export interface ServiceZone {
   zipCode: string;
   active: boolean;
   priority: number;
-  maxLeadsPerDay?: number;
-  minBid?: number;
-  maxBid?: number;
+  maxLeadsPerDay?: number | null;
+  minBid?: number | null;
+  maxBid?: number | null;
   createdAt: Date;
   updatedAt: Date;
   buyer?: {
@@ -71,10 +91,10 @@ export interface ZipCodeMetadata {
   zipCode: string;
   city: string;
   state: string;
-  county?: string;
-  latitude?: number;
-  longitude?: number;
-  timezone?: string;
+  county?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  timezone?: string | null;
   active: boolean;
 }
 
@@ -146,7 +166,7 @@ export class ServiceZoneRepository {
         zipCode: input.zipCode
       });
 
-      return serviceZone;
+      return mapToServiceZone(serviceZone);
     } catch (error) {
       logger.error('Failed to create service zone', {
         input,
@@ -238,7 +258,7 @@ export class ServiceZoneRepository {
         zipCodeCount: input.zipCodes.length
       });
 
-      return serviceZones;
+      return serviceZones.map(mapToServiceZone);
     } catch (error) {
       logger.error('Failed to create bulk service zones', {
         input,
@@ -310,10 +330,12 @@ export class ServiceZoneRepository {
         ]
       });
 
-      // Cache the result
-      await RedisCache.set(cacheKey, serviceZones, this.CACHE_TTL);
+      const mappedZones = serviceZones.map(mapToServiceZone);
 
-      return serviceZones;
+      // Cache the result
+      await RedisCache.set(cacheKey, mappedZones, this.CACHE_TTL);
+
+      return mappedZones;
     } catch (error) {
       logger.error('Failed to find service zones', {
         filter,
@@ -362,10 +384,12 @@ export class ServiceZoneRepository {
         ]
       });
 
-      // Cache the result with shorter TTL for frequently accessed data
-      await RedisCache.set(cacheKey, eligibleBuyers, 900); // 15 minutes
+      const mappedBuyers = eligibleBuyers.map(mapToServiceZone);
 
-      return eligibleBuyers;
+      // Cache the result with shorter TTL for frequently accessed data
+      await RedisCache.set(cacheKey, mappedBuyers, 900); // 15 minutes
+
+      return mappedBuyers;
     } catch (error) {
       logger.error('Failed to get eligible buyers', {
         serviceTypeId,
@@ -418,7 +442,7 @@ export class ServiceZoneRepository {
         updates
       });
 
-      return serviceZone;
+      return mapToServiceZone(serviceZone);
     } catch (error) {
       logger.error('Failed to update service zone', {
         id,

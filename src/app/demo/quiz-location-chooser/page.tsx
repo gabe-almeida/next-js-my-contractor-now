@@ -28,12 +28,7 @@ interface ServiceType {
 
 interface ServiceLocationMapping {
   serviceId: string;
-  locations: {
-    states: Location[];
-    cities: Location[];
-    counties: Location[];
-    zipCodes: Location[];
-  };
+  locations: Location[];
 }
 
 type QuizPhase = 'quiz' | 'completed';

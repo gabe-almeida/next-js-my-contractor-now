@@ -8,7 +8,7 @@ interface NumberInputProps {
   name: string;
   value: number | string;
   onChange: (value: number | string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   placeholder?: string;
   disabled?: boolean;
   min?: number;
@@ -97,7 +97,7 @@ export function NumberInput({
         onChange(parseFloat(formatted));
       }
     }
-    onBlur();
+    onBlur?.();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

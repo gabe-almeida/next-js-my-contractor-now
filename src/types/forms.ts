@@ -1,5 +1,11 @@
-import { FormField, FormSchema, ComplianceData } from './database';
+import { FormField, FormSchema, ComplianceData, FormFieldOption } from './database';
 import { ComplianceStatus, TcpaConsentStatus } from './api';
+
+// Re-export types needed by components
+export type { FormFieldOption, ComplianceStatus, TcpaConsentStatus };
+
+// Re-export form configuration types from forms/index
+export type { FormConfig, ServiceType } from './forms/index';
 
 // Form Engine Types
 export interface FormEngineProps {
@@ -62,6 +68,30 @@ export interface FormInteraction {
   action: 'focus' | 'blur' | 'change' | 'click';
   timestamp: string;
   value?: any;
+}
+
+// Form Field Props for base form field component
+// Uses a flexible field type to support both forms.ts and forms/index.ts FormField types
+export interface FormFieldProps {
+  field: {
+    id: string;
+    name: string;
+    type: string;
+    label: string;
+    placeholder?: string;
+    description?: string;
+    required?: boolean;
+    options?: { value: string; label: string; disabled?: boolean }[];
+    gridColumn?: string;
+    className?: string;
+  };
+  value: any;
+  error?: string;
+  touched?: boolean;
+  onChange: (value: any) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  className?: string;
 }
 
 // Dynamic Field Components

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { FormSection as FormSectionType, FormState } from '@/types/forms';
+import { FormSection as FormSectionType, FormState } from '@/types/forms/index';
 import { FormField } from '../base/FormField';
 import { evaluateConditional } from '@/utils/forms/conditionals';
 import { cn } from '@/utils/cn';

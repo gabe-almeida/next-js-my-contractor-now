@@ -212,7 +212,7 @@ export const ProgressiveButton = memo<{
     };
   }, [supports]);
 
-  const isDisabled = disabled || (isOffline && href);
+  const isDisabled = disabled || !!(isOffline && href);
 
   if (href && !isDisabled) {
     return (
@@ -280,8 +280,6 @@ export const ProgressiveInput = memo<{
       required={required}
       className={className}
       pattern={pattern}
-      // Only use client-side validation if supported
-      noValidate={isClient && supports('formData')}
       {...props}
     />
   );

@@ -9,7 +9,7 @@ interface TextInputProps {
   type?: 'text' | 'email' | 'tel' | 'url' | 'password';
   value: string;
   onChange: (value: string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -35,7 +35,7 @@ export function TextInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   const inputClassName = cn(

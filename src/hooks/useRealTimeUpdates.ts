@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { RealtimeUpdate } from '@/types';
+
+interface RealtimeUpdate {
+  type: 'lead_submitted' | 'auction_complete' | 'buyer_response' | 'system_alert';
+  data: any;
+  timestamp: Date;
+}
 
 interface UseRealTimeUpdatesOptions {
   enabled?: boolean;

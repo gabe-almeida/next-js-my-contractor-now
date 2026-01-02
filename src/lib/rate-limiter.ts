@@ -176,11 +176,11 @@ export async function getRateLimitStatus(
   const clientId = getClientIdentifier(req);
   
   const status = await limiter.get(clientId);
-  
+
   return {
-    totalHits: status?.totalHits || 0,
-    totalTime: status?.totalTime || 0,
-    remainingPoints: status?.remainingPoints || limiter.points,
+    totalHits: status?.consumedPoints || 0,
+    totalTime: 0,
+    remainingPoints: status?.remainingPoints ?? limiter.points,
     msBeforeNext: status?.msBeforeNext || 0
   };
 }

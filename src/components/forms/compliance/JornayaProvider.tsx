@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ComplianceStatus } from '@/types/forms';
+import { ComplianceStatus } from '@/types/forms/index';
 
 export interface JornayaConfig {
   enabled: boolean;

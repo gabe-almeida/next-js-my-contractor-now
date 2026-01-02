@@ -96,6 +96,7 @@ async function handleGetBuyers(req: EnhancedRequest): Promise<NextResponse> {
         contactEmail: buyer.contactEmail,
         contactPhone: buyer.contactPhone,
         complianceFieldMappings: buyer.complianceFieldMappings ? JSON.parse(buyer.complianceFieldMappings) : null,
+        responseMappingConfig: buyer.responseMappingConfig ? JSON.parse(buyer.responseMappingConfig) : null,
         serviceConfigCount: buyer._count.serviceConfigs,
         zipCodeCount: buyer._count.serviceZipCodes,
         leadsWon: buyer._count.wonLeads,
@@ -159,6 +160,7 @@ async function handleCreateBuyer(
     pingTimeout?: number;
     postTimeout?: number;
     complianceFieldMappings?: any;
+    responseMappingConfig?: any;
   }
 ): Promise<NextResponse> {
   const { requestId } = req.context;
@@ -233,6 +235,9 @@ async function handleCreateBuyer(
         postTimeout: validatedData.postTimeout || 60,
         complianceFieldMappings: validatedData.complianceFieldMappings
           ? JSON.stringify(validatedData.complianceFieldMappings)
+          : null,
+        responseMappingConfig: validatedData.responseMappingConfig
+          ? JSON.stringify(validatedData.responseMappingConfig)
           : null
       },
       include: {
@@ -270,6 +275,7 @@ async function handleCreateBuyer(
       contactName: newBuyer.contactName,
       contactEmail: newBuyer.contactEmail,
       complianceFieldMappings: newBuyer.complianceFieldMappings ? JSON.parse(newBuyer.complianceFieldMappings) : null,
+      responseMappingConfig: newBuyer.responseMappingConfig ? JSON.parse(newBuyer.responseMappingConfig) : null,
       serviceConfigCount: newBuyer._count.serviceConfigs,
       zipCodeCount: newBuyer._count.serviceZipCodes,
       leadsWon: newBuyer._count.wonLeads,

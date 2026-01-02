@@ -108,8 +108,8 @@ export default function AddressAutocomplete({
   };
 
   const handleAddressSelect = (address: RadarAutocompleteResult) => {
-    const formattedAddress = address.address?.formattedAddress || address.formattedAddress || address.address?.addressLabel || 'Selected Address';
-    const zipCode = address.address?.postalCode || address.postalCode;
+    const formattedAddress = address.address?.formattedAddress || address.address?.addressLabel || 'Selected Address';
+    const zipCode = address.address?.postalCode;
     
     setInputValue(formattedAddress);
     setIsOpen(false);
@@ -270,7 +270,7 @@ export default function AddressAutocomplete({
         >
           {suggestions.map((suggestion, index) => (
             <button
-              key={`${suggestion.address?.formattedAddress || suggestion.formattedAddress || 'address'}-${index}`}
+              key={`${suggestion.address?.formattedAddress || 'address'}-${index}`}
               type="button"
               onClick={() => handleAddressSelect(suggestion)}
               className={`w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors ${
@@ -283,7 +283,7 @@ export default function AddressAutocomplete({
                 <MapPinIcon className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">
-                    {(suggestion.address?.addressLabel || suggestion.address?.formattedAddress || suggestion.formattedAddress || 'Address').replace(/, US$/, '').replace(' US', '')}
+                    {(suggestion.address?.addressLabel || suggestion.address?.formattedAddress || 'Address').replace(/, US$/, '').replace(' US', '')}
                   </div>
                   {suggestion.address?.addressLabel && suggestion.address?.formattedAddress && (
                     <div className="text-xs text-gray-500 truncate">

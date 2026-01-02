@@ -27,11 +27,12 @@ import {
 
 // Valid status transitions map
 // Matches actual worker flow: PENDING → PROCESSING → SOLD/REJECTED/DELIVERY_FAILED
+// DUPLICATE can be reported by buyer during PROCESSING or after SOLD (buyer found duplicate)
 const VALID_STATUS_TRANSITIONS: Record<string, LeadStatus[]> = {
   [LeadStatus.PENDING]: [LeadStatus.PROCESSING, LeadStatus.REJECTED, LeadStatus.SCRUBBED, LeadStatus.DUPLICATE],
-  [LeadStatus.PROCESSING]: [LeadStatus.SOLD, LeadStatus.REJECTED, LeadStatus.EXPIRED, LeadStatus.DELIVERY_FAILED, LeadStatus.SCRUBBED],
-  [LeadStatus.AUCTIONED]: [LeadStatus.SOLD, LeadStatus.REJECTED, LeadStatus.EXPIRED, LeadStatus.SCRUBBED],
-  [LeadStatus.SOLD]: [LeadStatus.SCRUBBED], // Can only scrub after sold
+  [LeadStatus.PROCESSING]: [LeadStatus.SOLD, LeadStatus.REJECTED, LeadStatus.EXPIRED, LeadStatus.DELIVERY_FAILED, LeadStatus.SCRUBBED, LeadStatus.DUPLICATE],
+  [LeadStatus.AUCTIONED]: [LeadStatus.SOLD, LeadStatus.REJECTED, LeadStatus.EXPIRED, LeadStatus.SCRUBBED, LeadStatus.DUPLICATE],
+  [LeadStatus.SOLD]: [LeadStatus.SCRUBBED, LeadStatus.DUPLICATE, LeadStatus.DELIVERY_FAILED], // Buyer can report duplicate or delivery failure after we marked sold
   [LeadStatus.REJECTED]: [LeadStatus.PROCESSING, LeadStatus.SCRUBBED], // Can reprocess or scrub
   [LeadStatus.EXPIRED]: [LeadStatus.PROCESSING, LeadStatus.SCRUBBED], // Can reprocess or scrub
   [LeadStatus.DELIVERY_FAILED]: [LeadStatus.PROCESSING, LeadStatus.REJECTED, LeadStatus.SCRUBBED], // Can retry, reject, or scrub

@@ -4,7 +4,7 @@
  */
 
 import { ServiceZoneRepository, ServiceZone } from '../repositories/service-zone-repository';
-import { BuyerServiceConfig } from '../../types/database';
+import { BuyerServiceConfig } from '../templates/types';
 import { BuyerConfigurationRegistry } from '../buyers/configurations';
 import { logger } from '../logger';
 import { RedisCache } from '../../config/redis';

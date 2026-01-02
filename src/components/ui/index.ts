@@ -4,7 +4,7 @@
 export { Button, buttonVariants } from './Button';
 export { Card } from './Card';
 export { Badge } from './Badge';
-export { PortalDropdown } from './PortalDropdown';
+export { default as PortalDropdown } from './PortalDropdown';
 
 // Loading and State Components
 export { LoadingSpinner, LoadingOverlay } from './LoadingSpinner';
@@ -35,12 +35,8 @@ export {
 } from './ProgressiveEnhancement';
 
 // Lazy Loading
-export { 
+export {
   withLazyLoading,
-  LazyModal,
-  LazyChart,
-  LazyTable,
-  LazyForm,
   LazyOnScroll
 } from './LazyComponent';
 

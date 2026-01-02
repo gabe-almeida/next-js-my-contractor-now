@@ -10,13 +10,15 @@ import { Buyer, BuyerServiceConfig, ServiceType } from '@/types';
 import { Plus, Trash2, TestTube } from 'lucide-react';
 import { ComplianceFieldMappingEditor } from '@/components/admin/compliance/ComplianceFieldMappingEditor';
 import { ComplianceFieldMappings } from '@/lib/templates/types';
+import { ResponseMappingEditor } from '@/components/admin/response-mapping';
+import { ResponseMappingConfig } from '@/types/response-mapping';
 
 const buyerSchema = z.object({
   name: z.string().min(1, 'Buyer name is required'),
   displayName: z.string().min(1, 'Display name is required'),
   apiUrl: z.string().url('Please enter a valid URL'),
   authConfig: z.object({
-    type: z.enum(['bearer', 'basic', 'custom']),
+    type: z.enum(['apikey', 'bearer', 'basic', 'custom']),
     token: z.string().optional(),
     username: z.string().optional(),
     password: z.string().optional(),
@@ -49,6 +51,7 @@ const buyerSchema = z.object({
       state: z.array(z.string()).optional(),
     }).optional(),
   }).optional(),
+  responseMappingConfig: z.any().nullable().optional(),
 });
 
 const serviceConfigSchema = z.object({
@@ -108,15 +111,16 @@ export function BuyerForm({
       apiUrl: buyer?.apiUrl || '',
       authConfig: {
         type: buyer?.authConfig?.type || 'bearer',
-        token: buyer?.authConfig?.token || '',
+        token: buyer?.authConfig?.bearerToken || '',
         username: buyer?.authConfig?.username || '',
         password: buyer?.authConfig?.password || '',
-        headers: buyer?.authConfig?.headers || {},
+        headers: buyer?.authConfig?.customHeaders || {},
       },
       active: buyer?.active ?? true,
       pingTimeout: buyer?.pingTimeout || 5,
       postTimeout: buyer?.postTimeout || 10,
       complianceFieldMappings: (buyer as any)?.complianceFieldMappings || {},
+      responseMappingConfig: (buyer as any)?.responseMappingConfig || null,
       serviceConfigs: buyerConfigs.map(config => ({
         serviceTypeId: config.serviceTypeId,
         active: config.active,
@@ -515,6 +519,25 @@ export function BuyerForm({
           <ComplianceFieldMappingEditor
             value={watch('complianceFieldMappings') || {}}
             onChange={(mappings: ComplianceFieldMappings) => setValue('complianceFieldMappings', mappings)}
+            buyerName={watch('displayName') || watch('name') || 'this buyer'}
+            disabled={loading}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Response Mapping Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Response Mapping Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4">
+            Configure how the system interprets this buyer&apos;s PING and POST responses.
+            Map buyer-specific status codes to internal system statuses.
+          </p>
+          <ResponseMappingEditor
+            value={watch('responseMappingConfig') as ResponseMappingConfig | null}
+            onChange={(config: ResponseMappingConfig | null) => setValue('responseMappingConfig', config)}
             buyerName={watch('displayName') || watch('name') || 'this buyer'}
             disabled={loading}
           />

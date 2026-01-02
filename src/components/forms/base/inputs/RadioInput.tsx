@@ -9,7 +9,7 @@ interface RadioInputProps {
   name: string;
   value: string;
   onChange: (value: string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   options: FormFieldOption[];
   disabled?: boolean;
   layout?: 'vertical' | 'horizontal';
@@ -36,7 +36,7 @@ export function RadioInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   const wrapperClassName = cn(
@@ -118,11 +118,11 @@ export function RadioCardInput({
   };
 
   const handleBlur = () => {
-    onBlur();
+    onBlur?.();
   };
 
   return (
-    <div 
+    <div
       className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}
       role="radiogroup"
       aria-labelledby={`${id}-label`}

@@ -7,6 +7,7 @@ export * from './api';
 export * from './forms';
 export * from './errors';
 export * from './guards';
+export * from './response-mapping';
 
 // Legacy compatibility - these types are now in database.ts
 // Keeping for backward compatibility until all imports are updated

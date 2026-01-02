@@ -380,7 +380,7 @@ export function FieldMappingEditor({
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="default"
             onClick={handleSave}
             disabled={!isDirty || isSaving}
             className="inline-flex items-center gap-2"

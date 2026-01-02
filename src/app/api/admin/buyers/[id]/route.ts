@@ -5,6 +5,7 @@ import { RedisCache } from '@/config/redis';
 import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
+import { BuyerResponseParser } from '@/lib/buyers/response-parser';
 
 // Get specific buyer
 async function handleGetBuyer(
@@ -95,6 +96,7 @@ async function handleGetBuyer(
       businessEmail: buyer.businessEmail,
       businessPhone: buyer.businessPhone,
       complianceFieldMappings: buyer.complianceFieldMappings ? JSON.parse(buyer.complianceFieldMappings) : null,
+      responseMappingConfig: buyer.responseMappingConfig ? JSON.parse(buyer.responseMappingConfig) : null,
       serviceConfigs: buyer.serviceConfigs.map(config => ({
         id: config.id,
         serviceTypeId: config.serviceTypeId,
@@ -158,6 +160,7 @@ async function handleUpdateBuyer(
     pingTimeout?: number;
     postTimeout?: number;
     complianceFieldMappings?: any;
+    responseMappingConfig?: any;
   },
   { params }: { params: { id: string } }
 ): Promise<NextResponse> {
@@ -247,6 +250,11 @@ async function handleUpdateBuyer(
         complianceFieldMappings: validatedData.complianceFieldMappings
           ? JSON.stringify(validatedData.complianceFieldMappings)
           : null
+      }),
+      ...(validatedData.responseMappingConfig !== undefined && {
+        responseMappingConfig: validatedData.responseMappingConfig
+          ? JSON.stringify(validatedData.responseMappingConfig)
+          : null
       })
     };
 
@@ -270,6 +278,15 @@ async function handleUpdateBuyer(
       RedisCache.deletePattern('admin:buyers:*'),
       RedisCache.delete(`buyer:${id}`)
     ]);
+
+    // Invalidate response mapping cache if config was updated
+    if (validatedData.responseMappingConfig !== undefined) {
+      BuyerResponseParser.invalidateCache(id);
+      logger.info('Response mapping cache invalidated for buyer', {
+        buyerId: id,
+        requestId
+      });
+    }
 
     logger.info('Buyer updated', {
       buyerId: id,
@@ -309,6 +326,7 @@ async function handleUpdateBuyer(
       businessEmail: updatedBuyer.businessEmail,
       businessPhone: updatedBuyer.businessPhone,
       complianceFieldMappings: updatedBuyer.complianceFieldMappings ? JSON.parse(updatedBuyer.complianceFieldMappings) : null,
+      responseMappingConfig: updatedBuyer.responseMappingConfig ? JSON.parse(updatedBuyer.responseMappingConfig) : null,
       serviceConfigCount: updatedBuyer._count.serviceZipCodes,
       zipCodeCount: updatedBuyer._count.serviceZipCodes,
       leadsWon: updatedBuyer._count.wonLeads,

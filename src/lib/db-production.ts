@@ -46,7 +46,8 @@ if (process.env.NODE_ENV !== 'production') {
 // Production event handlers
 if (process.env.NODE_ENV === 'production') {
   // Log database errors in production
-  prisma.$on('error', (e) => {
+  // Note: Prisma's typed events vary by version - using type assertion for compatibility
+  (prisma.$on as any)('error', (e: any) => {
     logger.error('Database error occurred', {
       timestamp: new Date().toISOString(),
       target: e.target,
@@ -55,7 +56,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 
   // Log warnings in production
-  prisma.$on('warn', (e) => {
+  (prisma.$on as any)('warn', (e: any) => {
     logger.warn('Database warning', {
       timestamp: new Date().toISOString(),
       target: e.target,
@@ -64,22 +65,22 @@ if (process.env.NODE_ENV === 'production') {
   });
 } else {
   // Development logging
-  prisma.$on('query', (e) => {
+  (prisma.$on as any)('query', (e: any) => {
     if (process.env.LOG_QUERIES === 'true') {
       console.log('Query:', e.query);
       console.log('Duration:', e.duration + 'ms');
     }
   });
 
-  prisma.$on('error', (e) => {
+  (prisma.$on as any)('error', (e: any) => {
     console.error('Database error:', e);
   });
 
-  prisma.$on('warn', (e) => {
+  (prisma.$on as any)('warn', (e: any) => {
     console.warn('Database warning:', e);
   });
 
-  prisma.$on('info', (e) => {
+  (prisma.$on as any)('info', (e: any) => {
     console.info('Database info:', e);
   });
 }
@@ -271,7 +272,7 @@ export async function checkProductionReadiness(): Promise<{
   ready: boolean;
   checks: Array<{ name: string; passed: boolean; message: string }>;
 }> {
-  const checks = [];
+  const checks: Array<{ name: string; passed: boolean; message: string }> = [];
   
   try {
     // Database connection check
@@ -322,8 +323,8 @@ export async function checkProductionReadiness(): Promise<{
     });
 
     // Environment configuration check
-    const hasProductionUrl = process.env.DATABASE_URL && 
-      !process.env.DATABASE_URL.includes('dev.db');
+    const hasProductionUrl = !!(process.env.DATABASE_URL &&
+      !process.env.DATABASE_URL.includes('dev.db'));
     checks.push({
       name: 'Production Database URL',
       passed: hasProductionUrl,

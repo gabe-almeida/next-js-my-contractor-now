@@ -86,7 +86,7 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
           ...coords
         };
       })
-      .filter(Boolean);
+      .filter((item): item is Location & { coordinates: [number, number]; state: string } => item !== null);
   }, [locations]);
 
   // Calculate optimal zoom and center based on selected locations
@@ -199,17 +199,18 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
                       key={geo.rsmKey}
                       geography={geo}
                       fill={isSelected ? '#1877F2' : '#E5E7EB'}
-                      fillOpacity={isSelected ? 0.7 : 0.3}
                       stroke="#9CA3AF"
-                      strokeWidth={0.5}
                       style={{
                         default: {
                           outline: 'none',
+                          fillOpacity: isSelected ? 0.7 : 0.3,
+                          strokeWidth: 0.5,
                           transition: 'fill 0.3s ease, fill-opacity 0.3s ease',
                         },
                         hover: {
                           outline: 'none',
                           fill: isSelected ? '#1565C0' : '#D1D5DB',
+                          fillOpacity: 0.9,
                         },
                         pressed: {
                           outline: 'none',
@@ -223,12 +224,12 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
 
             {/* City and ZIP Code Markers */}
             {cityMarkers.map((location, index) => (
-              <Marker key={location?.id} coordinates={location?.coordinates}>
+              <Marker key={location.id} coordinates={location.coordinates}>
                 <circle
-                  r={location?.type === 'zipcode' ? 4 : 6}
+                  r={location.type === 'zipcode' ? 4 : 6}
                   fill={
-                    location?.type === 'city' ? '#1877F2' :
-                    location?.type === 'zipcode' ? '#10B981' : '#F59E0B'
+                    location.type === 'city' ? '#1877F2' :
+                    location.type === 'zipcode' ? '#10B981' : '#F59E0B'
                   }
                   stroke="white"
                   strokeWidth={2}
@@ -244,11 +245,11 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
             {/* City Labels */}
             {cityMarkers.slice(0, 10).map((location) => ( // Limit to first 10 to avoid clutter
               <Annotation
-                key={`label-${location?.id}`}
-                subject={location?.coordinates}
+                key={`label-${location.id}`}
+                subject={location.coordinates}
                 dx={15}
                 dy={-10}
-                connector={false}
+                connectorProps={{ stroke: 'transparent' }}
               >
                 <text
                   textAnchor="start"
@@ -261,7 +262,7 @@ export default function ServiceAreaMapAdvanced({ locations, className }: Service
                     filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.8))'
                   }}
                 >
-                  {location?.displayName}
+                  {location.displayName}
                 </text>
               </Annotation>
             ))}

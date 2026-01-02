@@ -79,7 +79,7 @@ export function withMiddleware(
             'INVALID_CONTENT_TYPE',
             'Content-Type must be application/json',
             undefined,
-            400,
+            undefined,
             requestId
           );
           
@@ -108,7 +108,7 @@ export function withMiddleware(
           }
           
           const response = rateLimitErrorResponse(
-            rateLimitResult.resetTime!,
+            rateLimitResult.resetTime!.getTime(),
             requestId
           );
           
@@ -120,7 +120,7 @@ export function withMiddleware(
             headers: {
               ...getRateLimitHeaders(rateLimitResult),
               ...corsHeaders
-            }
+            } as HeadersInit
           });
         }
       }
@@ -133,7 +133,7 @@ export function withMiddleware(
             'UNAUTHORIZED',
             authResult.error || 'Authentication required',
             undefined,
-            401,
+            undefined,
             requestId
           );
           
@@ -192,8 +192,8 @@ export function withMiddleware(
       const response = errorResponse(
         sanitizedError.code || 'INTERNAL_ERROR',
         sanitizedError.message,
-        process.env.NODE_ENV !== 'production' ? { error: error.message } : undefined,
-        500,
+        process.env.NODE_ENV !== 'production' ? { error: (error as Error).message } : undefined,
+        undefined,
         requestId
       );
       
@@ -249,7 +249,7 @@ export function withValidation<T>(
           'VALIDATION_ERROR',
           'Request validation failed',
           process.env.NODE_ENV !== 'production' ? { errors } : undefined,
-          400,
+          undefined,
           req.context.requestId
         );
         
@@ -263,7 +263,7 @@ export function withValidation<T>(
         'INVALID_JSON',
         'Invalid JSON in request body',
         undefined,
-        400,
+        undefined,
         req.context.requestId
       );
       

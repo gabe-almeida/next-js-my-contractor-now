@@ -1,13 +1,20 @@
 import Redis from 'ioredis';
-import { RedisConfig } from '@/types';
+
+interface RedisConfig {
+  host: string;
+  port: number;
+  password?: string;
+  db: number;
+  maxRetriesPerRequest: number;
+  retryStrategy?: (times: number) => number | null;
+}
 
 const redisConfig: RedisConfig = {
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD,
   db: parseInt(process.env.REDIS_DB || '0'),
-  maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100
+  maxRetriesPerRequest: 3
 };
 
 // Create Redis clients for different purposes
@@ -17,7 +24,6 @@ export const redis = new Redis({
   password: redisConfig.password,
   db: redisConfig.db,
   maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
-  retryDelayOnFailover: redisConfig.retryDelayOnFailover,
   lazyConnect: true
 });
 

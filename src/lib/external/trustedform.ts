@@ -8,7 +8,7 @@ export class TrustedFormService {
 
   static generateScript(): string {
     if (!this.domain) {
-      throw new AppError('TrustedForm domain not configured', 500);
+      throw new AppError('TrustedForm domain not configured', 'TRUSTEDFORM_DOMAIN_NOT_CONFIGURED');
     }
 
     return `
@@ -29,7 +29,7 @@ export class TrustedFormService {
 
   static async validateCertificate(certUrl: string): Promise<TrustedFormCertificate | null> {
     if (!this.apiKey) {
-      throw new AppError('TrustedForm API key not configured', 500);
+      throw new AppError('TrustedForm API key not configured', 'TRUSTEDFORM_NOT_CONFIGURED');
     }
 
     try {
@@ -50,7 +50,7 @@ export class TrustedFormService {
         }
         throw new AppError(
           `TrustedForm API error: ${response.status} ${response.statusText}`,
-          response.status
+          `TRUSTEDFORM_API_ERROR_${response.status}`
         );
       }
 
@@ -72,13 +72,13 @@ export class TrustedFormService {
       }
       
       console.error('TrustedForm validation error:', error);
-      throw new AppError('Failed to validate TrustedForm certificate', 500);
+      throw new AppError('Failed to validate TrustedForm certificate', 'TRUSTEDFORM_VALIDATION_FAILED');
     }
   }
 
   static async getCertificateDetails(certId: string) {
     if (!this.apiKey) {
-      throw new AppError('TrustedForm API key not configured', 500);
+      throw new AppError('TrustedForm API key not configured', 'TRUSTEDFORM_NOT_CONFIGURED');
     }
 
     try {
@@ -95,7 +95,7 @@ export class TrustedFormService {
         }
         throw new AppError(
           `TrustedForm API error: ${response.status} ${response.statusText}`,
-          response.status
+          `TRUSTEDFORM_API_ERROR_${response.status}`
         );
       }
 
@@ -120,7 +120,7 @@ export class TrustedFormService {
       }
       
       console.error('TrustedForm certificate details error:', error);
-      throw new AppError('Failed to get certificate details', 500);
+      throw new AppError('Failed to get certificate details', 'TRUSTEDFORM_DETAILS_FAILED');
     }
   }
 
