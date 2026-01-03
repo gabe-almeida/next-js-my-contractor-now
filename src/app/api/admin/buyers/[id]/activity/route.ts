@@ -281,7 +281,7 @@ async function handleGetActivity(
     };
 
     // Cache for 5 minutes
-    await RedisCache.set(cacheKey, JSON.stringify(result), 300);
+    await RedisCache.set(cacheKey, result, 300);
 
     return NextResponse.json(successResponse(result, requestId));
 
