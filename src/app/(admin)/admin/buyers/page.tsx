@@ -277,10 +277,15 @@ export default function BuyersPage() {
     return buyerConfigs.filter(config => config.buyerId === buyerId);
   };
 
-  const filteredBuyers = buyers.filter(buyer =>
-    buyer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    buyer.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredBuyers = buyers.filter(buyer => {
+    const query = searchQuery.toLowerCase();
+    return (
+      buyer.name.toLowerCase().includes(query) ||
+      (buyer.displayName?.toLowerCase().includes(query)) ||
+      ((buyer as any).contactName?.toLowerCase().includes(query)) ||
+      ((buyer as any).contactEmail?.toLowerCase().includes(query))
+    );
+  });
 
   if (showForm) {
     return (
@@ -368,15 +373,26 @@ export default function BuyersPage() {
                     <div className="flex-1">
                       <CardTitle className="flex items-center space-x-2">
                         <span>{buyer.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          buyer.type === 'CONTRACTOR'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {buyer.type}
+                        </span>
                         {buyer.active ? (
                           <span className="status-indicator status-success">Active</span>
                         ) : (
                           <span className="status-indicator status-pending">Inactive</span>
                         )}
                       </CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {buyer.name}
-                      </p>
+                      {/* Show contact info for contractors */}
+                      {(buyer as any).contactName && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Contact: {(buyer as any).contactName}
+                          {(buyer as any).contactEmail && ` • ${(buyer as any).contactEmail}`}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -387,18 +403,6 @@ export default function BuyersPage() {
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Globe className="h-4 w-4" />
                       <span className="truncate">{buyer.apiUrl}</span>
-                    </div>
-                    
-                    {/* Timeouts */}
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>Status: {buyer.active ? 'Active' : 'Inactive'}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>Created: {buyer.createdAt.toLocaleDateString()}</span>
-                      </div>
                     </div>
                     
                     {/* Service Configs */}
@@ -414,8 +418,8 @@ export default function BuyersPage() {
                               <div
                                 key={config.id}
                                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                  config.active 
-                                    ? 'bg-green-100 text-green-800' 
+                                  config.active
+                                    ? 'bg-green-100 text-green-800'
                                     : 'bg-gray-100 text-gray-600'
                                 }`}
                               >
@@ -430,10 +434,10 @@ export default function BuyersPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Created Date */}
-                    <div className="text-sm text-gray-600">
-                      <strong>Created:</strong> {buyer.createdAt.toLocaleDateString()}
+                    <div className="text-sm text-gray-500">
+                      Created: {buyer.createdAt.toLocaleDateString()}
                     </div>
                     
                     {/* Action Buttons */}
