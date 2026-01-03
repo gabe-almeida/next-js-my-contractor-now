@@ -172,55 +172,105 @@ export default function BuyersPage() {
   };
 
   const handleSubmitForm = async (data: any) => {
-    // Mock save - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (editingBuyer) {
-      // Update existing buyer
-      setBuyers(prev => prev.map(b => 
-        b.id === editingBuyer.id 
-          ? { ...b, ...data, updatedAt: new Date() }
-          : b
-      ));
-      
-      // Update service configs
-      setBuyerConfigs(prev => {
-        // Remove old configs for this buyer
-        const withoutOld = prev.filter(c => c.buyerId !== editingBuyer.id);
-        // Add new configs
-        const newConfigs = data.serviceConfigs.map((config: any) => ({
-          id: `config-${Date.now()}-${Math.random()}`,
-          buyerId: editingBuyer.id,
-          ...config,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }));
-        return [...withoutOld, ...newConfigs];
-      });
-    } else {
-      // Create new buyer
-      const newBuyerId = `buyer-${Date.now()}`;
-      const newBuyer: Buyer = {
-        id: newBuyerId,
-        ...data,
-        createdAt: new Date(),
-        updatedAt: new Date()
+    try {
+      // Transform form data to match API expectations
+      const apiData = {
+        name: data.name,
+        displayName: data.displayName,
+        apiUrl: data.apiUrl,
+        authConfig: {
+          type: data.authConfig.type,
+          credentials: {
+            ...(data.authConfig.type === 'bearer' && { bearerToken: data.authConfig.token }),
+            ...(data.authConfig.type === 'basic' && {
+              username: data.authConfig.username,
+              password: data.authConfig.password
+            }),
+            ...(data.authConfig.type === 'custom' && { customHeaders: data.authConfig.headers })
+          }
+        },
+        active: data.active,
+        pingTimeout: data.pingTimeout,
+        postTimeout: data.postTimeout,
+        complianceFieldMappings: data.complianceFieldMappings,
+        responseMappingConfig: data.responseMappingConfig
       };
-      setBuyers(prev => [newBuyer, ...prev]);
-      
-      // Add service configs
-      const newConfigs = data.serviceConfigs.map((config: any) => ({
-        id: `config-${Date.now()}-${Math.random()}`,
-        buyerId: newBuyerId,
-        ...config,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }));
-      setBuyerConfigs(prev => [...prev, ...newConfigs]);
+
+      if (editingBuyer) {
+        // Update existing buyer
+        const response = await fetch(`/api/admin/buyers/${editingBuyer.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiData)
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error?.message || 'Failed to update buyer');
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Update failed');
+        }
+
+        // Update local state with response data
+        setBuyers(prev => prev.map(b =>
+          b.id === editingBuyer.id
+            ? {
+                ...b,
+                ...result.data,
+                createdAt: new Date(result.data.createdAt),
+                updatedAt: new Date(result.data.updatedAt)
+              }
+            : b
+        ));
+      } else {
+        // Create new buyer
+        const response = await fetch('/api/admin/buyers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiData)
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error?.message || 'Failed to create buyer');
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Creation failed');
+        }
+
+        // Add new buyer to local state
+        const newBuyer: Buyer = {
+          id: result.data.id,
+          name: result.data.name,
+          displayName: result.data.displayName,
+          type: result.data.type as BuyerType,
+          apiUrl: result.data.apiUrl,
+          authConfig: null,
+          pingTimeout: result.data.pingTimeout || 5000,
+          postTimeout: result.data.postTimeout || 10000,
+          active: result.data.active,
+          createdAt: new Date(result.data.createdAt),
+          updatedAt: new Date(result.data.updatedAt)
+        };
+        setBuyers(prev => [newBuyer, ...prev]);
+
+        // Show webhook secret if returned (only on creation)
+        if (result.data.webhookSecret) {
+          alert(`Buyer created successfully!\n\nWebhook Secret (save this - it won't be shown again):\n${result.data.webhookSecret}`);
+        }
+      }
+
+      setShowForm(false);
+      setEditingBuyer(null);
+    } catch (error) {
+      console.error('Error saving buyer:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save buyer. Please try again.');
     }
-    
-    setShowForm(false);
-    setEditingBuyer(null);
   };
 
   const getBuyerConfigs = (buyerId: string) => {
