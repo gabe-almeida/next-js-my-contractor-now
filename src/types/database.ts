@@ -45,7 +45,10 @@ export enum ChangeSource {
 
 export enum TransactionActionType {
   PING = 'PING',
-  POST = 'POST'
+  POST = 'POST',
+  PING_WEBHOOK = 'PING_WEBHOOK',
+  POST_WEBHOOK = 'POST_WEBHOOK',
+  STATUS_UPDATE = 'STATUS_UPDATE'
 }
 
 export enum TransactionStatus {

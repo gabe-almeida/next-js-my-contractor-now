@@ -34,7 +34,7 @@ interface TrendPoint {
 interface TransactionItem {
   id: string;
   leadId: string;
-  actionType: 'PING' | 'POST';
+  actionType: 'PING' | 'POST' | 'PING_WEBHOOK' | 'POST_WEBHOOK' | 'STATUS_UPDATE';
   status: string;
   bidAmount: number | null;
   responseTime: number | null;
@@ -255,7 +255,7 @@ async function handleGetActivity(
     const formattedTransactions: TransactionItem[] = transactions.map(tx => ({
       id: tx.id,
       leadId: tx.leadId,
-      actionType: tx.actionType as 'PING' | 'POST',
+      actionType: tx.actionType as TransactionItem['actionType'],
       status: tx.status,
       bidAmount: tx.bidAmount ? Number(tx.bidAmount) : null,
       responseTime: tx.responseTime,
