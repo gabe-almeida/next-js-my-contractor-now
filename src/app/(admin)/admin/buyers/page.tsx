@@ -30,199 +30,72 @@ export default function BuyersPage() {
   const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock data - replace with actual API calls
+  // Fetch buyers and services from API
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock services data
-      const mockServices: ServiceType[] = [
-        {
-          id: 'service-1',
-          name: 'Windows',
-          displayName: 'Window Services',
-          formSchema: {
-            title: 'Window Services Form',
-            fields: [],
-            validationRules: []
-          },
-          active: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: 'service-2',
-          name: 'Bathrooms',
-          displayName: 'Bathroom Services',
-          formSchema: {
-            title: 'Bathroom Services Form',
-            fields: [],
-            validationRules: []
-          },
-          active: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: 'service-3',
-          name: 'Roofing',
-          displayName: 'Roofing Services',
-          formSchema: {
-            title: 'Roofing Services Form',
-            fields: [],
-            validationRules: []
-          },
-          active: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ];
 
-      // Mock buyers data
-      const mockBuyers: Buyer[] = [
-        {
-          id: 'buyer-1',
-          name: 'HomeAdvisor',
-          type: BuyerType.NETWORK,
-          apiUrl: 'https://api.homeadvisor.com/leads',
-          authConfig: {
-            type: 'bearer',
-            bearerToken: 'ha_token_123'
-          },
-          pingTimeout: 5000,
-          postTimeout: 10000,
-          active: true,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-15')
-        },
-        {
-          id: 'buyer-2',
-          name: 'Modernize',
-          type: BuyerType.NETWORK,
-          apiUrl: 'https://api.modernize.com/leads',
-          authConfig: {
-            type: 'basic',
-            username: 'modernize_api',
-            password: 'mod_pass_456'
-          },
-          pingTimeout: 5000,
-          postTimeout: 10000,
-          active: true,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-20')
-        },
-        {
-          id: 'buyer-3',
-          name: 'Angi',
-          type: BuyerType.NETWORK,
-          apiUrl: 'https://api.angi.com/leads',
-          authConfig: {
-            type: 'custom',
-            customHeaders: {
-              'X-API-Key': 'angi_key_789',
-              'X-Partner-ID': 'partner_123'
-            }
-          },
-          pingTimeout: 5000,
-          postTimeout: 10000,
-          active: false,
-          createdAt: new Date('2024-01-10'),
-          updatedAt: new Date('2024-01-18')
-        }
-      ];
+      try {
+        // Fetch buyers and services in parallel
+        const [buyersResponse, servicesResponse] = await Promise.all([
+          fetch('/api/admin/buyers?includeInactive=true'),
+          fetch('/api/admin/services')
+        ]);
 
-      // Mock buyer configurations
-      const mockBuyerConfigs: BuyerServiceConfig[] = [
-        {
-          id: 'config-1',
-          buyerId: 'buyer-1',
-          serviceTypeId: 'service-1',
-          active: true,
-          pingTemplate: {
-            url: '/api/ping',
-            method: 'POST',
-            headers: {},
-            body: {},
-            timeout: 5000
-          },
-          postTemplate: {
-            url: '/api/post',
-            method: 'POST',
-            headers: {},
-            body: {},
-            timeout: 10000
-          },
-          fieldMappings: [],
-          requiresTrustedForm: false,
-          requiresJornaya: false,
-          minBid: 25,
-          maxBid: 75,
-          priority: 1,
-          createdAt: new Date()
-        },
-        {
-          id: 'config-2',
-          buyerId: 'buyer-1',
-          serviceTypeId: 'service-2',
-          active: true,
-          pingTemplate: {
-            url: '/api/ping',
-            method: 'POST',
-            headers: {},
-            body: {},
-            timeout: 5000
-          },
-          postTemplate: {
-            url: '/api/post',
-            method: 'POST',
-            headers: {},
-            body: {},
-            timeout: 10000
-          },
-          fieldMappings: [],
-          requiresTrustedForm: true,
-          requiresJornaya: false,
-          minBid: 30,
-          maxBid: 90,
-          priority: 1,
-          createdAt: new Date()
-        },
-        {
-          id: 'config-3',
-          buyerId: 'buyer-2',
-          serviceTypeId: 'service-1',
-          active: true,
-          pingTemplate: {
-            url: '/api/ping',
-            method: 'POST',
-            headers: {},
-            body: {},
-            timeout: 5000
-          },
-          postTemplate: {
-            url: '/api/post',
-            method: 'POST',
-            headers: {},
-            body: {},
-            timeout: 10000
-          },
-          fieldMappings: [],
-          requiresTrustedForm: false,
-          requiresJornaya: false,
-          minBid: 20,
-          maxBid: 60,
-          priority: 1,
-          createdAt: new Date()
+        if (!buyersResponse.ok) {
+          throw new Error('Failed to fetch buyers');
         }
-      ];
-      
-      setServices(mockServices);
-      setBuyers(mockBuyers);
-      setBuyerConfigs(mockBuyerConfigs);
-      setLoading(false);
+
+        const buyersData = await buyersResponse.json();
+
+        // Transform API response to match Buyer type
+        const fetchedBuyers: Buyer[] = (buyersData.data?.buyers || []).map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          displayName: b.displayName,
+          type: b.type as BuyerType,
+          apiUrl: b.apiUrl,
+          authConfig: null, // Auth config is not returned for security
+          pingTimeout: 5000,
+          postTimeout: 10000,
+          active: b.active,
+          createdAt: new Date(b.createdAt),
+          updatedAt: new Date(b.updatedAt),
+          // Include additional fields from API
+          contactName: b.contactName,
+          contactEmail: b.contactEmail,
+          serviceConfigCount: b.serviceConfigCount || 0,
+          zipCodeCount: b.zipCodeCount || 0
+        }));
+
+        setBuyers(fetchedBuyers);
+
+        // Fetch services if response is ok
+        if (servicesResponse.ok) {
+          const servicesData = await servicesResponse.json();
+          const fetchedServices: ServiceType[] = (servicesData.data?.services || []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            displayName: s.displayName,
+            formSchema: s.formSchema || { title: '', fields: [], validationRules: [] },
+            active: s.active,
+            createdAt: new Date(s.createdAt),
+            updatedAt: new Date(s.updatedAt)
+          }));
+          setServices(fetchedServices);
+        }
+
+        // Note: buyerConfigs will be fetched when editing a specific buyer
+        setBuyerConfigs([]);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        // Keep empty arrays on error
+        setBuyers([]);
+        setServices([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -239,18 +112,63 @@ export default function BuyersPage() {
   };
 
   const handleDeleteBuyer = async (buyerId: string) => {
-    if (window.confirm('Are you sure you want to delete this buyer? This will also remove all associated service configurations.')) {
-      // Mock delete - replace with actual API call
+    if (!window.confirm('Are you sure you want to delete this buyer? This will also remove all associated service configurations.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/buyers/${buyerId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error?.message || 'Failed to delete buyer');
+      }
+
+      // Remove from local state on success
       setBuyers(prev => prev.filter(b => b.id !== buyerId));
       setBuyerConfigs(prev => prev.filter(c => c.buyerId !== buyerId));
+    } catch (error) {
+      console.error('Error deleting buyer:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete buyer. Please try again.');
     }
   };
 
   const handleToggleActive = async (buyerId: string) => {
-    // Mock toggle - replace with actual API call
-    setBuyers(prev => prev.map(b => 
-      b.id === buyerId ? { ...b, active: !b.active } : b
+    const buyer = buyers.find(b => b.id === buyerId);
+    if (!buyer) return;
+
+    const newActiveState = !buyer.active;
+
+    // Optimistically update UI
+    setBuyers(prev => prev.map(b =>
+      b.id === buyerId ? { ...b, active: newActiveState } : b
     ));
+
+    try {
+      const response = await fetch(`/api/admin/buyers/${buyerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: newActiveState })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update buyer status');
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Update failed');
+      }
+    } catch (error) {
+      // Revert on error
+      console.error('Error toggling buyer active status:', error);
+      setBuyers(prev => prev.map(b =>
+        b.id === buyerId ? { ...b, active: !newActiveState } : b
+      ));
+      alert('Failed to update buyer status. Please try again.');
+    }
   };
 
   const handleSubmitForm = async (data: any) => {
