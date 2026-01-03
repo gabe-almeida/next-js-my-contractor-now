@@ -104,6 +104,9 @@ async function handleGetLead(
       serviceTypeId: lead.serviceTypeId,
       serviceType: lead.serviceType,
       status: lead.status,
+      disposition: lead.disposition,
+      creditAmount: lead.creditAmount,
+      creditIssuedAt: lead.creditIssuedAt,
       formData: {
         ...parsedFormData,
         zipCode: lead.zipCode,
