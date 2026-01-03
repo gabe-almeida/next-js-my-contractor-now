@@ -282,8 +282,8 @@ export default function BuyersPage() {
     return (
       buyer.name.toLowerCase().includes(query) ||
       (buyer.displayName?.toLowerCase().includes(query)) ||
-      ((buyer as any).contactName?.toLowerCase().includes(query)) ||
-      ((buyer as any).contactEmail?.toLowerCase().includes(query))
+      (buyer.contactName?.toLowerCase().includes(query)) ||
+      (buyer.contactEmail?.toLowerCase().includes(query))
     );
   });
 
@@ -387,10 +387,10 @@ export default function BuyersPage() {
                         )}
                       </CardTitle>
                       {/* Show contact info for contractors */}
-                      {(buyer as any).contactName && (
+                      {buyer.contactName && (
                         <p className="text-sm text-gray-600 mt-1">
-                          Contact: {(buyer as any).contactName}
-                          {(buyer as any).contactEmail && ` • ${(buyer as any).contactEmail}`}
+                          Contact: {buyer.contactName}
+                          {buyer.contactEmail && ` • ${buyer.contactEmail}`}
                         </p>
                       )}
                     </div>

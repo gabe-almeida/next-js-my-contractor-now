@@ -78,6 +78,13 @@ export interface Buyer {
   active: boolean;
   complianceFieldMappings?: ComplianceFieldMappings | null; // Parsed JSON from string
   responseMappingConfig?: ResponseMappingConfig | null; // Parsed JSON from string
+  // Contact information (for contractors)
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  businessEmail?: string | null;
+  businessPhone?: string | null;
+  additionalContacts?: string | null; // JSON string of AdditionalContact[]
   createdAt: Date;
   updatedAt: Date;
 
