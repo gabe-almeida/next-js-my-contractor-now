@@ -47,7 +47,7 @@ export async function createCommissionForLead(
 ): Promise<CommissionResult> {
   try {
     // Get lead with affiliate attribution
-    // We need to find the affiliate link code from the lead's form data
+    // The affiliate link code is stored in complianceData.attribution
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
       include: {
@@ -68,14 +68,19 @@ export async function createCommissionForLead(
       };
     }
 
-    // Get affiliate attribution from form data
-    const formData = typeof lead.formData === 'string'
-      ? JSON.parse(lead.formData)
-      : lead.formData;
+    // Get affiliate attribution from complianceData (NOT formData)
+    // The affiliate code is stored in complianceData.attribution when the lead is created
+    const complianceData = lead.complianceData
+      ? (typeof lead.complianceData === 'string'
+          ? JSON.parse(lead.complianceData)
+          : lead.complianceData)
+      : null;
 
-    const affiliateCode = formData?.metadata?.affiliateCode ||
-      formData?.affiliateCode ||
-      formData?.attribution?.affiliate_id;
+    // Check for affiliate code in attribution data
+    // Supports multiple field names: affiliate_id, aff, ref
+    const affiliateCode = complianceData?.attribution?.affiliate_id ||
+      complianceData?.attribution?.aff ||
+      complianceData?.attribution?.ref;
 
     if (!affiliateCode) {
       // No affiliate attribution - not an error, just no commission
