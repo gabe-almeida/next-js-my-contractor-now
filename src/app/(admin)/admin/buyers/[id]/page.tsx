@@ -13,6 +13,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { BuyerActivityTab } from '@/components/admin/BuyerActivityTab';
+import { BuyerServiceCoverageTab } from '@/components/admin/BuyerServiceCoverageTab';
 import {
   ArrowLeft,
   AlertCircle,
@@ -302,13 +303,7 @@ export default function BuyerDetailPage() {
 
       {activeTab === 'coverage' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">ZIP Code Coverage</h3>
-              <p className="text-gray-500">
-                {buyer.stats.zipCodeCount.toLocaleString()} ZIP codes configured
-              </p>
-            </div>
+          <div className="flex justify-end">
             <Button
               onClick={() => router.push(`/admin/buyers/${buyer.id}/zip-codes`)}
               className="flex items-center gap-2"
@@ -317,14 +312,11 @@ export default function BuyerDetailPage() {
               Manage ZIP Codes
             </Button>
           </div>
-          <Card>
-            <CardContent className="py-12 text-center">
-              <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
-                Click &quot;Manage ZIP Codes&quot; to configure coverage areas for this buyer.
-              </p>
-            </CardContent>
-          </Card>
+          <BuyerServiceCoverageTab
+            buyerId={buyer.id}
+            buyerName={buyer.displayName || buyer.name}
+            buyerType={buyer.type}
+          />
         </div>
       )}
     </div>

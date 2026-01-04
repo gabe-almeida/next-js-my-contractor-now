@@ -113,17 +113,20 @@ export default function TransactionsPage() {
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'TIMEOUT':
         return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      case 'INFO':
+        return <AlertCircle className="h-4 w-4 text-blue-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-400" />;
     }
   };
 
   const getStatusBadge = (status: TransactionStatus) => {
-    const styles = {
-      SUCCESS: 'status-indicator status-success',
-      FAILED: 'status-indicator status-failed',
-      PENDING: 'status-indicator status-pending',
-      TIMEOUT: 'status-indicator status-failed'
+    const styles: Record<TransactionStatus, string> = {
+      [TransactionStatus.SUCCESS]: 'status-indicator status-success',
+      [TransactionStatus.FAILED]: 'status-indicator status-failed',
+      [TransactionStatus.PENDING]: 'status-indicator status-pending',
+      [TransactionStatus.TIMEOUT]: 'status-indicator status-failed',
+      [TransactionStatus.INFO]: 'status-indicator status-info'
     };
 
     return <span className={styles[status]}>{status}</span>;
@@ -272,6 +275,7 @@ export default function TransactionsPage() {
                 <option value="FAILED">Failed</option>
                 <option value="PENDING">Pending</option>
                 <option value="TIMEOUT">Timeout</option>
+                <option value="INFO">Info</option>
               </select>
               
               <select

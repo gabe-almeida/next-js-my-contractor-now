@@ -37,3 +37,28 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Status indicator badges used across admin pages */
+  .status-indicator {
+    @apply px-2 py-1 text-xs font-medium rounded-full inline-flex items-center;
+  }
+  .status-success {
+    @apply bg-green-100 text-green-800;
+  }
+  .status-failed {
+    @apply bg-red-100 text-red-800;
+  }
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  .status-processing {
+    @apply bg-blue-100 text-blue-800;
+  }
+  .status-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+  .status-posted {
+    @apply bg-purple-100 text-purple-800;
+  }
+}

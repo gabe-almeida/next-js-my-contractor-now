@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Search, X, MapPin, Building2, Map, Hash, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Search, X, MapPin, Building2, Map, Hash, ChevronLeft, ChevronRight, Check, Loader2, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -19,9 +19,9 @@ interface ServiceType {
   id: string;
   name: string;
   displayName: string;
-  category: 'construction' | 'repair' | 'maintenance' | 'installation';
-  description: string;
-  icon: string;
+  category?: string;
+  description?: string;
+  icon?: string;
 }
 
 interface ServiceLocationMapping {
@@ -30,31 +30,28 @@ interface ServiceLocationMapping {
 }
 
 interface ServiceLocationQuizProps {
-  onComplete: (data: { 
+  onComplete: (data: {
     selectedServices: ServiceType[];
     serviceLocationMappings: ServiceLocationMapping[];
   }) => void;
   onStepSave: (stepId: string, data: any) => void;
 }
 
-const SERVICE_TYPES: ServiceType[] = [
-  {
-    id: 'roofing',
-    name: 'roofing',
-    displayName: 'Roofing Services',
-    category: 'construction',
-    description: 'Roof repair, replacement, installation, and maintenance',
-    icon: '🏠'
-  },
-  {
-    id: 'hvac',
-    name: 'hvac',
-    displayName: 'HVAC Services',
-    category: 'installation',
-    description: 'Heating, ventilation, and air conditioning systems',
-    icon: '❄️'
-  }
-];
+/**
+ * Map service names to icons for display
+ * WHY: Services from DB don't have icons, need visual differentiation
+ */
+const SERVICE_ICONS: Record<string, string> = {
+  roofing: '🏠',
+  hvac: '❄️',
+  windows: '🪟',
+  bathrooms: '🚿',
+  plumbing: '🔧',
+  electrical: '⚡',
+  painting: '🎨',
+  flooring: '🪵',
+  default: '🔨'
+};
 
 export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: ServiceLocationQuizProps) {
   const [step, setStep] = useState<'services' | 'locations' | 'review'>('services');
@@ -63,6 +60,51 @@ export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: Se
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+
+  // Service loading state
+  const [availableServices, setAvailableServices] = useState<ServiceType[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [servicesError, setServicesError] = useState<string | null>(null);
+
+  /**
+   * Fetch available services from database on mount
+   * WHY: Use real service IDs (UUIDs) instead of hardcoded strings
+   * WHEN: Component mounts
+   * HOW: GET /api/service-types returns active services with UUIDs
+   */
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setServicesLoading(true);
+        setServicesError(null);
+
+        const response = await fetch('/api/service-types');
+        const data = await response.json();
+
+        if (!data.success || !data.data) {
+          throw new Error(data.error || 'Failed to load services');
+        }
+
+        // Map database services to display format with icons
+        const services: ServiceType[] = data.data.map((svc: any) => ({
+          id: svc.id,  // UUID from database
+          name: svc.name,
+          displayName: svc.displayName,
+          description: svc.description || `${svc.displayName} for residential and commercial projects`,
+          icon: SERVICE_ICONS[svc.name] || SERVICE_ICONS.default
+        }));
+
+        setAvailableServices(services);
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+        setServicesError(error instanceof Error ? error.message : 'Failed to load services');
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
 
   const handleServiceToggle = useCallback((service: ServiceType) => {
     setSelectedServices(prev => {
@@ -150,48 +192,123 @@ export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: Se
   const getCurrentService = () => selectedServices[currentServiceIndex];
   const getCurrentMapping = () => serviceLocationMappings.find(m => m.serviceId === getCurrentService()?.id);
 
+  /**
+   * Check if all selected services have at least one location configured
+   * WHY: Validation for proceeding to review step
+   * WHEN: Checking if "Review Configuration" button should be enabled
+   */
+  const allServicesHaveLocations = () => {
+    return selectedServices.every(service => {
+      const mapping = serviceLocationMappings.find(m => m.serviceId === service.id);
+      return mapping && mapping.locations.length > 0;
+    });
+  };
+
+  /**
+   * Get list of services that are missing locations
+   * WHY: Show user which services still need configuration
+   * WHEN: Displaying validation warnings in locations step
+   */
+  const getServicesWithoutLocations = () => {
+    return selectedServices.filter(service => {
+      const mapping = serviceLocationMappings.find(m => m.serviceId === service.id);
+      return !mapping || mapping.locations.length === 0;
+    });
+  };
+
+  /**
+   * Get count of configured services
+   * WHY: Progress indicator for location configuration
+   */
+  const getConfiguredServicesCount = () => {
+    return selectedServices.filter(service => {
+      const mapping = serviceLocationMappings.find(m => m.serviceId === service.id);
+      return mapping && mapping.locations.length > 0;
+    }).length;
+  };
+
   // Service Selection Step
   if (step === 'services') {
     return (
       <Card className="p-6 max-w-4xl mx-auto">
         <h2 className="text-2xl font-bold mb-4">Select Your Services</h2>
         <p className="text-gray-600 mb-6">Choose the services you want to offer</p>
-        <p className="text-sm text-gray-500 mb-4">Selected: {selectedServices.length} services</p>
-        
-        <div className="space-y-4 mb-8">
-          {SERVICE_TYPES.map(service => {
-            const isSelected = selectedServices.find(s => s.id === service.id);
-            return (
-              <button
-                key={service.id}
-                onClick={() => handleServiceToggle(service)}
-                className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
-                  isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="flex items-start space-x-4">
-                  <span className="text-2xl">{service.icon}</span>
-                  <div className="flex-1">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      {service.displayName}
-                      {isSelected && <Check className="h-5 w-5 text-blue-600" />}
-                    </h3>
-                    <p className="text-gray-600 text-sm">{service.description}</p>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block">
-                      {service.category}
-                    </span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+
+        {/* Loading state */}
+        {servicesLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading available services...</span>
+          </div>
+        )}
+
+        {/* Error state */}
+        {servicesError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertCircle className="h-5 w-5" />
+              <span className="font-medium">Failed to load services</span>
+            </div>
+            <p className="text-red-700 text-sm mt-1">{servicesError}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => window.location.reload()}
+            >
+              Try Again
+            </Button>
+          </div>
+        )}
+
+        {/* Services list */}
+        {!servicesLoading && !servicesError && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500">
+                Selected: {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''}
+              </p>
+              {selectedServices.length === 0 && (
+                <p className="text-sm text-amber-600 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  At least 1 service required
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-4 mb-8">
+              {availableServices.map(service => {
+                const isSelected = selectedServices.find(s => s.id === service.id);
+                return (
+                  <button
+                    key={service.id}
+                    onClick={() => handleServiceToggle(service)}
+                    className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
+                      isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-start space-x-4">
+                      <span className="text-2xl">{service.icon}</span>
+                      <div className="flex-1">
+                        <h3 className="font-semibold flex items-center gap-2">
+                          {service.displayName}
+                          {isSelected && <Check className="h-5 w-5 text-blue-600" />}
+                        </h3>
+                        <p className="text-gray-600 text-sm">{service.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <div className="flex justify-between">
           <Button variant="outline" disabled>Previous</Button>
-          <Button 
-            onClick={handleNext} 
-            disabled={selectedServices.length === 0}
+          <Button
+            onClick={handleNext}
+            disabled={selectedServices.length === 0 || servicesLoading}
           >
             Next Step
           </Button>
@@ -204,12 +321,52 @@ export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: Se
   if (step === 'locations') {
     const currentService = getCurrentService();
     const currentMapping = getCurrentMapping();
+    const configuredCount = getConfiguredServicesCount();
+    const servicesWithoutLocations = getServicesWithoutLocations();
+    const allConfigured = allServicesHaveLocations();
 
     return (
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-4">Configure Service Areas</h2>
-        
+
+          {/* Progress indicator */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Location Coverage Progress
+              </span>
+              <span className="text-sm text-gray-500">
+                {configuredCount} of {selectedServices.length} services configured
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${allConfigured ? 'bg-green-500' : 'bg-blue-500'}`}
+                style={{ width: `${(configuredCount / selectedServices.length) * 100}%` }}
+              />
+            </div>
+            {/* Service status chips */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              {selectedServices.map(service => {
+                const hasLocations = serviceLocationMappings.find(m => m.serviceId === service.id)?.locations?.length > 0;
+                return (
+                  <span
+                    key={service.id}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                      hasLocations
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {hasLocations ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                    {service.displayName}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
         {currentService && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -306,13 +463,31 @@ export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: Se
           </div>
         )}
 
+          {/* Validation warning when not all services have locations */}
+          {!allConfigured && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">
+                    Configure locations for all services
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Missing: {servicesWithoutLocations.map(s => s.displayName).join(', ')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between">
             <Button variant="outline" onClick={handlePrevious}>Previous</Button>
-            <Button 
+            <Button
               onClick={handleNext}
-              disabled={serviceLocationMappings.length === 0}
+              disabled={!allConfigured}
+              className={allConfigured ? 'bg-green-600 hover:bg-green-700' : ''}
             >
-              Review Configuration
+              {allConfigured ? 'Review Configuration' : `Configure ${servicesWithoutLocations.length} More`}
             </Button>
           </div>
         </Card>

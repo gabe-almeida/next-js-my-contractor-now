@@ -194,10 +194,10 @@ export default function AddressAutocomplete({
   }, []);
 
   const inputClasses = `
-    w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-orange-500 
+    w-full px-4 py-3 pr-12 border-2 rounded-xl focus:ring-2 focus:ring-orange-500
     transition-colors ${error
       ? 'border-red-300 focus:border-red-500'
-      : 'border-gray-300 focus:border-orange-500'
+      : 'border-orange-400 focus:border-orange-500'
     } ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
     ${className}
   `.trim();
@@ -234,13 +234,13 @@ export default function AddressAutocomplete({
             <button
               type="button"
               onClick={clearInput}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-orange-400 hover:text-orange-600 transition-colors"
               aria-label="Clear address"
             >
               <XMarkIcon className="w-4 h-4" />
             </button>
           )}
-          <MapPinIcon className="w-5 h-5 text-gray-400" />
+          <MapPinIcon className="w-5 h-5 text-orange-500" />
         </div>
       </div>
 
@@ -265,7 +265,7 @@ export default function AddressAutocomplete({
       {isOpen && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-2 bg-white border-2 border-orange-400 rounded-xl shadow-lg max-h-60 overflow-auto"
           role="listbox"
         >
           {suggestions.map((suggestion, index) => (
@@ -273,20 +273,20 @@ export default function AddressAutocomplete({
               key={`${suggestion.address?.formattedAddress || 'address'}-${index}`}
               type="button"
               onClick={() => handleAddressSelect(suggestion)}
-              className={`w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors ${
-                index === selectedIndex ? 'bg-orange-50 border-orange-200' : ''
+              className={`w-full px-4 py-3 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none border-b border-orange-100 last:border-b-0 transition-colors ${
+                index === selectedIndex ? 'bg-orange-50' : ''
               }`}
               role="option"
               aria-selected={index === selectedIndex}
             >
               <div className="flex items-start space-x-3">
-                <MapPinIcon className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                <MapPinIcon className="w-4 h-4 text-orange-500 mt-1 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">
+                  <div className="text-sm font-medium text-orange-700 truncate">
                     {(suggestion.address?.addressLabel || suggestion.address?.formattedAddress || 'Address').replace(/, US$/, '').replace(' US', '')}
                   </div>
                   {suggestion.address?.addressLabel && suggestion.address?.formattedAddress && (
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-xs text-orange-500 truncate">
                       {suggestion.address.formattedAddress.replace(/, US$/, '').replace(' US', '')}
                     </div>
                   )}
