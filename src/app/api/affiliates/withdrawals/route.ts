@@ -18,7 +18,7 @@ import {
 // Validation schema for withdrawal request
 const withdrawalSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
-  method: z.enum(['paypal', 'bank_transfer']),
+  method: z.enum(['paypal', 'bank_transfer', 'check']),
   methodDetails: z.string().optional()
 });
 

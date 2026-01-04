@@ -93,15 +93,17 @@ export async function GET(request: NextRequest) {
       prisma.affiliateCommission.count({ where })
     ]);
 
-    // Format response - privacy-safe, no PII
+    // Format response - field names match frontend expectations
+    // Privacy-safe, no PII
     const leads = commissions.map(commission => ({
-      leadId: commission.lead.id,
+      id: commission.lead.id,
       serviceType: commission.lead.serviceType?.displayName || 'Unknown',
-      leadStatus: commission.lead.status,
-      leadDate: commission.lead.createdAt,
+      status: commission.lead.status,
+      createdAt: commission.lead.createdAt,
+      winningBid: null, // Privacy: don't expose bid amounts to affiliates
+      // Also include commission details for compatibility
       commissionAmount: Number(commission.amount),
-      commissionStatus: commission.status,
-      commissionDate: commission.createdAt
+      commissionStatus: commission.status
     }));
 
     return NextResponse.json({

@@ -11,6 +11,7 @@ import { z } from 'zod';
 import {
   getAffiliateById,
   updateAffiliate,
+  changePassword,
   verifyAffiliateToken
 } from '@/lib/services/affiliate-service';
 
@@ -19,8 +20,20 @@ const updateSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
   companyName: z.string().max(100).optional().nullable().transform(v => v ?? undefined),
-  phone: z.string().max(20).optional().nullable().transform(v => v ?? undefined)
-});
+  phone: z.string().max(20).optional().nullable().transform(v => v ?? undefined),
+  // Password change fields
+  currentPassword: z.string().min(1).optional(),
+  newPassword: z.string().min(8).optional()
+}).refine(
+  (data) => {
+    // If either password field is provided, both must be provided
+    if (data.currentPassword || data.newPassword) {
+      return data.currentPassword && data.newPassword;
+    }
+    return true;
+  },
+  { message: 'Both current and new password are required for password change' }
+);
 
 /**
  * Extracts and verifies affiliate ID from request
@@ -114,28 +127,47 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Update affiliate
-    const result = await updateAffiliate(affiliateId, validation.data);
+    // Extract password fields from profile fields
+    const { currentPassword, newPassword, ...profileData } = validation.data;
 
-    if (!result.success) {
-      return NextResponse.json({
-        success: false,
-        error: result.error
-      }, { status: 400 });
+    // Handle password change if requested
+    if (currentPassword && newPassword) {
+      const passwordResult = await changePassword(affiliateId, currentPassword, newPassword);
+      if (!passwordResult.success) {
+        return NextResponse.json({
+          success: false,
+          error: passwordResult.error
+        }, { status: 400 });
+      }
     }
 
-    const affiliate = result.affiliate!;
+    // Update profile fields if any provided
+    let affiliate;
+    if (Object.keys(profileData).length > 0) {
+      const result = await updateAffiliate(affiliateId, profileData);
+      if (!result.success) {
+        return NextResponse.json({
+          success: false,
+          error: result.error
+        }, { status: 400 });
+      }
+      affiliate = result.affiliate!;
+    } else {
+      // Get current affiliate if only password was changed
+      affiliate = await getAffiliateById(affiliateId);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
-        id: affiliate.id,
-        email: affiliate.email,
-        firstName: affiliate.firstName,
-        lastName: affiliate.lastName,
-        companyName: affiliate.companyName,
-        phone: affiliate.phone
+        id: affiliate!.id,
+        email: affiliate!.email,
+        firstName: affiliate!.firstName,
+        lastName: affiliate!.lastName,
+        companyName: affiliate!.companyName,
+        phone: affiliate!.phone
       },
-      message: 'Profile updated successfully'
+      message: currentPassword ? 'Password updated successfully' : 'Profile updated successfully'
     });
 
   } catch (error) {

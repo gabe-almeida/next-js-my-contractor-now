@@ -34,9 +34,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const PAYMENT_METHODS = [
-  { value: 'PAYPAL', label: 'PayPal' },
-  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
-  { value: 'CHECK', label: 'Check' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'check', label: 'Check' },
 ];
 
 export default function AffiliateWithdrawalsPage() {
@@ -74,11 +74,17 @@ export default function AffiliateWithdrawalsPage() {
       ]);
 
       if (withdrawalsData.success) {
-        setWithdrawals(withdrawalsData.data);
+        // Extract withdrawals array from nested structure
+        setWithdrawals(withdrawalsData.data.withdrawals || []);
+        // Also get availableBalance from same response (more efficient)
+        if (withdrawalsData.data.availableBalance !== undefined) {
+          setStats({ availableBalance: withdrawalsData.data.availableBalance });
+        }
       }
 
-      if (statsData.success) {
-        setStats({ availableBalance: statsData.data.availableBalance });
+      // Fallback: use stats endpoint if available
+      if (statsData.success && !stats) {
+        setStats({ availableBalance: statsData.data.availableBalance || 0 });
       }
     } catch (error) {
       console.error('Error fetching data:', error);

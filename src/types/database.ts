@@ -630,8 +630,10 @@ export interface UpdateAffiliateRequest {
 }
 
 export interface CreateAffiliateLinkRequest {
-  targetPath: string;
-  code?: string; // Optional custom code
+  targetPath?: string;  // Either targetPath or targetUrl required
+  targetUrl?: string;   // Alternative field name (from frontend)
+  code?: string;        // Optional custom code
+  customCode?: string;  // Alternative field name (from frontend)
   name?: string;
 }
 

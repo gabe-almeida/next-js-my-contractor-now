@@ -74,8 +74,10 @@ export default function AdminAffiliateDetailPage() {
       const data = await response.json();
 
       if (data.success) {
-        setAffiliate(data.data);
-        setStats(data.stats);
+        // Extract affiliate data and stats from nested response
+        const { stats: affiliateStats, ...affiliateData } = data.data;
+        setAffiliate(affiliateData);
+        setStats(affiliateStats);
       }
     } catch (error) {
       console.error('Error fetching affiliate:', error);

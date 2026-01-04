@@ -69,14 +69,15 @@ export async function GET(
         emailVerified: affiliate.emailVerified,
         createdAt: affiliate.createdAt,
         stats: {
-          totalEarned: stats.totalEarned,
-          pendingCommissions: stats.pendingCommissions,
+          // Field names match frontend expectations
+          totalEarnings: stats.totalEarned,
+          pendingEarnings: stats.pendingCommissions,
           approvedCommissions: stats.approvedCommissions,
-          availableForWithdrawal: stats.availableForWithdrawal,
+          availableBalance: stats.availableForWithdrawal,
           totalClicks: stats.totalClicks,
           totalConversions: stats.totalConversions,
           conversionRate: Math.round(stats.conversionRate * 10000) / 100,
-          activeLinks: stats.activeLinks
+          totalLinks: stats.activeLinks
         }
       }
     });

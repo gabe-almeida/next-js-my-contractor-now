@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAffiliateToken } from '@/lib/services/affiliate-service';
-import { getCommissionsByAffiliateId } from '@/lib/services/affiliate-commission-service';
+import { getCommissionsByAffiliateId, getAffiliateStats } from '@/lib/services/affiliate-commission-service';
 import { CommissionStatus } from '@/types/database';
 
 /**
@@ -51,13 +51,17 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
 
-    const result = await getCommissionsByAffiliateId(affiliateId, {
-      page,
-      limit,
-      status: status || undefined,
-      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-      dateTo: dateTo ? new Date(dateTo) : undefined
-    });
+    // Fetch commissions and stats in parallel
+    const [result, stats] = await Promise.all([
+      getCommissionsByAffiliateId(affiliateId, {
+        page,
+        limit,
+        status: status || undefined,
+        dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+        dateTo: dateTo ? new Date(dateTo) : undefined
+      }),
+      getAffiliateStats(affiliateId)
+    ]);
 
     // Format commissions with lead info (privacy-safe)
     const commissions = result.commissions.map(commission => ({
@@ -83,6 +87,11 @@ export async function GET(request: NextRequest) {
         page: result.page,
         totalPages: result.totalPages,
         total: result.total
+      },
+      totals: {
+        pending: stats.pendingCommissions,
+        approved: stats.approvedCommissions,
+        paid: stats.totalEarned - stats.pendingCommissions - stats.approvedCommissions
       }
     });
 

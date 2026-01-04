@@ -16,11 +16,17 @@ import {
 } from '@/lib/services/affiliate-link-service';
 
 // Validation schema for creating a link
+// Accepts both targetPath and targetUrl for compatibility
 const createLinkSchema = z.object({
-  targetPath: z.string().min(1, 'Target path is required'),
+  targetPath: z.string().min(1).optional(),
+  targetUrl: z.string().min(1).optional(),
   code: z.string().min(4).max(20).regex(/^[a-zA-Z0-9-_]+$/).optional(),
+  customCode: z.string().min(4).max(20).regex(/^[a-zA-Z0-9-_]+$/).optional(),
   name: z.string().max(100).optional()
-});
+}).refine(
+  (data) => data.targetPath || data.targetUrl,
+  { message: 'Target path or URL is required' }
+);
 
 /**
  * Extracts and verifies affiliate ID from request

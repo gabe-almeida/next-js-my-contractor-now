@@ -63,8 +63,8 @@ export async function createLink(
       return { success: false, error: 'Affiliate account is not active' };
     }
 
-    // Generate or validate code
-    let code = data.code;
+    // Generate or validate code (accepts both code and customCode)
+    let code = data.code || data.customCode;
     if (code) {
       // Validate custom code
       const codeError = validateCode(code);
@@ -83,8 +83,9 @@ export async function createLink(
       code = await generateUniqueCode();
     }
 
-    // Validate target path
-    const targetPath = normalizeTargetPath(data.targetPath);
+    // Validate target path (accepts both targetPath and targetUrl)
+    const rawTargetPath = data.targetPath || data.targetUrl || '/';
+    const targetPath = normalizeTargetPath(rawTargetPath);
 
     // Create link
     const link = await prisma.affiliateLink.create({

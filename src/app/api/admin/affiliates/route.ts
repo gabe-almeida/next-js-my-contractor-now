@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateAdminAuth } from '@/lib/security';
+import { prisma } from '@/lib/prisma';
 import {
   listAffiliates,
   createAffiliate,
@@ -51,7 +52,21 @@ export async function GET(request: NextRequest) {
       search: search || undefined
     });
 
-    // Format affiliates for admin view
+    // Get earnings aggregations for all affiliates in the result
+    const affiliateIds = result.affiliates.map(a => a.id);
+    const earningsAggregations = await prisma.affiliateCommission.groupBy({
+      by: ['affiliateId'],
+      where: {
+        affiliateId: { in: affiliateIds },
+        status: 'APPROVED'
+      },
+      _sum: { amount: true }
+    });
+    const earningsMap = new Map(
+      earningsAggregations.map(e => [e.affiliateId, Number(e._sum.amount) || 0])
+    );
+
+    // Format affiliates for admin view with earnings
     const affiliates = result.affiliates.map(affiliate => ({
       id: affiliate.id,
       email: affiliate.email,
@@ -62,7 +77,8 @@ export async function GET(request: NextRequest) {
       commissionRate: affiliate.commissionRate,
       status: affiliate.status,
       emailVerified: affiliate.emailVerified,
-      createdAt: affiliate.createdAt
+      createdAt: affiliate.createdAt,
+      totalEarnings: earningsMap.get(affiliate.id) || 0
     }));
 
     return NextResponse.json({

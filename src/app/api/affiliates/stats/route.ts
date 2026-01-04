@@ -48,11 +48,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        // Earnings
-        totalEarned: stats.totalEarned,
-        pendingCommissions: stats.pendingCommissions,
+        // Earnings - field names match frontend expectations
+        totalEarnings: stats.totalEarned,
+        pendingEarnings: stats.pendingCommissions,
         approvedCommissions: stats.approvedCommissions,
-        availableForWithdrawal: stats.availableForWithdrawal,
+        availableBalance: stats.availableForWithdrawal,
         // Traffic stats
         totalClicks: stats.totalClicks,
         totalConversions: stats.totalConversions,
