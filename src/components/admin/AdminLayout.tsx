@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Users, 
-  ShoppingCart, 
-  FileText, 
-  BarChart3, 
-  Settings, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  ShoppingCart,
+  FileText,
+  BarChart3,
+  Settings,
+  Menu,
   X,
   Bell,
   LogOut,
@@ -45,6 +46,11 @@ const navigationItems = [
     name: 'Buyers',
     href: '/admin/buyers',
     icon: Users,
+  },
+  {
+    name: 'Affiliates',
+    href: '/admin/affiliates',
+    icon: UserPlus,
   },
   {
     name: 'Payload Testing',

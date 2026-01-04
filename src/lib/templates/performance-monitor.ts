@@ -462,7 +462,7 @@ export class PerformanceMonitor {
 
     // Calculate buyer metrics
     const buyerGroups = this.groupBy(buyerSamples, s => s.buyerId!);
-    for (const [buyerId, samples] of buyerGroups) {
+    Array.from(buyerGroups.entries()).forEach(([buyerId, samples]) => {
       const buyerData = samples.map(s => s.data);
       metrics.buyerMetrics[buyerId] = {
         responseTime: this.calculateAverage(buyerData.map(d => d.responseTime)),
@@ -470,7 +470,7 @@ export class PerformanceMonitor {
         errorRate: buyerData.filter(d => !d.success).length / buyerData.length,
         volume: buyerData.length
       };
-    }
+    });
 
     return metrics;
   }

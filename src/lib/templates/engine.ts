@@ -12,7 +12,8 @@ import {
   TemplateEngineError,
   TransformationError,
   ValidationError,
-  PerformanceMetrics
+  PerformanceMetrics,
+  TransformFunction
 } from './types';
 import { Transformations } from './transformations';
 import { DataValidator } from './validator';
@@ -639,7 +640,7 @@ export class MappingBuilder {
     this.mapping = { sourceField, targetField };
   }
 
-  transform(transform: string | Function): this {
+  transform(transform: string | TransformFunction): this {
     this.mapping.transform = transform;
     return this;
   }

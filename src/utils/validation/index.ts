@@ -3,14 +3,16 @@
  * Re-exports all validation functions for easy import
  */
 
+import type { ValidationResult } from './tcpa';
+
 export {
   validatePhoneNumber,
   validateEmail,
   isContactInfoValid,
   formatPhoneNumber,
   formatPhoneInput,
-  type ValidationResult
 } from './tcpa';
+export type { ValidationResult };
 
 export {
   type TCPAConfig,

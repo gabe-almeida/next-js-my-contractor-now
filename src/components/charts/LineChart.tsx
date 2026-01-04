@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * LineChart Component
+ *
+ * WHY: Displays time-series data as a line chart.
+ * WHEN: Used for trends, revenue over time, etc.
+ * HOW: Wraps recharts LineChart with consistent styling.
+ */
+
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -7,114 +15,109 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Legend
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+
+interface DataPoint {
+  [key: string]: string | number | undefined;
+}
+
+interface LineConfig {
+  dataKey: string;
+  stroke?: string;
+  name?: string;
+  strokeWidth?: number;
+}
 
 interface LineChartProps {
-  title: string;
-  data: Array<{
-    [key: string]: any;
-  }>;
-  xAxisKey: string;
-  lines: Array<{
-    dataKey: string;
-    stroke: string;
-    name: string;
-    strokeWidth?: number;
-  }>;
+  data: DataPoint[];
+  lines: LineConfig[];
+  xAxisKey?: string;
   height?: number;
+  showGrid?: boolean;
+  showLegend?: boolean;
   className?: string;
+  title?: string;
   loading?: boolean;
 }
 
+const DEFAULT_COLORS = [
+  '#3B82F6', // blue
+  '#10B981', // green
+  '#F59E0B', // amber
+  '#EF4444', // red
+  '#8B5CF6', // purple
+  '#EC4899', // pink
+];
+
 export function LineChart({
-  title,
   data,
-  xAxisKey,
   lines,
+  xAxisKey = 'name',
   height = 300,
-  className,
+  showGrid = true,
+  showLegend = true,
+  className = '',
+  title,
   loading = false
 }: LineChartProps) {
   if (loading) {
     return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            <div className="h-6 bg-gray-200 rounded animate-pulse w-32"></div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`bg-gray-100 rounded animate-pulse`} style={{ height }}>
-            <div className="flex items-center justify-center h-full text-gray-400">
-              Loading chart...
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className={'bg-white rounded-lg shadow p-6 ' + className}>
+        {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
+        <div className="animate-pulse" style={{ height }}>
+          <div className="h-full bg-gray-200 rounded"></div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={height}>
-          <RechartsLineChart
-            data={data}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
+    <div className={'bg-white rounded-lg shadow p-6 ' + className}>
+      {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
+      <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsLineChart
+          data={data}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />}
+          <XAxis
+            dataKey={xAxisKey}
+            tick={{ fontSize: 12, fill: '#6B7280' }}
+            tickLine={false}
+            axisLine={{ stroke: '#E5E7EB' }}
+          />
+          <YAxis
+            tick={{ fontSize: 12, fill: '#6B7280' }}
+            tickLine={false}
+            axisLine={{ stroke: '#E5E7EB' }}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'white',
+              border: '1px solid #E5E7EB',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
             }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis 
-              dataKey={xAxisKey}
-              stroke="#666"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
+          />
+          {showLegend && <Legend />}
+          {lines.map((line, index) => (
+            <Line
+              key={line.dataKey}
+              type="monotone"
+              dataKey={line.dataKey}
+              stroke={line.stroke || DEFAULT_COLORS[index % DEFAULT_COLORS.length]}
+              strokeWidth={line.strokeWidth || 2}
+              name={line.name || line.dataKey}
+              dot={false}
+              activeDot={{ r: 6 }}
             />
-            <YAxis
-              stroke="#666"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${value}`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}
-              labelStyle={{ color: '#374151' }}
-            />
-            {lines.length > 1 && <Legend />}
-            {lines.map((line, index) => (
-              <Line
-                key={line.dataKey}
-                type="monotone"
-                dataKey={line.dataKey}
-                stroke={line.stroke}
-                strokeWidth={line.strokeWidth || 2}
-                name={line.name}
-                dot={{ r: 4, fill: line.stroke }}
-                activeDot={{ r: 6, fill: line.stroke }}
-              />
-            ))}
-          </RechartsLineChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+          ))}
+        </RechartsLineChart>
+      </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

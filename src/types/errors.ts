@@ -186,10 +186,12 @@ export interface MultiErrorResponse {
 }
 
 // Error factory functions
+type ValidationErrorCode = ErrorCode.VALIDATION_ERROR | ErrorCode.REQUIRED_FIELD_MISSING | ErrorCode.INVALID_FORMAT | ErrorCode.INVALID_ENUM_VALUE | ErrorCode.VALUE_OUT_OF_RANGE;
+
 export const createValidationError = (
   message: string,
   field?: string,
-  code: ErrorCode = ErrorCode.VALIDATION_ERROR,
+  code: ValidationErrorCode = ErrorCode.VALIDATION_ERROR,
   options?: Partial<ValidationError>
 ): ValidationError => ({
   code,
@@ -199,10 +201,17 @@ export const createValidationError = (
   ...options
 });
 
+type ResourceErrorCode = ErrorCode.RESOURCE_NOT_FOUND | ErrorCode.RESOURCE_ALREADY_EXISTS | ErrorCode.RESOURCE_CONFLICT | ErrorCode.RESOURCE_LOCKED;
+type BusinessLogicErrorCode = ErrorCode.LEAD_ALREADY_PROCESSED | ErrorCode.BUYER_NOT_ACTIVE | ErrorCode.SERVICE_NOT_CONFIGURED | ErrorCode.ZIP_CODE_NOT_SUPPORTED | ErrorCode.AUCTION_ALREADY_COMPLETE | ErrorCode.NO_ELIGIBLE_BUYERS;
+type ComplianceErrorCode = ErrorCode.TRUSTEDFORM_INVALID | ErrorCode.JORNAYA_MISSING | ErrorCode.TCPA_CONSENT_REQUIRED | ErrorCode.COMPLIANCE_VERIFICATION_FAILED;
+type ExternalServiceErrorCode = ErrorCode.EXTERNAL_API_ERROR | ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE | ErrorCode.RADAR_API_ERROR | ErrorCode.BUYER_API_TIMEOUT | ErrorCode.BUYER_API_ERROR;
+type SystemErrorCode = ErrorCode.INTERNAL_SERVER_ERROR | ErrorCode.DATABASE_ERROR | ErrorCode.REDIS_CONNECTION_ERROR | ErrorCode.QUEUE_ERROR | ErrorCode.CONFIG_ERROR;
+type RateLimitErrorCode = ErrorCode.RATE_LIMIT_EXCEEDED | ErrorCode.TOO_MANY_REQUESTS | ErrorCode.QUOTA_EXCEEDED;
+
 export const createResourceError = (
   message: string,
   resourceType: string,
-  code: ErrorCode = ErrorCode.RESOURCE_NOT_FOUND,
+  code: ResourceErrorCode = ErrorCode.RESOURCE_NOT_FOUND,
   options?: Partial<ResourceError>
 ): ResourceError => ({
   code,
@@ -214,7 +223,7 @@ export const createResourceError = (
 
 export const createBusinessLogicError = (
   message: string,
-  code: ErrorCode,
+  code: BusinessLogicErrorCode,
   options?: Partial<BusinessLogicError>
 ): BusinessLogicError => ({
   code,
@@ -226,7 +235,7 @@ export const createBusinessLogicError = (
 export const createComplianceError = (
   message: string,
   requiredCompliance: string[],
-  code: ErrorCode,
+  code: ComplianceErrorCode,
   options?: Partial<ComplianceError>
 ): ComplianceError => ({
   code,
@@ -239,7 +248,7 @@ export const createComplianceError = (
 export const createExternalServiceError = (
   message: string,
   service: string,
-  code: ErrorCode = ErrorCode.EXTERNAL_API_ERROR,
+  code: ExternalServiceErrorCode = ErrorCode.EXTERNAL_API_ERROR,
   options?: Partial<ExternalServiceError>
 ): ExternalServiceError => ({
   code,
@@ -252,7 +261,7 @@ export const createExternalServiceError = (
 export const createSystemError = (
   message: string,
   severity: SystemError['severity'] = 'medium',
-  code: ErrorCode = ErrorCode.INTERNAL_SERVER_ERROR,
+  code: SystemErrorCode = ErrorCode.INTERNAL_SERVER_ERROR,
   options?: Partial<SystemError>
 ): SystemError => ({
   code,
@@ -268,7 +277,7 @@ export const createRateLimitError = (
   current: number,
   resetTime: string,
   retryAfter: number,
-  code: ErrorCode = ErrorCode.RATE_LIMIT_EXCEEDED
+  code: RateLimitErrorCode = ErrorCode.RATE_LIMIT_EXCEEDED
 ): RateLimitError => ({
   code,
   message,

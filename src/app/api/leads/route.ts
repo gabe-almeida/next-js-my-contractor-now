@@ -11,6 +11,7 @@ import {
 } from '@/lib/validations/lead';
 import { sanitizeFormData } from '@/lib/security/sanitize';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
+import { recordConversion } from '@/lib/services/affiliate-link-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -183,6 +184,10 @@ export async function POST(request: NextRequest) {
         first_touch_timestamp: complianceData.attribution.first_touch_timestamp,
         session_id: complianceData.attribution.session_id,
         raw_query_params: complianceData.attribution.raw_query_params,
+        // Affiliate tracking
+        affiliate_id: complianceData.attribution.affiliate_id,
+        aff: complianceData.attribution.aff,
+        ref: complianceData.attribution.ref,
       } : undefined,
     } : null;
 
@@ -275,6 +280,18 @@ export async function POST(request: NextRequest) {
       leadId: result.id,
       priority: leadQualityScore >= 80 ? 'high' : 'normal',
     });
+
+    // Record affiliate conversion if attribution exists
+    // This increments the link's conversion counter for affiliate tracking
+    const affiliateCode = leadComplianceData?.attribution?.affiliate_id ||
+                          leadComplianceData?.attribution?.aff ||
+                          leadComplianceData?.attribution?.ref;
+    if (affiliateCode) {
+      // Fire and forget - don't block lead response for affiliate tracking
+      recordConversion(affiliateCode).catch(err => {
+        console.warn('Failed to record affiliate conversion:', err);
+      });
+    }
 
     return NextResponse.json({
       success: true,

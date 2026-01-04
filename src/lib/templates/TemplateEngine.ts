@@ -7,46 +7,52 @@ export class TemplateEngine {
    */
   static transform(data: any, mappings: FieldMapping[]): any {
     const result: any = {};
-    
+
     for (const mapping of mappings) {
       try {
+        // Support both sourceField/targetField and source/target field names
+        const sourceField = mapping.sourceField || mapping.source;
+        const targetField = mapping.targetField || mapping.target;
+
         // Check if mapping condition is met
         if (mapping.condition && !this.evaluateCondition(data, mapping.condition)) {
           continue;
         }
 
-        let value = this.getNestedValue(data, mapping.sourceField);
-        
+        let value = this.getNestedValue(data, sourceField);
+
         // Handle missing values
         if (value === undefined || value === null) {
           if (mapping.defaultValue !== undefined) {
             value = mapping.defaultValue;
           } else if (mapping.required) {
             throw new AppError(
-              `Required field ${mapping.sourceField} is missing`,
-              400
+              `Required field ${sourceField} is missing`,
+              'MISSING_REQUIRED_FIELD'
             );
           } else {
             continue;
           }
         }
-        
+
         // Apply transformations
         if (mapping.transform) {
           value = this.applyTransform(value, mapping.transform);
         }
-        
+
         // Set the transformed value
-        this.setNestedValue(result, mapping.targetField, value);
-        
+        this.setNestedValue(result, targetField, value);
+
       } catch (error) {
-        console.error(`Error processing mapping ${mapping.sourceField} -> ${mapping.targetField}:`, error);
+        const sourceField = mapping.sourceField || mapping.source;
+        const targetField = mapping.targetField || mapping.target;
+        console.error(`Error processing mapping ${sourceField} -> ${targetField}:`, error);
         if (mapping.required) {
           throw error;
         }
       }
     }
-    
+
     return result;
   }
 
@@ -391,13 +397,14 @@ export class TemplateEngine {
       
       // Check for potential issues
       for (const mapping of mappings) {
-        const value = this.getNestedValue(data, mapping.sourceField);
-        
+        const sourceField = mapping.sourceField || mapping.source;
+        const value = this.getNestedValue(data, sourceField);
+
         if (value === undefined || value === null) {
           if (mapping.required) {
-            errors.push(`Required field ${mapping.sourceField} is missing`);
+            errors.push(`Required field ${sourceField} is missing`);
           } else if (!mapping.defaultValue) {
-            warnings.push(`Field ${mapping.sourceField} is missing and no default value provided`);
+            warnings.push(`Field ${sourceField} is missing and no default value provided`);
           }
         }
       }

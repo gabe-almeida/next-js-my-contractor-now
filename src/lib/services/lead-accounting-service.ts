@@ -24,6 +24,7 @@ import {
   LeadStatusHistory,
   Lead
 } from '@/types/database';
+import { createCommissionForLead } from './affiliate-commission-service';
 
 // Valid status transitions map
 // Matches actual worker flow: PENDING → PROCESSING → SOLD/REJECTED/DELIVERY_FAILED
@@ -219,6 +220,18 @@ export async function changeLeadStatus(
       adminUserId,
       changeSource
     });
+
+    // WHY: Create affiliate commission when lead is sold
+    // This triggers the affiliate payout workflow when a lead converts
+    if (newStatus === LeadStatus.SOLD) {
+      // Fire and forget - don't block status change for commission creation
+      createCommissionForLead(leadId).catch(err => {
+        logger.warn('Failed to create affiliate commission for lead', {
+          leadId,
+          error: err.message
+        });
+      });
+    }
 
     return {
       success: true,

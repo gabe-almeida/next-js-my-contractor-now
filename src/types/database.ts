@@ -107,11 +107,35 @@ export interface TemplateConfig {
   staticFields?: Record<string, any>;
 }
 
+export type TransformationType =
+  | 'uppercase'
+  | 'lowercase'
+  | 'trim'
+  | 'format_phone'
+  | 'format_date'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'phone'
+  | 'email'
+  | string; // Allow custom transforms
+
+export interface MappingCondition {
+  field: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'exists' | 'gt' | 'lt' | 'gte' | 'lte';
+  value?: any;
+}
+
 export interface FieldMapping {
   source: string;
   target: string;
-  transform?: 'uppercase' | 'lowercase' | 'trim' | 'format_phone' | 'format_date';
+  // Alternative field names for compatibility
+  sourceField?: string;
+  targetField?: string;
+  transform?: TransformationType;
   defaultValue?: any;
+  required?: boolean;
+  condition?: MappingCondition;
 }
 
 export interface ComplianceConfig {
@@ -456,4 +480,163 @@ export interface BuyerQueryFilters {
   hasServiceType?: string;
   hasZipCode?: string;
   search?: string;
+}
+
+// ============================================
+// AFFILIATE SYSTEM TYPES
+// ============================================
+
+export enum AffiliateStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED'
+}
+
+export enum CommissionStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  PAID = 'PAID',
+  REJECTED = 'REJECTED'
+}
+
+export enum WithdrawalStatus {
+  REQUESTED = 'REQUESTED',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED'
+}
+
+export interface Affiliate {
+  id: string;
+  email: string;
+  passwordHash: string;
+  firstName: string;
+  lastName: string;
+  companyName?: string | null;
+  phone?: string | null;
+  commissionRate: number; // Decimal stored as number
+  status: AffiliateStatus;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  links?: AffiliateLink[];
+  commissions?: AffiliateCommission[];
+  withdrawals?: AffiliateWithdrawal[];
+}
+
+export interface AffiliateLink {
+  id: string;
+  affiliateId: string;
+  code: string;
+  targetPath: string; // e.g., "/windows", "/roofing"
+  name?: string | null;
+  clicks: number;
+  conversions: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  affiliate?: Affiliate;
+}
+
+export interface AffiliateCommission {
+  id: string;
+  affiliateId: string;
+  leadId: string;
+  amount: number; // Decimal stored as number
+  rate: number; // Rate at time of creation
+  status: CommissionStatus;
+  approvedAt?: Date | null;
+  paidAt?: Date | null;
+  rejectedAt?: Date | null;
+  rejectReason?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  affiliate?: Affiliate;
+  lead?: Lead;
+}
+
+export interface AffiliateWithdrawal {
+  id: string;
+  affiliateId: string;
+  amount: number; // Decimal stored as number
+  method: string; // "paypal", "bank_transfer"
+  methodDetails?: string | null; // Encrypted JSON
+  status: WithdrawalStatus;
+  processedAt?: Date | null;
+  processedBy?: string | null;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  affiliate?: Affiliate;
+}
+
+// Affiliate dashboard statistics
+export interface AffiliateStats {
+  totalEarned: number;
+  pendingCommissions: number;
+  approvedCommissions: number;
+  availableForWithdrawal: number;
+  totalClicks: number;
+  totalConversions: number;
+  conversionRate: number;
+  activeLinks: number;
+}
+
+// Affiliate query filters
+export interface AffiliateQueryFilters {
+  status?: AffiliateStatus;
+  search?: string;
+}
+
+export interface CommissionQueryFilters {
+  status?: CommissionStatus;
+  affiliateId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+export interface WithdrawalQueryFilters {
+  status?: WithdrawalStatus;
+  affiliateId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+// Affiliate creation/update requests
+export interface CreateAffiliateRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  companyName?: string;
+  phone?: string;
+}
+
+export interface UpdateAffiliateRequest {
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  phone?: string;
+  commissionRate?: number;
+  status?: AffiliateStatus;
+}
+
+export interface CreateAffiliateLinkRequest {
+  targetPath: string;
+  code?: string; // Optional custom code
+  name?: string;
+}
+
+export interface CreateWithdrawalRequest {
+  amount: number;
+  method: string;
+  methodDetails?: string;
 }

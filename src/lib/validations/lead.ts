@@ -39,6 +39,10 @@ export const attributionDataSchema = z.object({
   twclid: z.string().optional(),
   rdt_cid: z.string().optional(),
   irclickid: z.string().optional(),
+  // Affiliate tracking
+  affiliate_id: z.string().optional(),
+  aff: z.string().optional(),
+  ref: z.string().optional(),
   // Page context
   landing_page: z.string().optional(),
   referrer: z.string().optional(),

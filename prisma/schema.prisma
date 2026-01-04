@@ -99,11 +99,12 @@ model Lead {
   createdAt          DateTime             @default(now()) @map("created_at")
   updatedAt          DateTime             @updatedAt @map("updated_at")
   // Relations
-  complianceAudits   ComplianceAuditLog[]
-  serviceType        ServiceType          @relation(fields: [serviceTypeId], references: [id])
-  winningBuyer       Buyer?               @relation(fields: [winningBuyerId], references: [id])
-  transactions       Transaction[]
-  statusHistory      LeadStatusHistory[]
+  complianceAudits       ComplianceAuditLog[]
+  serviceType            ServiceType          @relation(fields: [serviceTypeId], references: [id])
+  winningBuyer           Buyer?               @relation(fields: [winningBuyerId], references: [id])
+  transactions           Transaction[]
+  statusHistory          LeadStatusHistory[]
+  affiliateCommissions   AffiliateCommission[]
 
   @@index([status])
   @@index([zipCode])
@@ -237,4 +238,116 @@ model LeadStatusHistory {
   @@index([newStatus])
   @@index([createdAt])
   @@map("lead_status_history")
+}
+
+// ============================================
+// AFFILIATE SYSTEM MODELS
+// ============================================
+
+enum AffiliateStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Affiliate {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  passwordHash    String          @map("password_hash")
+  firstName       String          @map("first_name")
+  lastName        String          @map("last_name")
+  companyName     String?         @map("company_name")
+  phone           String?
+  commissionRate  Decimal         @default(0.10) @map("commission_rate") @db.Decimal(5, 4)
+  status          AffiliateStatus @default(PENDING)
+  emailVerified   Boolean         @default(false) @map("email_verified")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  links       AffiliateLink[]
+  commissions AffiliateCommission[]
+  withdrawals AffiliateWithdrawal[]
+
+  @@index([status])
+  @@index([email])
+  @@map("affiliates")
+}
+
+model AffiliateLink {
+  id          String    @id @default(uuid())
+  affiliateId String    @map("affiliate_id")
+  code        String    @unique
+  targetPath  String    @map("target_path") // e.g., "/windows", "/roofing"
+  name        String?   // e.g., "Facebook Campaign Jan"
+  clicks      Int       @default(0)
+  conversions Int       @default(0)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([code])
+  @@index([isActive])
+  @@map("affiliate_links")
+}
+
+model AffiliateCommission {
+  id          String           @id @default(uuid())
+  affiliateId String           @map("affiliate_id")
+  leadId      String           @map("lead_id")
+  amount      Decimal          @db.Decimal(10, 2)
+  rate        Decimal          @db.Decimal(5, 4) // Rate at time of creation
+  status      CommissionStatus @default(PENDING)
+  approvedAt  DateTime?        @map("approved_at")
+  paidAt      DateTime?        @map("paid_at")
+  rejectedAt  DateTime?        @map("rejected_at")
+  rejectReason String?         @map("reject_reason")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([leadId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("affiliate_commissions")
+}
+
+model AffiliateWithdrawal {
+  id            String           @id @default(uuid())
+  affiliateId   String           @map("affiliate_id")
+  amount        Decimal          @db.Decimal(10, 2)
+  method        String           // "paypal", "bank_transfer"
+  methodDetails String?          @map("method_details") // PayPal email, bank info (encrypted JSON)
+  status        WithdrawalStatus @default(REQUESTED)
+  processedAt   DateTime?        @map("processed_at")
+  processedBy   String?          @map("processed_by") // Admin user ID
+  notes         String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("affiliate_withdrawals")
 }

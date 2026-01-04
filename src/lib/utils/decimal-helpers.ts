@@ -132,7 +132,7 @@ export function bidsEqual(bid1: Decimal | number, bid2: Decimal | number): boole
  * Add multiple bid amounts together
  */
 export function sumBids(bids: (Decimal | number)[]): Decimal {
-  return bids.reduce((sum, bid) => {
+  return bids.reduce<Decimal>((sum, bid) => {
     return sum.plus(toDecimal(bid));
   }, new Decimal(0));
 }

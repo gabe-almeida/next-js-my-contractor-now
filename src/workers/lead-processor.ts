@@ -19,12 +19,15 @@ function safeJsonParse<T>(value: unknown, fallback: T, fieldName: string): T {
   }
 }
 
+// Default empty FormSchema for fallback
+const emptyFormSchema = { fields: [], validations: [] };
+
 // Helper function to convert Prisma lead to LeadData format
 function convertToLeadData(lead: any): LeadData {
   const serviceType: ServiceType = {
     id: lead.serviceType.id,
     name: lead.serviceType.name,
-    formSchema: safeJsonParse(lead.serviceType.formSchema, {}, 'formSchema'),
+    formSchema: safeJsonParse(lead.serviceType.formSchema, emptyFormSchema, 'formSchema'),
     active: lead.serviceType.active,
   };
 
@@ -92,7 +95,7 @@ async function processLead(job: any) {
     });
 
     if (!lead) {
-      throw new AppError(`Lead ${leadId} not found`, 404);
+      throw new AppError(`Lead ${leadId} not found`, 'RESOURCE_NOT_FOUND');
     }
 
     // Convert to LeadData format expected by advanced auction engine

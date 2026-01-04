@@ -21,9 +21,9 @@ interface ServiceType {
   id: string;
   name: string;
   displayName: string;
-  category: 'construction' | 'repair' | 'maintenance' | 'installation';
-  description: string;
-  icon: string;
+  category?: string;
+  description?: string;
+  icon?: string;
 }
 
 interface ServiceLocationMapping {

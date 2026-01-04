@@ -449,10 +449,10 @@ export class BuyerEligibilityService {
       buyerConfig,
       eligibilityScore,
       constraints: {
-        maxLeadsPerDay: serviceZone.maxLeadsPerDay,
+        maxLeadsPerDay: serviceZone.maxLeadsPerDay ?? undefined,
         currentDailyCount,
-        minBid: serviceZone.minBid,
-        maxBid: serviceZone.maxBid,
+        minBid: serviceZone.minBid ?? undefined,
+        maxBid: serviceZone.maxBid ?? undefined,
         priority: serviceZone.priority
       }
     };
@@ -481,10 +481,9 @@ export class BuyerEligibilityService {
       score += Math.min(serviceZone.maxBid * 0.1, 50); // Up to 50 points for high bids
     }
 
-    // Daily capacity bonus
+    // Daily capacity bonus (just check if they have capacity limits configured)
     if (serviceZone.maxLeadsPerDay) {
-      const remainingCapacity = serviceZone.maxLeadsPerDay - (serviceZone.constraints?.currentDailyCount || 0);
-      score += Math.min(remainingCapacity * 2, 20); // Up to 20 points for remaining capacity
+      score += 10; // Bonus for having capacity limits
     }
 
     // Buyer configuration bonus

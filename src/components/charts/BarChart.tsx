@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * BarChart Component
+ *
+ * WHY: Displays categorical data as a bar chart.
+ * WHEN: Used for comparisons, distributions, rankings.
+ * HOW: Wraps recharts BarChart with consistent styling.
+ */
+
 import {
   BarChart as RechartsBarChart,
   Bar,
@@ -7,113 +15,131 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Legend
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 
-interface BarChartProps {
-  title: string;
-  data: Array<{
-    [key: string]: any;
-  }>;
-  xAxisKey: string;
-  bars: Array<{
-    dataKey: string;
-    fill: string;
-    name: string;
-  }>;
-  height?: number;
-  className?: string;
-  loading?: boolean;
-  stacked?: boolean;
+interface DataPoint {
+  [key: string]: string | number | undefined;
 }
 
+interface BarConfig {
+  dataKey: string;
+  fill?: string;
+  name?: string;
+  stackId?: string;
+}
+
+interface BarChartProps {
+  data: DataPoint[];
+  bars: BarConfig[];
+  xAxisKey?: string;
+  height?: number;
+  showGrid?: boolean;
+  showLegend?: boolean;
+  layout?: 'horizontal' | 'vertical';
+  className?: string;
+  title?: string;
+  loading?: boolean;
+}
+
+const DEFAULT_COLORS = [
+  '#3B82F6', // blue
+  '#10B981', // green
+  '#F59E0B', // amber
+  '#EF4444', // red
+  '#8B5CF6', // purple
+  '#EC4899', // pink
+];
+
 export function BarChart({
-  title,
   data,
-  xAxisKey,
   bars,
+  xAxisKey = 'name',
   height = 300,
-  className,
-  loading = false,
-  stacked = false
+  showGrid = true,
+  showLegend = true,
+  layout = 'horizontal',
+  className = '',
+  title,
+  loading = false
 }: BarChartProps) {
   if (loading) {
     return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            <div className="h-6 bg-gray-200 rounded animate-pulse w-32"></div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`bg-gray-100 rounded animate-pulse`} style={{ height }}>
-            <div className="flex items-center justify-center h-full text-gray-400">
-              Loading chart...
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className={'bg-white rounded-lg shadow p-6 ' + className}>
+        {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
+        <div className="animate-pulse" style={{ height }}>
+          <div className="h-full bg-gray-200 rounded"></div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={height}>
-          <RechartsBarChart
-            data={data}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis 
-              dataKey={xAxisKey}
-              stroke="#666"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="#666"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${value}`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}
-              labelStyle={{ color: '#374151' }}
-            />
-            {bars.length > 1 && <Legend />}
-            {bars.map((bar, index) => (
-              <Bar
-                key={bar.dataKey}
-                dataKey={bar.dataKey}
-                fill={bar.fill}
-                name={bar.name}
-                stackId={stacked ? 'stack' : undefined}
-                radius={stacked ? undefined : [2, 2, 0, 0]}
+    <div className={'bg-white rounded-lg shadow p-6 ' + className}>
+      {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
+      <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsBarChart
+          data={data}
+          layout={layout}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />}
+          {layout === 'horizontal' ? (
+            <>
+              <XAxis
+                dataKey={xAxisKey}
+                tick={{ fontSize: 12, fill: '#6B7280' }}
+                tickLine={false}
+                axisLine={{ stroke: '#E5E7EB' }}
               />
-            ))}
-          </RechartsBarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+              <YAxis
+                tick={{ fontSize: 12, fill: '#6B7280' }}
+                tickLine={false}
+                axisLine={{ stroke: '#E5E7EB' }}
+              />
+            </>
+          ) : (
+            <>
+              <XAxis
+                type="number"
+                tick={{ fontSize: 12, fill: '#6B7280' }}
+                tickLine={false}
+                axisLine={{ stroke: '#E5E7EB' }}
+              />
+              <YAxis
+                dataKey={xAxisKey}
+                type="category"
+                tick={{ fontSize: 12, fill: '#6B7280' }}
+                tickLine={false}
+                axisLine={{ stroke: '#E5E7EB' }}
+                width={100}
+              />
+            </>
+          )}
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'white',
+              border: '1px solid #E5E7EB',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            }}
+          />
+          {showLegend && <Legend />}
+          {bars.map((bar, index) => (
+            <Bar
+              key={bar.dataKey}
+              dataKey={bar.dataKey}
+              fill={bar.fill || DEFAULT_COLORS[index % DEFAULT_COLORS.length]}
+              name={bar.name || bar.dataKey}
+              stackId={bar.stackId}
+              radius={[4, 4, 0, 0]}
+            />
+          ))}
+        </RechartsBarChart>
+      </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

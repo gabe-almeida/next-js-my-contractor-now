@@ -1,5 +1,8 @@
-import { FormConfig, ServiceType } from '@/types/forms';
+import { FormConfig } from '@/types/forms';
 import { conditionalHelpers } from '@/utils/forms/conditionals';
+
+// Service type keys for form configs
+type ServiceTypeKey = 'windows' | 'roofing' | 'bathrooms';
 
 // Roofing service form configuration
 export const roofingFormConfig: FormConfig = {
@@ -519,13 +522,13 @@ export const bathroomsFormConfig: FormConfig = {
 };
 
 // Service configuration mapping
-export const serviceConfigs: Record<ServiceType, FormConfig> = {
+export const serviceConfigs: Record<ServiceTypeKey, FormConfig> = {
   windows: windowsFormConfig,
   roofing: roofingFormConfig,
   bathrooms: bathroomsFormConfig
 };
 
 // Helper function to get form config by service type
-export function getFormConfig(serviceType: ServiceType): FormConfig {
-  return serviceConfigs[serviceType] || genericContractorConfig;
+export function getFormConfig(serviceType: ServiceTypeKey | string): FormConfig {
+  return serviceConfigs[serviceType as ServiceTypeKey] || genericContractorConfig;
 }

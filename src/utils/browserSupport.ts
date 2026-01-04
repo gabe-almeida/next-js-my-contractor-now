@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 // Browser support detection and polyfills
 export class BrowserSupport {
   private static instance: BrowserSupport;
@@ -189,32 +191,38 @@ export class BrowserSupport {
   }
 
   // Polyfill loading
+  // Note: These polyfills are optional and only load for legacy browsers
+  // Modern browsers (all supported by Next.js) don't need them
   public async loadPolyfills(): Promise<void> {
-    const polyfills = [];
-    
-    // Promise polyfill for IE
+    const polyfills: Promise<unknown>[] = [];
+
+    // Promise polyfill for IE (not needed for modern browsers)
     if (!this.supports('promises')) {
-      polyfills.push(import('es6-promise').then(module => {
+      // @ts-expect-error - Optional polyfill, may not be installed
+      polyfills.push(import('es6-promise').then((module: { polyfill: () => void }) => {
         module.polyfill();
-      }));
+      }).catch(() => console.warn('es6-promise polyfill not available')));
     }
-    
+
     // Fetch polyfill for IE
     if (!this.supports('fetch')) {
-      polyfills.push(import('whatwg-fetch'));
+      // @ts-expect-error - Optional polyfill, may not be installed
+      polyfills.push(import('whatwg-fetch').catch(() => console.warn('whatwg-fetch polyfill not available')));
     }
-    
+
     // IntersectionObserver polyfill
     if (!this.supports('intersectionObserver')) {
-      polyfills.push(import('intersection-observer'));
+      // @ts-expect-error - Optional polyfill, may not be installed
+      polyfills.push(import('intersection-observer').catch(() => console.warn('intersection-observer polyfill not available')));
     }
-    
+
     // Custom properties polyfill
     if (!this.supports('customProperties')) {
       polyfills.push(
-        import('css-vars-ponyfill').then(module => {
+        // @ts-expect-error - Optional polyfill, may not be installed
+        import('css-vars-ponyfill').then((module: { default: () => void }) => {
           module.default();
-        })
+        }).catch(() => console.warn('css-vars-ponyfill not available'))
       );
     }
 

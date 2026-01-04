@@ -43,6 +43,11 @@ export interface AttributionData {
   rdt_cid?: string; // Reddit
   irclickid?: string; // Impact Radius
 
+  // Affiliate tracking
+  affiliate_id?: string; // Affiliate tracking code
+  aff?: string; // Short alias for affiliate_id
+  ref?: string; // Referral code alias
+
   // Page context
   landing_page?: string;
   referrer?: string;
@@ -84,6 +89,10 @@ const ATTRIBUTION_PARAMS = [
   'rdt_cid',
   // Impact Radius
   'irclickid',
+  // Affiliate tracking
+  'affiliate_id',
+  'aff',
+  'ref',
 ] as const;
 
 /**
@@ -283,4 +292,22 @@ export function detectTrafficSource(data: AttributionData): string {
   }
 
   return 'direct';
+}
+
+/**
+ * Extracts affiliate code from attribution data
+ * Checks multiple parameter names (affiliate_id, aff, ref)
+ * Returns the first non-empty value found
+ */
+export function getAffiliateCode(data: AttributionData): string | null {
+  // Check in priority order
+  const code = data.affiliate_id || data.aff || data.ref;
+  return code || null;
+}
+
+/**
+ * Check if attribution data contains affiliate tracking
+ */
+export function hasAffiliateAttribution(data: AttributionData): boolean {
+  return !!(data.affiliate_id || data.aff || data.ref);
 }

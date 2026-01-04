@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CheckCircleIcon, ClockIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
-export default function ThankYouPage() {
+function ThankYouContent() {
   const searchParams = useSearchParams();
   const leadId = searchParams.get('leadId');
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -21,9 +22,7 @@ export default function ThankYouPage() {
   }, [timeRemaining]);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Header />
-
+    <>
       {/* Main Content */}
       <div className="py-16">
         <div className="max-w-3xl mx-auto px-4 text-center">
@@ -50,9 +49,9 @@ export default function ThankYouPage() {
                 We're Finding Your Contractors
               </h2>
             </div>
-            
+
             <p className="text-gray-600 mb-6">
-              Our system is currently matching you with qualified contractors in your area. 
+              Our system is currently matching you with qualified contractors in your area.
               You should expect to hear from contractors within the next 24 hours.
             </p>
 
@@ -62,7 +61,7 @@ export default function ThankYouPage() {
                   Estimated processing time: <span className="font-semibold text-orange-600">{timeRemaining} seconds</span>
                 </p>
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div 
+                  <div
                     className="bg-orange-500 h-2 rounded-full transition-all duration-1000"
                     style={{ width: `${((30 - timeRemaining) / 30) * 100}%` }}
                   ></div>
@@ -82,7 +81,7 @@ export default function ThankYouPage() {
             <h3 className="text-2xl font-semibold text-gray-800 mb-6">
               What Happens Next?
             </h3>
-            
+
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -121,13 +120,13 @@ export default function ThankYouPage() {
             <h4 className="text-lg font-semibold text-gray-800 mb-4">
               Questions? We're Here to Help
             </h4>
-            
+
             <div className="flex justify-center space-x-8">
               <div className="flex items-center">
                 <PhoneIcon className="w-5 h-5 text-orange-600 mr-2" />
                 <span className="text-gray-600">(555) 123-4567</span>
               </div>
-              
+
               <div className="flex items-center">
                 <EnvelopeIcon className="w-5 h-5 text-orange-600 mr-2" />
                 <span className="text-gray-600">support@mycontractornow.com</span>
@@ -146,7 +145,33 @@ export default function ThankYouPage() {
           </div>
         </div>
       </div>
+    </>
+  );
+}
 
+function ThankYouLoading() {
+  return (
+    <div className="py-16">
+      <div className="max-w-3xl mx-auto px-4 text-center">
+        <div className="mb-8 flex justify-center">
+          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center animate-pulse">
+            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+          </div>
+        </div>
+        <div className="h-10 bg-gray-200 rounded w-48 mx-auto mb-4 animate-pulse"></div>
+        <div className="h-6 bg-gray-200 rounded w-64 mx-auto animate-pulse"></div>
+      </div>
+    </div>
+  );
+}
+
+export default function ThankYouPage() {
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <Header />
+      <Suspense fallback={<ThankYouLoading />}>
+        <ThankYouContent />
+      </Suspense>
       <Footer />
     </div>
   );

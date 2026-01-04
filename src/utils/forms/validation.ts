@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FormField, FormValidationError } from '@/types/forms';
+import { FormField, FormValidationError } from '@/types/forms/index';
 
 // Base validation schemas
 export const phoneSchema = z.string()

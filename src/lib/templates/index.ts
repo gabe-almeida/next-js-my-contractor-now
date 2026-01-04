@@ -497,11 +497,8 @@ interface HealthCheckResult {
   };
 }
 
-// Export all components
+// Export all components (TemplateEngineOrchestrator is already exported at class definition)
 export {
-  // Main orchestrator
-  TemplateEngineOrchestrator,
-  
   // Core engines
   TemplateEngine,
   AuctionEngine,

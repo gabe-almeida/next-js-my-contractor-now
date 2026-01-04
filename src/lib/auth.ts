@@ -13,7 +13,8 @@ import { checkRateLimit } from './rate-limiter';
 export const USER_ROLES = {
   ADMIN: 'admin',
   MANAGER: 'manager',
-  VIEWER: 'viewer'
+  VIEWER: 'viewer',
+  AFFILIATE: 'affiliate'
 } as const;
 
 export const PERMISSIONS = {
@@ -22,7 +23,12 @@ export const PERMISSIONS = {
   ADMIN_DELETE: 'admin:delete',
   LEADS_READ: 'leads:read',
   LEADS_WRITE: 'leads:write',
-  ANALYTICS_READ: 'analytics:read'
+  ANALYTICS_READ: 'analytics:read',
+  // Affiliate-specific permissions
+  AFFILIATE_READ_OWN: 'affiliate:read_own',
+  AFFILIATE_WRITE_OWN: 'affiliate:write_own',
+  AFFILIATE_READ_COMMISSIONS: 'affiliate:read_commissions',
+  AFFILIATE_REQUEST_WITHDRAWAL: 'affiliate:request_withdrawal'
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
@@ -61,6 +67,13 @@ export function getRolePermissions(role: UserRole): Permission[] {
         PERMISSIONS.ADMIN_READ,
         PERMISSIONS.LEADS_READ,
         PERMISSIONS.ANALYTICS_READ
+      ];
+    case USER_ROLES.AFFILIATE:
+      return [
+        PERMISSIONS.AFFILIATE_READ_OWN,
+        PERMISSIONS.AFFILIATE_WRITE_OWN,
+        PERMISSIONS.AFFILIATE_READ_COMMISSIONS,
+        PERMISSIONS.AFFILIATE_REQUEST_WITHDRAWAL
       ];
     default:
       return [];

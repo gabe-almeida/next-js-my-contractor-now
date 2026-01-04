@@ -1,76 +1,25 @@
 // Re-export all types for easy importing
 // This file serves as the main entry point for all type definitions
 
-// Database types
+// Database types (primary source for entity types)
 export * from './database';
-export * from './api';
-export * from './forms';
-export * from './errors';
-export * from './guards';
-export * from './response-mapping';
 
-// Legacy compatibility - these types are now in database.ts
-// Keeping for backward compatibility until all imports are updated
-export type { 
-  ServiceType,
-  Lead,
-  Buyer,
-  Transaction,
-  ComplianceData,
-  FormData,
-  BuyerType,
-  LeadStatus,
-  TransactionStatus,
-  TransactionActionType
-} from './database';
-
+// API types (excluding duplicates that exist in database)
 export type {
   ApiResponse,
   ApiSuccessResponse,
   ApiErrorResponse,
   PaginatedResponse,
+  BidResponse,
+  AuctionResult,
   CreateLeadRequest,
   CreateBuyerRequest,
-  BidResponse,
-  AuctionResult
+  DashboardMetrics,
+  ChartData
 } from './api';
 
-export type {
-  FormEngineProps,
-  FormSubmissionData,
-  FormComplianceData,
-  WindowsFormData,
-  BathroomFormData,
-  RoofingFormData,
-  FormValidationResult,
-  FormState
-} from './forms';
-
-export type {
-  AppError,
-  ValidationError,
-  ResourceError,
-  BusinessLogicError,
-  ComplianceError,
-  ErrorResponse
-} from './errors';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// Other type modules
+export * from './forms';
+export * from './errors';
+export * from './guards';
+export * from './response-mapping';

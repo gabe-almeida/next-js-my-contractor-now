@@ -2,7 +2,7 @@
 
 // Core UI Components
 export { Button, buttonVariants } from './Button';
-export { Card } from './Card';
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './Card';
 export { Badge } from './Badge';
 export { default as PortalDropdown } from './PortalDropdown';
 

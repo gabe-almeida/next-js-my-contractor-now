@@ -349,7 +349,7 @@ export default function ServiceLocationQuizSimple({ onComplete, onStepSave }: Se
             {/* Service status chips */}
             <div className="flex flex-wrap gap-2 mt-3">
               {selectedServices.map(service => {
-                const hasLocations = serviceLocationMappings.find(m => m.serviceId === service.id)?.locations?.length > 0;
+                const hasLocations = (serviceLocationMappings.find(m => m.serviceId === service.id)?.locations?.length ?? 0) > 0;
                 return (
                   <span
                     key={service.id}

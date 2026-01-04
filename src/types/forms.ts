@@ -5,7 +5,9 @@ import { ComplianceStatus, TcpaConsentStatus } from './api';
 export type { FormFieldOption, ComplianceStatus, TcpaConsentStatus };
 
 // Re-export form configuration types from forms/index
-export type { FormConfig, ServiceType } from './forms/index';
+// Note: ServiceType is defined in database.ts, not re-exporting to avoid conflict
+// Note: ComplianceConfig is also in database.ts, not re-exporting to avoid conflict
+export type { FormConfig, FormConditional, FormField as FormFieldConfig, FormSection, FormStyling } from './forms/index';
 
 // Form Engine Types
 export interface FormEngineProps {
