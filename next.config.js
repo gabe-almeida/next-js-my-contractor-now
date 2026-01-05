@@ -6,6 +6,9 @@ function generateNonce() {
 }
 
 const nextConfig = {
+  // Standalone output for reduced memory footprint (important for Render Starter plan)
+  output: 'standalone',
+
   // Transpile recharts for proper ESM handling
   transpilePackages: ['recharts', 'react-smooth', 'd3-scale', 'd3-shape'],
 
