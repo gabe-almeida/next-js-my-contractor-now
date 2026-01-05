@@ -116,7 +116,7 @@ export default function PortalDropdown({
       <button
         ref={buttonRef}
         onClick={toggleDropdown}
-        className={`w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-4 text-left flex items-center justify-between text-gray-600 hover:bg-gray-100 transition-colors ${className}`}
+        className={`w-full bg-white border-2 border-orange-300 rounded-lg px-4 py-4 text-left flex items-center justify-between text-gray-600 hover:border-orange-400 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${className}`}
       >
         <span className={selectedValue ? 'text-gray-800' : 'text-gray-500'}>
           {selectedValue || placeholder}
@@ -130,7 +130,7 @@ export default function PortalDropdown({
       {isMounted && isOpen && buttonRect && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed bg-white border border-gray-300 rounded-lg shadow-xl max-h-64 overflow-y-auto"
+          className="fixed bg-white border-2 border-orange-300 rounded-lg shadow-xl max-h-64 overflow-y-auto"
           style={{
             top: buttonRect.bottom + 4,
             left: buttonRect.left,

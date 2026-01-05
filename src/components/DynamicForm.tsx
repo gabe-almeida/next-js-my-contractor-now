@@ -128,7 +128,7 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                 <button
                   key={option.value}
                   onClick={() => handleAnswer(currentQuestion.id, option.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-6 py-4 text-left hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                  className="w-full bg-white border-2 border-orange-300 rounded-lg px-6 py-4 text-left hover:bg-orange-50 hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
                 >
                   <div className="text-gray-800 font-medium">{option.label}</div>
                 </button>
@@ -192,12 +192,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                   type="text"
                   value={formData.firstName}
                   onChange={(e) => updateField('firstName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.firstName.isValid
                       ? 'border-green-300 focus:border-green-500'
-                      : 'border-gray-300 focus:border-orange-500'
+                      : 'border-orange-300 focus:border-orange-500'
                   }`}
                   placeholder="First name"
                 />
@@ -213,12 +213,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => updateField('lastName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.lastName.isValid
                       ? 'border-green-300 focus:border-green-500'
-                      : 'border-gray-300 focus:border-orange-500'
+                      : 'border-orange-300 focus:border-orange-500'
                   }`}
                   placeholder="Last name"
                 />
@@ -257,12 +257,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField('email', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                   validation.email.message
                     ? 'border-red-300 focus:border-red-500'
                     : validation.email.isValid
                     ? 'border-green-300 focus:border-green-500'
-                    : 'border-gray-300 focus:border-orange-500'
+                    : 'border-orange-300 focus:border-orange-500'
                 }`}
                 placeholder="your@email.com"
               />
@@ -285,12 +285,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                   const formatted = formatPhoneField(e.target.value);
                   updateField('phone', formatted);
                 }}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                   validation.phone.message
                     ? 'border-red-300 focus:border-red-500'
                     : validation.phone.isValid
                     ? 'border-green-300 focus:border-green-500'
-                    : 'border-gray-300 focus:border-orange-500'
+                    : 'border-orange-300 focus:border-orange-500'
                 }`}
                 placeholder="(555) 123-4567"
               />
@@ -341,12 +341,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                   type="text"
                   value={formData.firstName}
                   onChange={(e) => updateField('firstName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.firstName.isValid
                       ? 'border-green-300 focus:border-green-500'
-                      : 'border-gray-300 focus:border-orange-500'
+                      : 'border-orange-300 focus:border-orange-500'
                   }`}
                   placeholder="First name"
                 />
@@ -362,12 +362,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => updateField('lastName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.lastName.isValid
                       ? 'border-green-300 focus:border-green-500'
-                      : 'border-gray-300 focus:border-orange-500'
+                      : 'border-orange-300 focus:border-orange-500'
                   }`}
                   placeholder="Last name"
                 />
@@ -385,12 +385,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField('email', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                   validation.email.message
                     ? 'border-red-300 focus:border-red-500'
                     : validation.email.isValid
                     ? 'border-green-300 focus:border-green-500'
-                    : 'border-gray-300 focus:border-orange-500'
+                    : 'border-orange-300 focus:border-orange-500'
                 }`}
                 placeholder="your@email.com"
               />
@@ -413,12 +413,12 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
                   const formatted = formatPhoneField(e.target.value);
                   updateField('phone', formatted);
                 }}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                   validation.phone.message
                     ? 'border-red-300 focus:border-red-500'
                     : validation.phone.isValid
                     ? 'border-green-300 focus:border-green-500'
-                    : 'border-gray-300 focus:border-orange-500'
+                    : 'border-orange-300 focus:border-orange-500'
                 }`}
                 placeholder="(555) 123-4567"
               />
@@ -493,7 +493,7 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
               <div className="mt-8">
                 <button
                   onClick={handleBack}
-                  className="flex items-center px-6 py-3 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="flex items-center px-6 py-3 border-2 border-orange-300 rounded-lg text-gray-600 hover:bg-orange-50 hover:border-orange-400 transition-colors"
                 >
                   <ChevronLeftIcon className="w-5 h-5 mr-2" />
                   Back
