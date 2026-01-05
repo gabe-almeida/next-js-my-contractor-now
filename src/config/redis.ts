@@ -17,8 +17,15 @@ const redisConfig: RedisConfig = {
   maxRetriesPerRequest: 3
 };
 
-// Create Redis clients for different purposes
-export const redis = new Redis({
+// Singleton pattern to prevent multiple Redis connections
+const globalForRedis = globalThis as unknown as {
+  redis: Redis | undefined;
+  queueRedis: Redis | undefined;
+  cacheRedis: Redis | undefined;
+};
+
+// Create Redis clients for different purposes (singleton pattern)
+export const redis = globalForRedis.redis ?? new Redis({
   host: redisConfig.host,
   port: redisConfig.port,
   password: redisConfig.password,
@@ -27,17 +34,22 @@ export const redis = new Redis({
   lazyConnect: true
 });
 
-export const queueRedis = new Redis({
+export const queueRedis = globalForRedis.queueRedis ?? new Redis({
   ...redisConfig,
   db: (redisConfig.db || 0) + 1, // Use separate DB for queue
   lazyConnect: true
 });
 
-export const cacheRedis = new Redis({
+export const cacheRedis = globalForRedis.cacheRedis ?? new Redis({
   ...redisConfig,
   db: (redisConfig.db || 0) + 2, // Use separate DB for cache
   lazyConnect: true
 });
+
+// Store in global for singleton pattern (works in both dev and production)
+globalForRedis.redis = redis;
+globalForRedis.queueRedis = queueRedis;
+globalForRedis.cacheRedis = cacheRedis;
 
 // Connection event handlers
 redis.on('connect', () => {
