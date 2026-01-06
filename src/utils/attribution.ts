@@ -103,6 +103,7 @@ const ATTRIBUTION_COOKIES = [
   '_fbp', // Facebook pixel
   '_ga', // Google Analytics
   '_gid', // Google Analytics session
+  'aff_ref', // Affiliate tracking cookie (set by /r/[code] redirect)
 ] as const;
 
 /**
@@ -132,9 +133,22 @@ export function extractAttributionData(): AttributionData {
   for (const cookieName of ATTRIBUTION_COOKIES) {
     const value = cookies[cookieName];
     if (value) {
-      // Map cookie names to attribution fields (remove leading underscore)
-      const fieldName = cookieName.startsWith('_') ? cookieName.slice(1) : cookieName;
-      (attribution as any)[fieldName] = value;
+      // Map cookie names to attribution fields
+      let fieldName: string;
+      if (cookieName === 'aff_ref') {
+        // Map aff_ref cookie to 'ref' field for affiliate tracking
+        fieldName = 'ref';
+      } else if (cookieName.startsWith('_')) {
+        // Remove leading underscore for analytics cookies
+        fieldName = cookieName.slice(1);
+      } else {
+        fieldName = cookieName;
+      }
+
+      // Only set if not already captured from URL params (URL takes precedence)
+      if (!(attribution as any)[fieldName]) {
+        (attribution as any)[fieldName] = value;
+      }
     }
   }
 
