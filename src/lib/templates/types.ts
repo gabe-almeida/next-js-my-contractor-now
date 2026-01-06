@@ -83,6 +83,31 @@ export interface ComplianceData {
     city?: string;
     state?: string;
   };
+  // Marketing attribution data (from URL params and cookies)
+  attribution?: {
+    // UTM parameters
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+    utm_term?: string;
+    // Click IDs
+    fbclid?: string;
+    gclid?: string;
+    msclkid?: string;
+    ttclid?: string;
+    // Affiliate tracking
+    affiliate_id?: string;
+    aff?: string;
+    ref?: string; // Affiliate link code - maps to Modernize partnerSourceId
+    // Page context
+    landing_page?: string;
+    referrer?: string;
+    referrer_domain?: string;
+    first_touch_timestamp?: string;
+    session_id?: string;
+    raw_query_params?: Record<string, string>;
+  };
 }
 
 export interface ServiceType {
