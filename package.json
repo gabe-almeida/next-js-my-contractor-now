@@ -75,6 +75,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "lint-staged": "^15.0.0",
+    "pg": "^8.16.3",
     "render-cli": "^0.3.2",
     "ts-jest": "^29.4.6",
     "tsx": "^4.21.0"
