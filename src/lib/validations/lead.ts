@@ -9,7 +9,11 @@ export const timeframeSchema = z.enum([
   '1_3_months',
   '3_6_months',
   '6_12_months',
-  'planning_phase'
+  'planning_phase',
+  // Values used by question flows
+  'within_3_months',
+  '3_plus_months',
+  'not_sure'
 ]);
 
 // Attribution data schema for marketing tracking
@@ -68,7 +72,7 @@ export const complianceDataSchema = z.object({
 
 // Base lead schema
 export const createLeadSchema = z.object({
-  serviceTypeId: z.string().uuid('Invalid service type ID'),
+  serviceTypeId: z.string().min(1, 'Service type is required'), // Can be UUID or service name (e.g., 'windows')
   formData: z.record(z.any()),
   zipCode: zipCodeSchema,
   ownsHome: z.boolean(),

@@ -78,8 +78,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify service type exists
-    const serviceType = await prisma.serviceType.findUnique({
-      where: { id: serviceTypeId, active: true },
+    // Note: serviceTypeId can be either the UUID or the service name (e.g., 'windows')
+    // We try both to support forms that pass name vs UUID
+    const serviceType = await prisma.serviceType.findFirst({
+      where: {
+        OR: [
+          { id: serviceTypeId },
+          { name: serviceTypeId }
+        ],
+        active: true
+      },
     });
 
     if (!serviceType) {
@@ -218,7 +226,7 @@ export async function POST(request: NextRequest) {
       // Using sanitized formData to prevent XSS attacks
       const lead = await tx.lead.create({
         data: {
-          serviceTypeId,
+          serviceTypeId: serviceType.id,
           formData: JSON.stringify(sanitizedFormData),
           zipCode,
           ownsHome,
