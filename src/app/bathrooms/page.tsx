@@ -25,7 +25,11 @@ export default function BathroomsPage() {
             tcpaConsent: answers.tcpaConsent?.consented ?? false,
             tcpaTimestamp: answers.tcpaConsent?.timestamp || new Date().toISOString(),
             tcpaConsentText: answers.tcpaConsent?.text || 'TCPA consent not properly captured',
-            attribution: answers.attribution // Marketing attribution data (utm params, click IDs, etc)
+            attribution: answers.attribution, // Marketing attribution data (utm params, click IDs, etc)
+            // TrustedForm and Jornaya compliance tokens - captured by DynamicForm providers
+            trustedFormCertUrl: answers.trustedFormCertUrl || null,
+            trustedFormCertId: answers.trustedFormCertId || null,
+            jornayaLeadId: answers.jornayaLeadId || null,
           }
         })
       });

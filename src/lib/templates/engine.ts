@@ -326,6 +326,25 @@ export class TemplateEngine {
     if (lead.complianceData) {
       const compliance = lead.complianceData;
 
+      // Affiliate tracking fields (ref → partnerSourceId, affiliate_id → publisherSubId for Modernize)
+      if (compliance.attribution && mappings.affiliate) {
+        const affiliateMappings = mappings.affiliate;
+
+        // ref code → partnerSourceId
+        if (compliance.attribution.ref && affiliateMappings.ref) {
+          for (const fieldName of affiliateMappings.ref) {
+            result[fieldName] = compliance.attribution.ref;
+          }
+        }
+
+        // affiliate_id → publisherSubId
+        if (compliance.attribution.affiliate_id && affiliateMappings.affiliateId) {
+          for (const fieldName of affiliateMappings.affiliateId) {
+            result[fieldName] = compliance.attribution.affiliate_id;
+          }
+        }
+      }
+
       // TCPA consent
       if (compliance.tcpaConsent !== undefined && mappings.tcpa?.consent) {
         for (const fieldName of mappings.tcpa.consent) {

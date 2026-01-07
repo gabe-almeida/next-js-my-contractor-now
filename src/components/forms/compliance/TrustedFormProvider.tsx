@@ -54,30 +54,12 @@ export function TrustedFormProvider({
 
     const initializeTrustedForm = () => {
       try {
-        // Load TrustedForm script if not already loaded
-        if (!document.getElementById('trustedform-script')) {
-          const script = document.createElement('script');
-          script.id = 'trustedform-script';
-          script.type = 'text/javascript';
-          // Use the official TrustedForm SDK URL with field parameter and consent tracking
-          const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-          script.src = `${protocol}://api.trustedform.com/trustedform.js?field=xxTrustedFormCertUrl&use_tagged_consent=true&l=${new Date().getTime()}${Math.random()}`;
-          script.async = true;
-          script.onload = () => {
-            setTimeout(() => {
-              checkTrustedFormStatus();
-            }, 1000);
-          };
-          script.onerror = () => {
-            updateStatus({
-              initialized: false,
-              error: 'Failed to load TrustedForm script'
-            });
-          };
-          document.head.appendChild(script);
-        } else {
-          checkTrustedFormStatus();
-        }
+        // TrustedForm script is loaded globally in layout.tsx on first page load
+        // Here we just check if it's ready and get the certificate URL
+        console.log('%c📋 TrustedForm: Checking for existing certificate...', 'color: gray;');
+
+        // Check immediately in case script is already loaded
+        checkTrustedFormStatus();
       } catch (error) {
         updateStatus({
           initialized: false,
@@ -98,6 +80,9 @@ export function TrustedFormProvider({
             const token = window.tf_getToken();
 
             if (certUrl && token) {
+              console.log('%c✅ TrustedForm INITIALIZED via tf_getCertUrl/tf_getToken', 'color: green; font-weight: bold;');
+              console.log('TrustedForm Cert URL:', certUrl);
+              console.log('TrustedForm Token:', token.substring(0, 30) + '...');
               updateStatus({
                 initialized: true,
                 url: certUrl,
@@ -109,6 +94,9 @@ export function TrustedFormProvider({
 
           // Alternative check for xxTrustedForm object
           if (window.xxTrustedForm?.certUrl && window.xxTrustedForm?.token) {
+            console.log('%c✅ TrustedForm INITIALIZED via xxTrustedForm object', 'color: green; font-weight: bold;');
+            console.log('TrustedForm Cert URL:', window.xxTrustedForm.certUrl);
+            console.log('TrustedForm Token:', window.xxTrustedForm.token.substring(0, 30) + '...');
             updateStatus({
               initialized: true,
               url: window.xxTrustedForm.certUrl,
@@ -183,11 +171,19 @@ export function TrustedFormProvider({
 export function useTrustedForm() {
   const getCertUrl = useCallback(() => {
     try {
+      // Method 1: Check for tf_getCertUrl function (some SDK versions)
       if (window.tf_getCertUrl) {
         return window.tf_getCertUrl();
       }
+      // Method 2: Check for xxTrustedForm global object
       if (window.xxTrustedForm?.certUrl) {
         return window.xxTrustedForm.certUrl;
+      }
+      // Method 3: Check for hidden input field created by SDK
+      // TrustedForm SDK creates: <input type="hidden" name="xxTrustedFormCertUrl" value="https://cert.trustedform.com/...">
+      const hiddenInput = document.querySelector('input[name="xxTrustedFormCertUrl"]') as HTMLInputElement;
+      if (hiddenInput?.value) {
+        return hiddenInput.value;
       }
       return null;
     } catch (error) {
@@ -198,11 +194,20 @@ export function useTrustedForm() {
 
   const getToken = useCallback(() => {
     try {
+      // Method 1: Check for tf_getToken function
       if (window.tf_getToken) {
         return window.tf_getToken();
       }
+      // Method 2: Check for xxTrustedForm global object
       if (window.xxTrustedForm?.token) {
         return window.xxTrustedForm.token;
+      }
+      // Method 3: Extract token from cert URL (token is the last part of the URL)
+      // Example: https://cert.trustedform.com/abc123def456 -> abc123def456
+      const certUrl = document.querySelector('input[name="xxTrustedFormCertUrl"]') as HTMLInputElement;
+      if (certUrl?.value) {
+        const urlParts = certUrl.value.split('/');
+        return urlParts[urlParts.length - 1];
       }
       return null;
     } catch (error) {

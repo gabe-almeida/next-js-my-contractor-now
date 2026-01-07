@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
@@ -64,6 +65,43 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <meta name="format-detection" content="telephone=no" />
+
+        {/*
+          TrustedForm Web SDK - Must load on first page to capture full user journey
+          Creates hidden field 'xxTrustedFormCertUrl' with certificate URL in all forms
+          Docs: https://trustedform.com/documentation
+        */}
+        <Script
+          id="trustedform-script"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var tf = document.createElement('script');
+                tf.type = 'text/javascript';
+                tf.async = true;
+                tf.src = ("https:" == document.location.protocol ? 'https' : 'http') +
+                  '://api.trustedform.com/trustedform.js?field=xxTrustedFormCertUrl&use_tagged_consent=true&l=' +
+                  new Date().getTime() + Math.random();
+                var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(tf, s);
+                console.log('%c✅ TrustedForm: Script injected', 'color: green; font-weight: bold;');
+              })();
+            `
+          }}
+        />
+
+        {/*
+          Jornaya LeadID Script - Must load on first page to track session
+          Generates unique LeadID token for TCPA compliance
+        */}
+        <Script
+          id="jornaya-script"
+          strategy="afterInteractive"
+          src="https://create.lidstatic.com/campaign/f9e0179a-baff-fd31-0b3d-43da231de245.js?snippet_version=2"
+          onLoad={() => {
+            console.log('%c✅ Jornaya LeadID: Script loaded on page', 'color: blue; font-weight: bold;');
+          }}
+        />
       </head>
       <body className={`${inter.className} antialiased`}>
         <ErrorBoundary>

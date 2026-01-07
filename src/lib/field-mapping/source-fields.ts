@@ -138,6 +138,49 @@ export const STANDARD_SOURCE_FIELDS: SourceFieldDefinition[] = [
     guaranteed: false,
   },
 
+  // Affiliate Attribution Fields
+  // Note: ref → partnerSourceId, affiliate_id → publisherSubId for buyers like Modernize
+  {
+    path: "complianceData.attribution.ref",
+    label: "Affiliate Ref Code (partnerSourceId)",
+    type: "string",
+    category: "compliance",
+    example: "partner123",
+    guaranteed: false,
+  },
+  {
+    path: "complianceData.attribution.affiliate_id",
+    label: "Affiliate ID (publisherSubId)",
+    type: "string",
+    category: "compliance",
+    example: "aff_456",
+    guaranteed: false,
+  },
+  {
+    path: "complianceData.attribution.utm_source",
+    label: "UTM Source",
+    type: "string",
+    category: "compliance",
+    example: "google",
+    guaranteed: false,
+  },
+  {
+    path: "complianceData.attribution.utm_medium",
+    label: "UTM Medium",
+    type: "string",
+    category: "compliance",
+    example: "cpc",
+    guaranteed: false,
+  },
+  {
+    path: "complianceData.attribution.utm_campaign",
+    label: "UTM Campaign",
+    type: "string",
+    category: "compliance",
+    example: "spring_promo",
+    guaranteed: false,
+  },
+
   // Meta Fields
   {
     path: "id",

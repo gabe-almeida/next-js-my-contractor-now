@@ -278,6 +278,13 @@ export interface ComplianceFieldMappings {
     leadId?: string[];       // Field names for ActiveProspect LeadiD tracking
     campaignId?: string[];   // Field names for campaign identifier
   };
+  // Affiliate tracking fields for buyers like Modernize
+  // ref → partnerSourceId (campaign identifier)
+  // affiliate_id → publisherSubId (transaction-level identifier)
+  affiliate?: {
+    ref?: string[];          // Field names for affiliate ref code (e.g., partnerSourceId)
+    affiliateId?: string[];  // Field names for affiliate ID (e.g., publisherSubId)
+  };
   tcpa?: {
     consent?: string[];      // Field names for TCPA consent
     timestamp?: string[];    // Field names for consent timestamp

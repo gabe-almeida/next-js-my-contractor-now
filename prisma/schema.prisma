@@ -44,6 +44,7 @@ model Buyer {
   additionalEmails        String?               @map("additional_emails")
   additionalPhones        String?               @map("additional_phones")
   additionalContacts      String?               @map("additional_contacts")
+  notes                   String?               @db.Text // Internal notes: docs links, tagId info, integration notes
   createdAt               DateTime              @default(now()) @map("created_at")
   updatedAt               DateTime              @updatedAt @map("updated_at")
   serviceConfigs          BuyerServiceConfig[]

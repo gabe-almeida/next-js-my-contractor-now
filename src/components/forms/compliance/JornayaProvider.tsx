@@ -61,36 +61,12 @@ export function JornayaProvider({
           window.leadid_token = config.leadid_token;
         }
 
-        // Load Jornaya script if not already loaded
-        if (!document.getElementById('jornaya-script')) {
-          const script = document.createElement('script');
-          script.id = 'jornaya-script';
-          script.src = config.trackingUrl || 'https://h.online-metrix.net/fp/tags.js?org_id=1snn5n9w&session_id=session_id';
-          script.async = true;
-          script.onload = () => {
-            setTimeout(() => {
-              checkJornayaStatus();
-            }, 1000);
-          };
-          script.onerror = () => {
-            updateStatus({
-              initialized: false,
-              error: 'Failed to load Jornaya script'
-            });
-          };
-          document.head.appendChild(script);
-        } else {
-          checkJornayaStatus();
-        }
+        // Jornaya script is loaded globally in layout.tsx on first page load
+        // Here we just check if it's ready and get the LeadID token
+        console.log('%c📋 Jornaya: Checking for existing LeadID token...', 'color: gray;');
 
-        // Alternative: Load Jornaya LeadId script
-        if (!document.getElementById('jornaya-leadid-script')) {
-          const leadidScript = document.createElement('script');
-          leadidScript.id = 'jornaya-leadid-script';
-          leadidScript.src = 'https://js.jornayaleadid.com/js/lid.js';
-          leadidScript.async = true;
-          document.head.appendChild(leadidScript);
-        }
+        // Check immediately in case script is already loaded
+        checkJornayaStatus();
       } catch (error) {
         updateStatus({
           initialized: false,
@@ -109,6 +85,8 @@ export function JornayaProvider({
           if (window.LeadId?.isReady && window.LeadId.isReady()) {
             const token = window.LeadId.getToken();
             if (token) {
+              console.log('%c✅ Jornaya LeadID INITIALIZED via LeadId.getToken()', 'color: blue; font-weight: bold;');
+              console.log('Jornaya LeadID Token:', token);
               updateStatus({
                 initialized: true,
                 token: token
@@ -119,6 +97,8 @@ export function JornayaProvider({
 
           // Check for leadid_token
           if (window.leadid_token) {
+            console.log('%c✅ Jornaya LeadID INITIALIZED via window.leadid_token', 'color: blue; font-weight: bold;');
+            console.log('Jornaya LeadID Token:', window.leadid_token);
             updateStatus({
               initialized: true,
               token: window.leadid_token
@@ -207,11 +187,27 @@ export function JornayaProvider({
 export function useJornaya() {
   const getLeadId = useCallback(() => {
     try {
+      // Method 1: Check for LeadId object (older SDK)
       if (window.LeadId?.getToken) {
         return window.LeadId.getToken();
       }
+      // Method 2: Check for LeadiD object (newer SDK - note capital D)
+      if ((window as any).LeadiD?.token) {
+        return (window as any).LeadiD.token;
+      }
+      // Method 3: Check for leadid_token global variable
       if (window.leadid_token) {
         return window.leadid_token;
+      }
+      // Method 4: Check for hidden input field (some implementations)
+      const hiddenInput = document.querySelector('input[name="leadid_token"]') as HTMLInputElement;
+      if (hiddenInput?.value) {
+        return hiddenInput.value;
+      }
+      // Method 5: Check for universal_leadid input
+      const universalInput = document.querySelector('input[name="universal_leadid"]') as HTMLInputElement;
+      if (universalInput?.value) {
+        return universalInput.value;
       }
       return null;
     } catch (error) {

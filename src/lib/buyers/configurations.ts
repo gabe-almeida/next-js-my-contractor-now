@@ -719,28 +719,39 @@ class BuyerTemplates {
         requireTcpaConsent: true,
         additionalRequirements: ['privacy_policy_acceptance']
       },
+      // Field mappings aligned with Modernize Ping-Post V3 API
+      // Docs: https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api
       complianceFieldMappings: {
         trustedForm: {
-          certUrl: ['trustedform_cert_url', 'tf_certificate'],
-          certId: ['trustedform_token', 'tf_cert_id']
+          // Modernize expects 'trustedFormToken' for the certificate URL
+          certUrl: ['trustedFormToken'],
+          certId: ['trustedFormToken']  // Same field - they use token/URL interchangeably
         },
         jornaya: {
-          leadId: ['leadid_token', 'jornaya_lead_id']
+          // Modernize expects 'leadIDToken' for Jornaya LeadID
+          leadId: ['leadIDToken']
+        },
+        // Affiliate tracking fields for Modernize
+        // ref → partnerSourceId (campaign identifier)
+        // affiliate_id → publisherSubId (transaction-level identifier)
+        affiliate: {
+          ref: ['partnerSourceId'],
+          affiliateId: ['publisherSubId']
         },
         tcpa: {
-          consent: ['tcpa_consent', 'consent_given'],
-          timestamp: ['consent_date']
+          consent: ['tcpaConsent'],
+          timestamp: ['consentDate']
         },
         technical: {
-          ipAddress: ['ip_address'],
-          userAgent: ['user_agent'],
-          timestamp: ['submit_timestamp']
+          ipAddress: ['ipAddress'],
+          userAgent: ['userAgent'],
+          timestamp: ['submitTimestamp']
         },
         geo: {
-          latitude: ['lat'],
-          longitude: ['lng'],
-          city: ['city_name'],
-          state: ['state_code']
+          latitude: ['latitude'],
+          longitude: ['longitude'],
+          city: ['city'],
+          state: ['state']
         }
       }
     };

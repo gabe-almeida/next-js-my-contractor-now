@@ -87,7 +87,8 @@ export class AuctionEngine {
       if (winner) {
         const winningBuyer = eligibleBuyers.find(b => b.buyer.id === winner.buyerId);
         if (winningBuyer) {
-          postResult = await this.sendPostToWinner(lead, winningBuyer);
+          // Pass the winning bid metadata (contains pingToken from PING response)
+          postResult = await this.sendPostToWinner(lead, winningBuyer, winner);
         }
       }
 
@@ -199,7 +200,13 @@ export class AuctionEngine {
           originalBid: parsedResponse.bidAmount,
           validated: validatedBid > 0,
           parsedStatus: parsedResponse.status,
-          rawStatus: parsedResponse.rawStatus
+          rawStatus: parsedResponse.rawStatus,
+          // Capture pingToken from PING response for use in POST
+          // Modernize and other buyers return this token that must be included in POST
+          pingToken: responseData.pingToken || responseData.ping_token || null,
+          buyerLeadId: responseData.leadId || responseData.lead_id || responseData.id || null,
+          // Store raw response for any other fields needed in POST
+          pingResponseData: responseData
         }
       };
 
@@ -228,7 +235,8 @@ export class AuctionEngine {
    */
   private static async sendPostToWinner(
     lead: LeadData,
-    winnerConfig: EligibleBuyerWithConfig
+    winnerConfig: EligibleBuyerWithConfig,
+    winningBid?: BidResponse
   ): Promise<PostResult> {
     const startTime = Date.now();
     const { buyer, serviceConfig } = winnerConfig;
@@ -245,6 +253,22 @@ export class AuctionEngine {
       // Add auction metadata
       payload.auction_winning_bid = await this.getWinningBid(lead.id);
       payload.auction_timestamp = new Date().toISOString();
+
+      // CRITICAL: Include pingToken from PING response if present
+      // Modernize and other ping-post buyers require this token to match PING to POST
+      if (winningBid?.metadata?.pingToken) {
+        payload.pingToken = winningBid.metadata.pingToken;
+        logger.info('Including pingToken in POST payload', {
+          leadId: lead.id,
+          buyerId: buyer.id,
+          pingToken: winningBid.metadata.pingToken
+        });
+      }
+
+      // Include buyerLeadId if present (some buyers return their own lead ID in PING)
+      if (winningBid?.metadata?.buyerLeadId) {
+        payload.buyerLeadId = winningBid.metadata.buyerLeadId;
+      }
 
       // Prepare request headers
       const headers = this.prepareHeaders(buyer, serviceConfig, 'POST');

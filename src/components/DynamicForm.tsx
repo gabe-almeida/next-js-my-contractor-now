@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { Question, QuestionFlow, getNextStep, shouldShowQuestion } from '@/lib/questions';
 import { useFormValidation, ContactFormData } from '@/hooks/useFormValidation';
@@ -9,6 +9,9 @@ import TCPACheckbox from '@/components/forms/compliance/TCPACheckbox';
 import AddressAutocomplete from '@/components/forms/inputs/AddressAutocomplete';
 import Header from '@/components/layout/Header';
 import { getAttributionData, AttributionData } from '@/utils/attribution';
+import { TrustedFormProvider, useTrustedForm } from '@/components/forms/compliance/TrustedFormProvider';
+import { JornayaProvider, useJornaya } from '@/components/forms/compliance/JornayaProvider';
+import { ComplianceStatus } from '@/types/forms/index';
 
 interface DynamicFormProps {
   flow: QuestionFlow;
@@ -17,10 +20,15 @@ interface DynamicFormProps {
   buyerId?: string; // For TCPA configuration
 }
 
-export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'default' }: DynamicFormProps) {
+// Inner form component that uses compliance hooks
+function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', complianceStatus }: DynamicFormProps & { complianceStatus: { trustedForm: ComplianceStatus; jornaya: ComplianceStatus } }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Hooks to get current compliance tokens at submission time
+  const { getCertUrl: getTrustedFormCertUrl, getToken: getTrustedFormToken } = useTrustedForm();
+  const { getLeadId: getJornayaLeadId } = useJornaya();
 
   // Capture attribution data once on mount (no race conditions - synchronous capture)
   const [attribution] = useState<AttributionData>(() => {
@@ -91,12 +99,31 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
   const handleComplete = async (allAnswers: { [key: string]: any }) => {
     setIsSubmitting(true);
     try {
-      // Include attribution data with the form answers
-      const answersWithAttribution = {
+      // Get fresh compliance tokens at submission time
+      // These are captured by the TrustedForm and Jornaya scripts loaded on the page
+      const trustedFormCertUrl = getTrustedFormCertUrl();
+      const trustedFormToken = getTrustedFormToken();
+      const jornayaLeadId = getJornayaLeadId();
+
+      // Log compliance status for debugging
+      console.log('Compliance tokens at submission:', {
+        trustedFormCertUrl: trustedFormCertUrl ? `${trustedFormCertUrl.substring(0, 50)}...` : null,
+        trustedFormToken: trustedFormToken ? `${trustedFormToken.substring(0, 20)}...` : null,
+        jornayaLeadId: jornayaLeadId ? `${jornayaLeadId.substring(0, 20)}...` : null,
+        trustedFormInitialized: complianceStatus.trustedForm.initialized,
+        jornayaInitialized: complianceStatus.jornaya.initialized,
+      });
+
+      // Include attribution data and compliance tokens with the form answers
+      const answersWithCompliance = {
         ...allAnswers,
-        attribution
+        attribution,
+        // Compliance tokens - these get extracted by the page handler and sent to API
+        trustedFormCertUrl,
+        trustedFormCertId: trustedFormToken,
+        jornayaLeadId,
       };
-      await onComplete(answersWithAttribution);
+      await onComplete(answersWithCompliance);
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
@@ -504,5 +531,55 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
         </div>
       </div>
     </div>
+  );
+}
+
+// Main wrapper component that provides compliance context
+export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'default' }: DynamicFormProps) {
+  // Track compliance status from providers
+  const [complianceStatus, setComplianceStatus] = useState({
+    trustedForm: { initialized: false } as ComplianceStatus,
+    jornaya: { initialized: false } as ComplianceStatus,
+  });
+
+  const handleTrustedFormStatus = useCallback((status: ComplianceStatus) => {
+    setComplianceStatus(prev => ({ ...prev, trustedForm: status }));
+  }, []);
+
+  const handleJornayaStatus = useCallback((status: ComplianceStatus) => {
+    setComplianceStatus(prev => ({ ...prev, jornaya: status }));
+  }, []);
+
+  // TrustedForm configuration - always enabled for lead gen forms
+  const trustedFormConfig = {
+    enabled: true,
+    pingData: true,
+    debug: process.env.NODE_ENV === 'development',
+  };
+
+  // Jornaya configuration - always enabled for lead gen forms
+  const jornayaConfig = {
+    enabled: true,
+    debug: process.env.NODE_ENV === 'development',
+  };
+
+  return (
+    <TrustedFormProvider
+      config={trustedFormConfig}
+      onStatusChange={handleTrustedFormStatus}
+    >
+      <JornayaProvider
+        config={jornayaConfig}
+        onStatusChange={handleJornayaStatus}
+      >
+        <DynamicFormInner
+          flow={flow}
+          onComplete={onComplete}
+          onBack={onBack}
+          buyerId={buyerId}
+          complianceStatus={complianceStatus}
+        />
+      </JornayaProvider>
+    </TrustedFormProvider>
   );
 }
