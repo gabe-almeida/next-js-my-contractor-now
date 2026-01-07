@@ -84,7 +84,23 @@ export default function RootLayout({
                   '://api.trustedform.com/trustedform.js?field=xxTrustedFormCertUrl&use_tagged_consent=true&l=' +
                   new Date().getTime() + Math.random();
                 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(tf, s);
-                console.log('%c✅ TrustedForm: Script injected', 'color: green; font-weight: bold;');
+                console.log('%c📋 TrustedForm: Script injected, waiting for certificate...', 'color: gray;');
+
+                // Poll for TrustedForm certificate URL (SDK creates it asynchronously)
+                var tfCheckCount = 0;
+                var tfCheck = setInterval(function() {
+                  tfCheckCount++;
+                  // Check hidden input created by SDK
+                  var input = document.querySelector('input[name="xxTrustedFormCertUrl"]');
+                  if (input && input.value) {
+                    console.log('%c✅ TrustedForm READY', 'color: green; font-weight: bold;');
+                    console.log('%cTrustedForm Cert URL: ' + input.value, 'color: green;');
+                    clearInterval(tfCheck);
+                  } else if (tfCheckCount >= 20) {
+                    console.log('%c⚠️ TrustedForm: Certificate not ready after 10s', 'color: orange;');
+                    clearInterval(tfCheck);
+                  }
+                }, 500);
               })();
             `
           }}
@@ -99,7 +115,23 @@ export default function RootLayout({
           strategy="afterInteractive"
           src="https://create.lidstatic.com/campaign/f9e0179a-baff-fd31-0b3d-43da231de245.js?snippet_version=2"
           onLoad={() => {
-            console.log('%c✅ Jornaya LeadID: Script loaded on page', 'color: blue; font-weight: bold;');
+            console.log('%c📋 Jornaya: Script loaded, waiting for LeadID...', 'color: gray;');
+
+            // Poll for Jornaya LeadID token
+            let jrnCheckCount = 0;
+            const jrnCheck = setInterval(() => {
+              jrnCheckCount++;
+              // Check multiple sources for LeadID
+              const token = window.LeadiD?.token || window.LeadId?.getToken?.() || window.leadid_token;
+              if (token) {
+                console.log('%c✅ Jornaya LeadID READY', 'color: blue; font-weight: bold;');
+                console.log('%cJornaya LeadID Token: ' + token, 'color: blue;');
+                clearInterval(jrnCheck);
+              } else if (jrnCheckCount >= 20) {
+                console.log('%c⚠️ Jornaya: LeadID not ready after 10s', 'color: orange;');
+                clearInterval(jrnCheck);
+              }
+            }, 500);
           }}
         />
       </head>
