@@ -26,7 +26,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval' 'unsafe-inline'" : "") + " https://secure.trustedform.com https://static.leadid.com https://api.radar.io",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://secure.trustedform.com https://static.leadid.com https://api.radar.io",
               "style-src 'self' 'unsafe-inline'", // Required for styled-components and Tailwind
               "img-src 'self' data: https:",
               "font-src 'self' data:",

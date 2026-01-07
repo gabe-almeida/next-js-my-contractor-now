@@ -1,47 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PortalDropdown from '@/components/ui/PortalDropdown';
 
-interface ServiceType {
-  id: string;
-  name: string;
-  displayName: string;
-}
+// Static service types - no API call needed for homepage
+const serviceTypes = [
+  { id: 'windows', name: 'Windows' },
+  { id: 'roofing', name: 'Roofing' },
+  { id: 'bathrooms', name: 'Bathrooms' }
+];
 
 export default function HomePage() {
   const [selectedService, setSelectedService] = useState('');
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchServiceTypes() {
-      try {
-        const response = await fetch('/api/service-types');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setServiceTypes(result.data.map((st: ServiceType) => ({
-            id: st.name.toLowerCase(),
-            name: st.displayName || st.name
-          })));
-        }
-      } catch (error) {
-        console.error('Failed to fetch service types:', error);
-        // Fallback to hardcoded values if API fails
-        setServiceTypes([
-          { id: 'windows', name: 'Windows' },
-          { id: 'roofing', name: 'Roofing' },
-          { id: 'bathrooms', name: 'Bathrooms' }
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchServiceTypes();
-  }, []);
 
   const handleServiceSelect = (serviceId: string, serviceName: string) => {
     setSelectedService(serviceName);
@@ -88,18 +61,12 @@ export default function HomePage() {
             </h2>
 
             {/* Service Type Dropdown - Portal Based */}
-            {loading ? (
-              <div className="w-full bg-white border-2 border-orange-300 rounded-lg px-4 py-4 text-gray-500 animate-pulse">
-                Loading services...
-              </div>
-            ) : (
-              <PortalDropdown
-                items={serviceTypes}
-                selectedValue={selectedService}
-                placeholder="Select your project type"
-                onSelect={handleServiceSelect}
-              />
-            )}
+            <PortalDropdown
+              items={serviceTypes}
+              selectedValue={selectedService}
+              placeholder="Select your project type"
+              onSelect={handleServiceSelect}
+            />
 
             <p className="text-sm text-gray-500 mt-4 text-center">
               Free, no-obligation estimates from local pros.
