@@ -435,6 +435,10 @@ export class TemplateEngine {
         leadId: ['activeprospect_leadid', 'ap_leadid'],
         campaignId: ['campaign_id', 'ap_campaign']
       },
+      affiliate: {
+        ref: ['partner_source_id', 'affiliate_ref'],
+        affiliateId: ['publisher_sub_id', 'affiliate_id']
+      },
       tcpa: {
         consent: ['tcpa_consent', 'opt_in_consent', 'marketing_consent'],
         timestamp: ['consent_timestamp']
