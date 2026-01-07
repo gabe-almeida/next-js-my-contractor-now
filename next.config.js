@@ -26,12 +26,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://secure.trustedform.com https://static.leadid.com https://api.radar.io",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trustedform.com https://*.lidstatic.com https://api.radar.io",
               "style-src 'self' 'unsafe-inline'", // Required for styled-components and Tailwind
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.radar.io" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
-              "frame-src 'self' https://secure.trustedform.com",
+              "connect-src 'self' https://api.radar.io https://*.trustedform.com https://*.lidstatic.com" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
+              "frame-src 'self' https://*.trustedform.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

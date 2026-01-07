@@ -113,25 +113,36 @@ export default function RootLayout({
         <Script
           id="jornaya-script"
           strategy="afterInteractive"
-          src="https://create.lidstatic.com/campaign/f9e0179a-baff-fd31-0b3d-43da231de245.js?snippet_version=2"
-          onLoad={() => {
-            console.log('%c📋 Jornaya: Script loaded, waiting for LeadID...', 'color: gray;');
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var jornayaScript = document.createElement('script');
+                jornayaScript.type = 'text/javascript';
+                jornayaScript.async = true;
+                jornayaScript.src = 'https://create.lidstatic.com/campaign/f9e0179a-baff-fd31-0b3d-43da231de245.js?snippet_version=2';
+                var s = document.getElementsByTagName('script')[0];
+                s.parentNode.insertBefore(jornayaScript, s);
+                console.log('%c📋 Jornaya: Script injected, waiting for LeadID...', 'color: gray;');
 
-            // Poll for Jornaya LeadID token
-            let jrnCheckCount = 0;
-            const jrnCheck = setInterval(() => {
-              jrnCheckCount++;
-              // Check multiple sources for LeadID
-              const token = window.LeadiD?.token || window.LeadId?.getToken?.() || window.leadid_token;
-              if (token) {
-                console.log('%c✅ Jornaya LeadID READY', 'color: blue; font-weight: bold;');
-                console.log('%cJornaya LeadID Token: ' + token, 'color: blue;');
-                clearInterval(jrnCheck);
-              } else if (jrnCheckCount >= 20) {
-                console.log('%c⚠️ Jornaya: LeadID not ready after 10s', 'color: orange;');
-                clearInterval(jrnCheck);
-              }
-            }, 500);
+                // Poll for Jornaya LeadID token
+                var jrnCheckCount = 0;
+                var jrnCheck = setInterval(function() {
+                  jrnCheckCount++;
+                  // Check multiple sources for LeadID
+                  var token = (window.LeadiD && window.LeadiD.token) ||
+                              (window.LeadId && window.LeadId.getToken && window.LeadId.getToken()) ||
+                              window.leadid_token;
+                  if (token) {
+                    console.log('%c✅ Jornaya LeadID READY', 'color: blue; font-weight: bold;');
+                    console.log('%cJornaya LeadID Token: ' + token, 'color: blue;');
+                    clearInterval(jrnCheck);
+                  } else if (jrnCheckCount >= 20) {
+                    console.log('%c⚠️ Jornaya: LeadID not ready after 10s (check if script is blocked)', 'color: orange;');
+                    clearInterval(jrnCheck);
+                  }
+                }, 500);
+              })();
+            `
           }}
         />
       </head>
