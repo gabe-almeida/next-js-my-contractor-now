@@ -85,11 +85,13 @@ export default function AddressAutocomplete({
     }
 
     timeoutRef.current = setTimeout(() => {
-      if (inputValue.trim() && isReady && !fallbackMode) {
+      // Search if we have input AND either Radar is ready OR we're in fallback mode
+      if (inputValue.trim() && (isReady || fallbackMode)) {
         searchAddresses(inputValue.trim());
-      } else {
+      } else if (!inputValue.trim()) {
         setSuggestions([]);
       }
+      // Don't clear suggestions while Radar is still loading
     }, 300);
 
     return () => {
