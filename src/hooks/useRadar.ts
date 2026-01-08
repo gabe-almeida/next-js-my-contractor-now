@@ -31,9 +31,9 @@ export function useRadar(): UseRadarReturn {
           return;
         }
 
-        // Use the correct publishable key from environment
-        const publishableKey = process.env.NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY;
-        
+        // Use the correct publishable key from environment or hardcoded fallback
+        const publishableKey = process.env.NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY || 'prj_live_pk_91767cffe84243dd66aae8025c9c44e0e5ebce49';
+
         if (!publishableKey) {
           secureLog.warn('Radar publishable key not found, enabling fallback mode');
           setFallbackMode(true);

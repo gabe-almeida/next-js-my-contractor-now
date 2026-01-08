@@ -215,6 +215,8 @@ class BuyerTemplates {
   }
 
   // Modernize service configurations
+  // NOTE: Field mappings are stored in the database (buyer_service_configs table)
+  // This code config is a fallback - database values take precedence
   private static modernizeWindowsConfig(): BuyerServiceConfig {
     return {
       buyerId: 'modernize',
@@ -884,10 +886,11 @@ class BuyerTemplates {
 
 /**
  * Initialize all buyer configurations
+ * NOTE: Modernize is loaded from database to allow runtime field mapping changes
  */
 export function initializeBuyerConfigurations(): void {
-  // Register all pre-configured buyers
-  BuyerConfigurationRegistry.register(BuyerTemplates.modernize());
+  // Register pre-configured buyers (Modernize uses database config for flexibility)
+  // BuyerConfigurationRegistry.register(BuyerTemplates.modernize()); // Now uses database
   BuyerConfigurationRegistry.register(BuyerTemplates.homeAdvisor());
   BuyerConfigurationRegistry.register(BuyerTemplates.angi());
 }
