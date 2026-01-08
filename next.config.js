@@ -33,10 +33,10 @@ const nextConfig = {
               "font-src 'self' data:",
               // Allow connections to TrustedForm, Jornaya/LeadID, and Radar
               "connect-src 'self' https://api.radar.io https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
-              // Allow iframes for TrustedForm and Jornaya/LeadID
-              "frame-src 'self' https://*.trustedform.com https://*.leadid.com",
-              // TrustedForm uses blob workers
-              "worker-src 'self' blob:",
+              // Allow iframes for TrustedForm, Jornaya/LeadID, and their CDNs
+              "frame-src 'self' https://*.trustedform.com https://*.leadid.com https://*.cloudfront.net",
+              // TrustedForm uses data: and blob: workers
+              "worker-src 'self' blob: data:",
               "object-src 'none'",
               "base-uri 'self'",
               // Jornaya/LeadID uses iframe form submissions
