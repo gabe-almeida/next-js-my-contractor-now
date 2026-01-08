@@ -113,36 +113,34 @@ export function generateFallbackSuggestions(input: string): FallbackAddress[] {
 
 /**
  * Validate address input and provide helpful error messages
+ * Requires a street address (number + street name), not just a ZIP code
  */
 export function validateAddressInput(input: string): { isValid: boolean; message?: string } {
   const trimmed = input.trim();
-  
+
   if (!trimmed) {
-    return { isValid: false, message: 'Please enter an address or ZIP code' };
+    return { isValid: false, message: 'Please enter your street address' };
   }
-  
-  if (trimmed.length < 3) {
-    return { isValid: false, message: 'Please enter at least 3 characters' };
+
+  if (trimmed.length < 5) {
+    return { isValid: false, message: 'Please enter your full street address' };
   }
-  
-  // Check if it's a valid ZIP code
-  if (isValidZipCode(trimmed)) {
-    return { isValid: true };
+
+  // Reject bare ZIP codes - require a street address
+  if (/^\d{5}(-\d{4})?$/.test(trimmed)) {
+    return { isValid: false, message: 'Please enter your full street address, not just ZIP code' };
   }
-  
-  // Check if it looks like an address
-  if (trimmed.includes(',') || /\d+\s+\w+/.test(trimmed)) {
-    return { isValid: true };
+
+  // Must have a street number followed by text (street name)
+  const hasStreetAddress = /^\d+\s+[a-zA-Z]/.test(trimmed);
+  if (!hasStreetAddress) {
+    return { isValid: false, message: 'Address should start with a street number (e.g., 123 Main St)' };
   }
-  
-  // Suggest what might be wrong
-  if (/^\d{1,4}$/.test(trimmed)) {
-    return { isValid: false, message: 'ZIP code must be 5 digits' };
+
+  // Minimum reasonable address length (e.g., "1 A St" is 6 chars)
+  if (trimmed.length < 6) {
+    return { isValid: false, message: 'Please enter your complete street address' };
   }
-  
-  if (!/\d/.test(trimmed)) {
-    return { isValid: false, message: 'Address should include a street number or ZIP code' };
-  }
-  
+
   return { isValid: true };
 }
