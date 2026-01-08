@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { ComplianceStatus } from '@/types/forms/index';
 
 export interface TrustedFormConfig {
@@ -28,129 +28,97 @@ declare global {
   }
 }
 
-export function TrustedFormProvider({ 
-  config, 
-  onStatusChange, 
-  children 
+export function TrustedFormProvider({
+  config,
+  onStatusChange,
+  children
 }: TrustedFormProviderProps) {
   const [status, setStatus] = useState<ComplianceStatus>({
     initialized: false
   });
-
-  const updateStatus = useCallback((newStatus: Partial<ComplianceStatus>) => {
-    const updatedStatus = { ...status, ...newStatus };
-    setStatus(updatedStatus);
-    onStatusChange(updatedStatus);
-  }, [status, onStatusChange]);
+  const initAttempted = useRef(false);
+  const onStatusChangeRef = useRef(onStatusChange);
+  onStatusChangeRef.current = onStatusChange;
 
   useEffect(() => {
+    // Prevent duplicate initialization
+    if (initAttempted.current) return;
+    initAttempted.current = true;
+
     if (!config.enabled) {
-      updateStatus({
-        initialized: false,
-        error: 'TrustedForm disabled'
-      });
+      setStatus({ initialized: false, error: 'TrustedForm disabled' });
       return;
     }
 
-    const initializeTrustedForm = () => {
-      try {
-        // TrustedForm script is loaded globally in layout.tsx on first page load
-        // Here we just check if it's ready and get the certificate URL
-        console.log('%c📋 TrustedForm: Checking for existing certificate...', 'color: gray;');
+    const updateStatus = (newStatus: ComplianceStatus) => {
+      setStatus(newStatus);
+      onStatusChangeRef.current(newStatus);
+    };
 
-        // Check immediately in case script is already loaded
-        checkTrustedFormStatus();
-      } catch (error) {
+    // Check for existing certificate with retry logic
+    let retries = 0;
+    const maxRetries = 10;
+
+    const checkStatus = () => {
+      // Check for TrustedForm global functions
+      if (window.tf_getCertUrl && window.tf_getToken) {
+        const certUrl = window.tf_getCertUrl();
+        const token = window.tf_getToken();
+        if (certUrl && token) {
+          updateStatus({ initialized: true, url: certUrl, token });
+          return;
+        }
+      }
+
+      // Alternative check for xxTrustedForm object
+      if (window.xxTrustedForm?.certUrl && window.xxTrustedForm?.token) {
+        updateStatus({
+          initialized: true,
+          url: window.xxTrustedForm.certUrl,
+          token: window.xxTrustedForm.token
+        });
+        return;
+      }
+
+      // Check for hidden input (SDK creates this)
+      const hiddenInput = document.querySelector('input[name="xxTrustedFormCertUrl"]') as HTMLInputElement;
+      if (hiddenInput?.value) {
+        updateStatus({ initialized: true, url: hiddenInput.value });
+        return;
+      }
+
+      retries++;
+      if (retries < maxRetries) {
+        setTimeout(checkStatus, 500);
+      } else {
         updateStatus({
           initialized: false,
-          error: `TrustedForm initialization error: ${error}`
+          error: 'TrustedForm failed to initialize'
         });
       }
     };
 
-    const checkTrustedFormStatus = () => {
-      const maxRetries = 10;
-      let retries = 0;
+    checkStatus();
+  }, [config.enabled]);
 
-      const checkStatus = () => {
-        try {
-          // Check for TrustedForm global functions
-          if (window.tf_getCertUrl && window.tf_getToken) {
-            const certUrl = window.tf_getCertUrl();
-            const token = window.tf_getToken();
-
-            if (certUrl && token) {
-              console.log('%c✅ TrustedForm INITIALIZED via tf_getCertUrl/tf_getToken', 'color: green; font-weight: bold;');
-              console.log('TrustedForm Cert URL:', certUrl);
-              console.log('TrustedForm Token:', token.substring(0, 30) + '...');
-              updateStatus({
-                initialized: true,
-                url: certUrl,
-                token: token
-              });
-              return;
-            }
-          }
-
-          // Alternative check for xxTrustedForm object
-          if (window.xxTrustedForm?.certUrl && window.xxTrustedForm?.token) {
-            console.log('%c✅ TrustedForm INITIALIZED via xxTrustedForm object', 'color: green; font-weight: bold;');
-            console.log('TrustedForm Cert URL:', window.xxTrustedForm.certUrl);
-            console.log('TrustedForm Token:', window.xxTrustedForm.token.substring(0, 30) + '...');
-            updateStatus({
-              initialized: true,
-              url: window.xxTrustedForm.certUrl,
-              token: window.xxTrustedForm.token
-            });
-            return;
-          }
-
-          retries++;
-          if (retries < maxRetries) {
-            setTimeout(checkStatus, 500);
-          } else {
-            updateStatus({
-              initialized: false,
-              error: 'TrustedForm failed to initialize after retries'
-            });
-          }
-        } catch (error) {
-          updateStatus({
-            initialized: false,
-            error: `TrustedForm status check error: ${error}`
-          });
-        }
-      };
-
-      checkStatus();
-    };
-
-    initializeTrustedForm();
-  }, [config, updateStatus]);
-
-  // Add TrustedForm ping functionality
+  // TrustedForm ping functionality (disabled by default)
   useEffect(() => {
-    if (config.pingData && status.initialized && status.url) {
-      const trustedFormUrl = status.url;
-      const pingInterval = setInterval(() => {
-        try {
-          // Create a hidden iframe to ping TrustedForm
-          const iframe = document.createElement('iframe');
-          iframe.style.display = 'none';
-          iframe.src = trustedFormUrl;
-          document.body.appendChild(iframe);
-          
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-          }, 1000);
-        } catch (error) {
-          console.warn('TrustedForm ping error:', error);
-        }
-      }, 30000); // Ping every 30 seconds
+    if (!config.pingData || !status.initialized || !status.url) return;
 
-      return () => clearInterval(pingInterval);
-    }
-  }, [config.pingData, status]);
+    const pingInterval = setInterval(() => {
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = status.url!;
+        document.body.appendChild(iframe);
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      } catch (error) {
+        // Silent fail for ping
+      }
+    }, 30000);
+
+    return () => clearInterval(pingInterval);
+  }, [config.pingData, status.initialized, status.url]);
 
   return (
     <>

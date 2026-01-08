@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { ComplianceStatus } from '@/types/forms/index';
 
 export interface JornayaConfig {
@@ -30,123 +30,80 @@ declare global {
   }
 }
 
-export function JornayaProvider({ 
-  config, 
-  onStatusChange, 
-  children 
+export function JornayaProvider({
+  config,
+  onStatusChange,
+  children
 }: JornayaProviderProps) {
   const [status, setStatus] = useState<ComplianceStatus>({
     initialized: false
   });
-
-  const updateStatus = useCallback((newStatus: Partial<ComplianceStatus>) => {
-    const updatedStatus = { ...status, ...newStatus };
-    setStatus(updatedStatus);
-    onStatusChange(updatedStatus);
-  }, [status, onStatusChange]);
+  const initAttempted = useRef(false);
+  const onStatusChangeRef = useRef(onStatusChange);
+  onStatusChangeRef.current = onStatusChange;
 
   useEffect(() => {
+    // Prevent duplicate initialization
+    if (initAttempted.current) return;
+    initAttempted.current = true;
+
     if (!config.enabled) {
-      updateStatus({
-        initialized: false,
-        error: 'Jornaya disabled'
-      });
+      setStatus({ initialized: false, error: 'Jornaya disabled' });
       return;
     }
 
-    const initializeJornaya = () => {
-      try {
-        // Set up Jornaya configuration
-        if (config.leadid_token) {
-          window.leadid_token = config.leadid_token;
-        }
-
-        // Jornaya script is loaded globally in layout.tsx on first page load
-        // Here we just check if it's ready and get the LeadID token
-        console.log('%c📋 Jornaya: Checking for existing LeadID token...', 'color: gray;');
-
-        // Check immediately in case script is already loaded
-        checkJornayaStatus();
-      } catch (error) {
-        updateStatus({
-          initialized: false,
-          error: `Jornaya initialization error: ${error}`
-        });
-      }
-    };
-
-    const checkJornayaStatus = () => {
-      const maxRetries = 10;
-      let retries = 0;
-
-      const checkStatus = () => {
-        try {
-          // Check for Jornaya LeadId
-          if (window.LeadId?.isReady && window.LeadId.isReady()) {
-            const token = window.LeadId.getToken();
-            if (token) {
-              console.log('%c✅ Jornaya LeadID INITIALIZED via LeadId.getToken()', 'color: blue; font-weight: bold;');
-              console.log('Jornaya LeadID Token:', token);
-              updateStatus({
-                initialized: true,
-                token: token
-              });
-              return;
-            }
-          }
-
-          // Check for leadid_token
-          if (window.leadid_token) {
-            console.log('%c✅ Jornaya LeadID INITIALIZED via window.leadid_token', 'color: blue; font-weight: bold;');
-            console.log('Jornaya LeadID Token:', window.leadid_token);
-            updateStatus({
-              initialized: true,
-              token: window.leadid_token
-            });
-            return;
-          }
-
-          // Generate a session-based token if Jornaya isn't fully loaded
-          const sessionToken = generateSessionToken();
-          updateStatus({
-            initialized: true,
-            token: sessionToken,
-            url: config.trackingUrl
-          });
-
-          retries++;
-          if (retries < maxRetries) {
-            setTimeout(checkStatus, 500);
-          } else {
-            // Fallback: still mark as initialized with session token
-            updateStatus({
-              initialized: true,
-              token: sessionToken,
-              error: 'Jornaya partially loaded, using session token'
-            });
-          }
-        } catch (error) {
-          const sessionToken = generateSessionToken();
-          updateStatus({
-            initialized: true,
-            token: sessionToken,
-            error: `Jornaya check error: ${error}`
-          });
-        }
-      };
-
-      checkStatus();
-    };
-
     const generateSessionToken = () => {
-      // Generate a unique session token for tracking
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2);
       return `jny_${timestamp}_${random}`;
     };
 
-    initializeJornaya();
-  }, [config, updateStatus]);
+    const updateStatus = (newStatus: ComplianceStatus) => {
+      setStatus(newStatus);
+      onStatusChangeRef.current(newStatus);
+    };
+
+    // Set up Jornaya configuration
+    if (config.leadid_token) {
+      window.leadid_token = config.leadid_token;
+    }
+
+    // Check for existing token with retry logic
+    let retries = 0;
+    const maxRetries = 10;
+
+    const checkStatus = () => {
+      // Check for Jornaya LeadId
+      if (window.LeadId?.isReady && window.LeadId.isReady()) {
+        const token = window.LeadId.getToken();
+        if (token) {
+          updateStatus({ initialized: true, token });
+          return;
+        }
+      }
+
+      // Check for leadid_token
+      if (window.leadid_token) {
+        updateStatus({ initialized: true, token: window.leadid_token });
+        return;
+      }
+
+      retries++;
+      if (retries < maxRetries) {
+        setTimeout(checkStatus, 500);
+      } else {
+        // Fallback to session token
+        const sessionToken = generateSessionToken();
+        updateStatus({
+          initialized: true,
+          token: sessionToken,
+          error: 'Jornaya not loaded, using session token'
+        });
+      }
+    };
+
+    checkStatus();
+  }, [config.enabled, config.leadid_token]);
 
   // Note: Jornaya SDK handles tracking internally via the script loaded in layout.tsx
   // No additional tracking pixel needed - the SDK automatically tracks user interactions
