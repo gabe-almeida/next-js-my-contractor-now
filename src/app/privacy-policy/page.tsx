@@ -1,5 +1,6 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import BackButton from '@/components/common/BackButton';
 
 export const metadata = {
   title: 'Privacy Policy - My Contractor Now',
@@ -10,10 +11,11 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      
+
       <main className="flex-1 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-white rounded-lg shadow-lg p-8">
+            <BackButton className="mb-4" label="Back to Form" />
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Privacy Policy</h1>
             
             <div className="prose max-w-none">

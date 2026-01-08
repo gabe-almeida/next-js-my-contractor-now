@@ -212,6 +212,17 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
           return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
         };
 
+        // Block non-letter keys from being typed (numbers, special chars)
+        const blockInvalidNameKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+          const key = e.key;
+          // Allow control keys: backspace, delete, arrow keys, tab, etc.
+          if (key.length > 1) return;
+          // Only allow letters, spaces, hyphens, and apostrophes
+          if (!/^[a-zA-Z\s\-']$/.test(key)) {
+            e.preventDefault();
+          }
+        };
+
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
@@ -227,6 +238,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   type="text"
                   value={formData.firstName}
                   onChange={(e) => updateField('firstName', formatName(e.target.value))}
+                  onKeyDown={blockInvalidNameKeys}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
@@ -248,6 +260,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => updateField('lastName', formatName(e.target.value))}
+                  onKeyDown={blockInvalidNameKeys}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'
@@ -363,12 +376,27 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
         );
 
       case 'contact':
+        // Format name: only letters, spaces, hyphens, apostrophes; auto-capitalize first letter
+        const formatContactName = (value: string): string => {
+          const cleaned = value.replace(/[^a-zA-Z\s\-']/g, '');
+          return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
+        };
+
+        // Block non-letter keys from being typed (numbers, special chars)
+        const blockInvalidContactNameKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+          const key = e.key;
+          if (key.length > 1) return;
+          if (!/^[a-zA-Z\s\-']$/.test(key)) {
+            e.preventDefault();
+          }
+        };
+
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
               {currentQuestion.question}
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -377,7 +405,8 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 <input
                   type="text"
                   value={formData.firstName}
-                  onChange={(e) => updateField('firstName', e.target.value)}
+                  onChange={(e) => updateField('firstName', formatContactName(e.target.value))}
+                  onKeyDown={blockInvalidContactNameKeys}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
@@ -398,7 +427,8 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 <input
                   type="text"
                   value={formData.lastName}
-                  onChange={(e) => updateField('lastName', e.target.value)}
+                  onChange={(e) => updateField('lastName', formatContactName(e.target.value))}
+                  onKeyDown={blockInvalidContactNameKeys}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'

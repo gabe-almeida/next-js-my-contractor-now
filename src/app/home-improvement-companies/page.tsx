@@ -1,5 +1,6 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import BackButton from '@/components/common/BackButton';
 
 export const metadata = {
   title: 'Home Improvement Companies - My Contractor Now',
@@ -72,6 +73,7 @@ export default function HomeImprovementCompaniesPage() {
       <main className="flex-1 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-white rounded-lg shadow-lg p-8">
+            <BackButton className="mb-4" label="Back to Form" />
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Home Improvement Companies</h1>
             
             <div className="prose max-w-none">
