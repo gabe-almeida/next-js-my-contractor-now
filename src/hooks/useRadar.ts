@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Radar from 'radar-sdk-js';
 
 interface UseRadarReturn {
@@ -9,17 +9,23 @@ interface UseRadarReturn {
   searchAddresses: (query: string) => Promise<any[]>;
 }
 
+// Track global initialization to handle React Strict Mode correctly
+let radarInitialized = false;
+
 export function useRadar(): UseRadarReturn {
-  const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isReady, setIsReady] = useState(radarInitialized);
+  const [isLoading, setIsLoading] = useState(!radarInitialized);
   const [error, setError] = useState<string | null>(null);
   const [fallbackMode, setFallbackMode] = useState(false);
-  const initializationAttempted = useRef(false);
 
   useEffect(() => {
-    // Prevent double initialization in strict mode
-    if (initializationAttempted.current) return;
-    initializationAttempted.current = true;
+    // Skip if already initialized globally (handles React Strict Mode)
+    if (radarInitialized) {
+      console.log('[Radar] Already initialized globally, skipping');
+      setIsReady(true);
+      setIsLoading(false);
+      return;
+    }
 
     const initializeRadar = () => {
       try {
@@ -44,14 +50,16 @@ export function useRadar(): UseRadarReturn {
           return;
         }
 
-        console.log('[Radar] Initializing SDK...');
+        console.log('[Radar] Initializing SDK with key:', publishableKey.substring(0, 20) + '...');
 
-        // Initialize Radar SDK (NOT async - returns void)
+        // Initialize Radar SDK (synchronous - returns void)
         Radar.initialize(publishableKey, {
           debug: process.env.NODE_ENV === 'development',
           logLevel: 'info'
         });
 
+        // Mark as globally initialized
+        radarInitialized = true;
         setIsReady(true);
         setIsLoading(false);
         console.log('[Radar] SDK initialized successfully');
@@ -75,11 +83,12 @@ export function useRadar(): UseRadarReturn {
     initializeRadar();
   }, []);
 
-  const searchAddresses = async (query: string): Promise<any[]> => {
-    console.log('[Radar] searchAddresses called', { query, isReady, fallbackMode });
+  const searchAddresses = useCallback(async (query: string): Promise<any[]> => {
+    console.log('[Radar] searchAddresses called', { query, radarInitialized, isReady, fallbackMode });
 
-    if (!isReady || fallbackMode) {
-      console.log('[Radar] Not ready or in fallback mode, returning empty');
+    // Use global flag to avoid stale closure issues
+    if (!radarInitialized || fallbackMode) {
+      console.log('[Radar] Not ready or in fallback mode, returning empty', { radarInitialized, fallbackMode });
       return [];
     }
 
@@ -161,7 +170,7 @@ export function useRadar(): UseRadarReturn {
 
       return [];
     }
-  };
+  }, [fallbackMode]);
 
   return {
     isReady,

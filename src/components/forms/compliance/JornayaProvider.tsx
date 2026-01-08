@@ -148,25 +148,9 @@ export function JornayaProvider({
     initializeJornaya();
   }, [config, updateStatus]);
 
-  // Add invisible tracking pixel for Jornaya
-  useEffect(() => {
-    if (status.initialized && status.token) {
-      const trackingPixel = document.createElement('img');
-      trackingPixel.src = `https://leadid.jornayaleadid.com/img.png?jornayanetwork=1&leadid_token=${status.token}`;
-      trackingPixel.style.display = 'none';
-      trackingPixel.style.width = '1px';
-      trackingPixel.style.height = '1px';
-      document.body.appendChild(trackingPixel);
-
-      return () => {
-        try {
-          document.body.removeChild(trackingPixel);
-        } catch (error) {
-          // Pixel already removed
-        }
-      };
-    }
-  }, [status]);
+  // Note: Jornaya SDK handles tracking internally via the script loaded in layout.tsx
+  // No additional tracking pixel needed - the SDK automatically tracks user interactions
+  // and generates the LeadID token which is captured via window.leadid_token
 
   return (
     <>
