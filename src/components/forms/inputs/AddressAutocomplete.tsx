@@ -38,15 +38,21 @@ export default function AddressAutocomplete({
   // Use the Radar hook
   const { isReady, isLoading: radarLoading, error: radarError, fallbackMode, searchAddresses: radarSearch } = useRadar();
 
+  // Debug: Log radar hook state
+  useEffect(() => {
+    console.log('[AddressAutocomplete] Radar state:', { isReady, radarLoading, radarError, fallbackMode });
+  }, [isReady, radarLoading, radarError, fallbackMode]);
+
   // Handle API autocomplete search
   const searchAddresses = useCallback(async (query: string) => {
+    console.log('[AddressAutocomplete] searchAddresses called:', { query, isReady, fallbackMode });
     if (query.length < 3) {
       setSuggestions([]);
       return;
     }
 
     setIsSearching(true);
-    
+
     try {
       if (fallbackMode) {
         // Use fallback address parsing

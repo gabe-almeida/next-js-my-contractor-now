@@ -20,8 +20,11 @@ export function useRadar(): UseRadarReturn {
   const initAttempted = useRef(false);
 
   useEffect(() => {
+    console.log('[Radar] useEffect triggered', { radarInitialized, initAttempted: initAttempted.current });
+
     // Skip if already initialized or if we've attempted init
     if (radarInitialized || initAttempted.current) {
+      console.log('[Radar] Skipping - already initialized or attempted');
       if (radarInitialized) {
         setIsReady(true);
         setIsLoading(false);
@@ -31,6 +34,7 @@ export function useRadar(): UseRadarReturn {
     initAttempted.current = true;
 
     const initializeRadar = async () => {
+      console.log('[Radar] Starting initialization...');
       try {
         setIsLoading(true);
         setError(null);
@@ -46,6 +50,7 @@ export function useRadar(): UseRadarReturn {
         // Dynamically import Radar SDK (browser-only due to maplibre-gl dependency)
         console.log('[Radar] Dynamically importing SDK...');
         const RadarModule = await import('radar-sdk-js');
+        console.log('[Radar] Import complete, RadarModule:', RadarModule);
         RadarSDK = RadarModule.default;
 
         if (!RadarSDK) {
