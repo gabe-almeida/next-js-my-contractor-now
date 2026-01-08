@@ -21,10 +21,19 @@ export interface ValidationState {
   isContactInfoValid: boolean;
 }
 
+export interface TouchedState {
+  firstName: boolean;
+  lastName: boolean;
+  email: boolean;
+  phone: boolean;
+}
+
 export interface FormValidationHook {
   formData: ContactFormData;
   validation: ValidationState;
+  touched: TouchedState;
   updateField: (field: keyof ContactFormData, value: string | boolean) => void;
+  setFieldTouched: (field: keyof TouchedState) => void;
   formatPhoneField: (value: string) => string;
   isSubmitEnabled: boolean;
 }
@@ -47,6 +56,17 @@ export const useFormValidation = (requireTCPA: boolean = true): FormValidationHo
     isFormValid: false,
     isContactInfoValid: false
   });
+
+  const [touched, setTouched] = useState<TouchedState>({
+    firstName: false,
+    lastName: false,
+    email: false,
+    phone: false
+  });
+
+  const setFieldTouched = (field: keyof TouchedState) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   // Validate individual fields
   const validateField = (field: keyof ContactFormData, value: string | boolean): { isValid: boolean; message?: string; formatted?: string } => {
@@ -119,7 +139,9 @@ export const useFormValidation = (requireTCPA: boolean = true): FormValidationHo
   return {
     formData,
     validation,
+    touched,
     updateField,
+    setFieldTouched,
     formatPhoneField,
     isSubmitEnabled
   };

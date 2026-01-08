@@ -40,7 +40,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 
   // TCPA configuration and form validation
   const tcpaConfig = getTCPAConfig(buyerId);
-  const { formData, validation, updateField, formatPhoneField, isSubmitEnabled } = useFormValidation(tcpaConfig.isRequired);
+  const { formData, validation, touched, updateField, setFieldTouched, formatPhoneField, isSubmitEnabled } = useFormValidation(tcpaConfig.isRequired);
 
   // Get valid steps based on current answers
   const getValidSteps = () => {
@@ -292,8 +292,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField('email', e.target.value)}
+                onBlur={() => setFieldTouched('email')}
                 className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                  validation.email.message
+                  touched.email && validation.email.message
                     ? 'border-red-300 focus:border-red-500'
                     : validation.email.isValid
                     ? 'border-green-300 focus:border-green-500'
@@ -301,7 +302,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 }`}
                 placeholder="your@email.com"
               />
-              {validation.email.message && (
+              {touched.email && validation.email.message && (
                 <p className="mt-1 text-sm text-red-600">{validation.email.message}</p>
               )}
               {validation.email.isValid && (
@@ -320,8 +321,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   const formatted = formatPhoneField(e.target.value);
                   updateField('phone', formatted);
                 }}
+                onBlur={() => setFieldTouched('phone')}
                 className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                  validation.phone.message
+                  touched.phone && validation.phone.message
                     ? 'border-red-300 focus:border-red-500'
                     : validation.phone.isValid
                     ? 'border-green-300 focus:border-green-500'
@@ -329,7 +331,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 }`}
                 placeholder="(555) 123-4567"
               />
-              {validation.phone.message && (
+              {touched.phone && validation.phone.message && (
                 <p className="mt-1 text-sm text-red-600">{validation.phone.message}</p>
               )}
               {validation.phone.isValid && (
