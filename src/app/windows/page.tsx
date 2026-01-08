@@ -115,7 +115,10 @@ export default function WindowsPage() {
       if (result.success) {
         window.location.href = `/thank-you?leadId=${result.data.leadId}`;
       } else {
-        alert('Error submitting form: ' + result.message);
+        // API returns 'error' for main message, 'details' for validation errors
+        const errorMsg = result.message || result.error || 'Unknown error';
+        const details = result.details ? '\n' + result.details.map((d: any) => d.message).join('\n') : '';
+        alert('Error submitting form: ' + errorMsg + details);
       }
     } catch (error) {
       console.error('Error submitting form:', error);

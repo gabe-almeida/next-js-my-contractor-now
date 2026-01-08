@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<!-- saved from url=(0071)https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api -->
+<html lang="en"><plasmo-csui id="ff-overlay-container"><template shadowrootmode="open"><style>#plasmo-shadow-container > div {
+  pointer-events: none !important;
+  background: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+.main_top_container_ff {
+  width: 400px;
+}
+
+.popup_container_wrapper_ff {
+  background-color: #fff;
+}
+
+.popup_container_wrapper_ff * {
+  font-family: PoppinsRegular;
+}
+
+.popup_container_wrapper_ff img {
+  background-color: #0000;
+}
+
+.popup_container_ff {
+  box-shadow: 0 5px 20px #1e1e2212;
+}
+
+.popup_div_ff {
+  box-sizing: border-box;
+  background-color: #fff;
+  width: 100%;
+  padding: 24px;
+}
+
+.main_component_ff {
+  width: 100%;
+  padding-bottom: 0 !important;
+}
+
+.popup_top_icon_div_ff {
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  display: flex;
+}
+
+.popup_top_icon_div_ff .btn_canvas_ff {
+  display: inline-flex;
+}
+
+.popup_top_icon_div_ff .ff_popup_top_image {
+  z-index: 0;
+  width: 100%;
+  height: auto;
+  position: absolute;
+  inset: 0 0 auto;
+}
+
+.popup_top_icon_btn_ff {
+  cursor: pointer;
+  z-index: 1;
+  background: none;
+  border: none;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 20px;
+  display: inline-flex;
+}
+
+.popup_top_icon_btn_ff img {
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.popup_top_icon_btn_ff:focus {
+  outline: none;
+}
+
+.dot_ff {
+  background-color: red;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+}
+
+.dot_ff-top-right {
+  position: absolute;
+  top: 33%;
+  right: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot_ff {
+    animation: none;
+  }
+}
+
+.topbar_cross_icon_ff {
+  cursor: pointer;
+  background: #eaeaea;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+}
+
+.topbar_cross_icon_ff img {
+  width: 12px;
+  height: 12px;
+}
+
+.btn_canvas_ff .topbar_detail_submit_btn_ff {
+  cursor: pointer;
+  color: #6e75ff;
+  background: #f0f0ff;
+  border: none;
+  border-radius: 5px;
+  justify-content: center;
+  align-items: center;
+  min-width: 108px;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 30px;
+  font-family: PoppinsRegular;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  display: flex;
+}
+
+.btn_canvas_ff .topbar_detail_submit_btn_ff:hover {
+  box-shadow: none;
+  color: #fff;
+  cursor: pointer;
+  background: #6e75ff;
+  border: none;
+  outline: none;
+}
+
+.btn_canvas_ff .topbar_detail_okay_btn_ff {
+  cursor: pointer;
+  color: #555;
+  background: #eee;
+  border: none;
+  border-radius: 5px;
+  justify-content: center;
+  align-items: center;
+  min-width: 108px;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 30px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  display: flex;
+}
+
+.btn_canvas_ff .topbar_detail_okay_btn_ff:hover, .btn_canvas_ff .topbar_detail_okay_btn_ff:focus {
+  box-shadow: none;
+  color: #eee;
+  cursor: pointer;
+  background: #555;
+  border: none;
+  outline: none;
+}
+
+.btn_canvas_ff .topbar_detail_submit_btn_ff:disabled, .btn_canvas_ff .topbar_detail_okay_btn_ff:disabled {
+  color: #696969 !important;
+  background-color: #d3d3d3 !important;
+}
+
+.spaced_icon_ff {
+  margin-left: 5px;
+  background-color: #0000 !important;
+}
+
+.toggle_btn_ff {
+  justify-content: center;
+  align-items: center;
+  padding: 6px 0 18px;
+  display: flex;
+  position: relative;
+}
+
+.create_notification_container_ff {
+  cursor: auto;
+  box-sizing: border-box;
+  z-index: 99999;
+  pointer-events: initial;
+  background-color: #fff;
+  border: none;
+  border-radius: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 512px;
+  margin-top: 16px;
+  padding: 24px;
+  position: absolute;
+  inset: 20px 100px auto auto;
+  box-shadow: 0 0 10px;
+}
+
+plasmo-csui#ff-overlay-container, plasmo-csui#real-time-panel {
+  z-index: 999;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.ff_input_container {
+  background: none;
+  border: none;
+  border-radius: 4px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: -webkit-fill-available;
+  display: flex;
+}
+
+.ff_input_container .input_input {
+  resize: none;
+  background: none;
+  border: 1px solid #f2f4f7;
+  border-radius: 8px;
+  width: -webkit-fill-available;
+  height: 20px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  box-shadow: none !important;
+  color: #475467 !important;
+  padding: 8px 16px !important;
+  font-family: Roboto !important;
+  font-size: 14px !important;
+}
+
+.ff_input_container .input_input:focus-visible {
+  outline: none;
+}
+
+.ff_input_container .input_label {
+  letter-spacing: -.01em;
+  color: #101828;
+  background-color: #0000;
+  padding-bottom: 8px;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.ff_input_container .input_description {
+  letter-spacing: -.01em;
+  color: #878f97;
+  background-color: #0000;
+  margin: 0;
+  padding-bottom: 8px;
+  font-family: Roboto;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.input_icon_container {
+  border: 1px solid #f2f4f7;
+  border-radius: 8px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  width: -webkit-fill-available;
+  padding-left: 16px;
+  display: flex;
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.input_icon_container .input_input {
+  border: none;
+  padding-left: 0 !important;
+}
+
+.ff_select_container {
+  background: none;
+  border: none;
+  border-radius: 4px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: -webkit-fill-available;
+  display: flex;
+  position: relative;
+}
+
+.ff_select_option_list_container {
+  z-index: 1;
+  background: #fff;
+  border: 1px solid #f2f4f7;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  width: -webkit-fill-available;
+  max-height: 80px;
+  margin: 0;
+  padding: 10px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  overflow-y: scroll;
+}
+
+.ff_select_option_list {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: hidden;
+}
+
+.ff_select_option_item {
+  color: #475467;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  align-self: stretch;
+  align-items: center;
+  gap: 8px;
+  min-height: 16px;
+  padding: 8px;
+  display: flex;
+  overflow: hidden;
+}
+
+.ff_select_option_item:hover, .ff_select_option_item:focus {
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.ff_select_option_item span {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: none;
+  overflow: hidden;
+}
+
+.ff_select_search {
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.ff_select_dropdown_container {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 55px;
+  display: flex;
+  position: relative;
+}
+
+.topbar_heading_box_ff {
+  flex-direction: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.topbar_icon_ff {
+  justify-content: center;
+  align-items: center;
+  margin-right: 10px;
+  display: flex;
+}
+
+.topbar_middle_icon_ff {
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 1rem;
+  display: flex;
+}
+
+.topbar_detail_head_ff {
+  text-align: left;
+  letter-spacing: -.01em;
+  color: #22262a;
+  border: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: PoppinsRegular;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  font-family: PoppinsMedium !important;
+}
+
+.topbar_detail_body_ff {
+  letter-spacing: 0;
+  align-items: flex-start;
+  margin: 16px 0 17px;
+  padding: 0;
+  display: flex;
+}
+
+.topbar_detail_para_ff {
+  width: 100%;
+  margin: 0;
+}
+
+.topbar_detail_para_ff .topbar_detail_text {
+  color: #484f56;
+  letter-spacing: -.01em;
+  margin: 0;
+  padding: 0;
+  font-family: PoppinsRegular;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.topbar_detail_para_ff .topbar_detail_text_last {
+  color: #878f97;
+  letter-spacing: -.01em;
+  margin: 0;
+  padding-top: 8px;
+  padding-bottom: 2px;
+  font-family: PoppinsRegular;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.topbar_detail_static_arrow_ff {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+
+.topbar_detail_static_arrow_ff img {
+  width: 24px;
+  height: 26px;
+  display: inline;
+}
+
+.topbar_detail_btns_ff {
+  justify-content: space-between;
+  width: 100%;
+  display: flex;
+}
+
+.narrow_btns_ff {
+  width: 70% !important;
+}
+
+.review_btns_ff {
+  gap: 1rem;
+  justify-content: flex-start !important;
+  width: 70% !important;
+}
+
+.topbar_detail_submit_btn_ff, .topbar_detail_okay_btn_ff {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  overflow: hidden;
+}
+
+.dot_ff {
+  border-radius: 50%;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 8px;
+  height: 8px;
+  display: flex;
+}
+
+.success_dot_ff {
+  background-color: #12b76a !important;
+}
+
+.warning_dot_ff {
+  background-color: #f08c00 !important;
+}
+
+.error_dot_ff {
+  background-color: red !important;
+}
+
+.large_dot_ff {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.medium_dot_ff {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.small_dot_ff {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+</style><div id="plasmo-shadow-container" style="z-index: 2147483647; position: relative;"><div id="plasmo-overlay-0" class="plasmo-csui-container" style="display: flex; position: absolute; top: 0px; left: 0px;"></div></div></template></plasmo-csui><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <title>Ping Post v3 API</title>
+  <link rel="stylesheet" href="./Modernize Ping Post v3 API_files/publishers-docs.css">
+  <link rel="icon" type="image/svg+xml" href="https://modernize.com/wp-content/themes/modernize/dist/images/favicons/icon.svg">
+<style>@font-face { font-family: DMSans; src: url('chrome-extension://meimoidfecamngeoanhnpdjjdcefoldn/assets/fonts/DMSans-Regular.ttf'); }@font-face { font-family: PoppinsMedium; src: url('chrome-extension://meimoidfecamngeoanhnpdjjdcefoldn/assets/fonts/Poppins-Medium.otf'); }@font-face { font-family: PoppinsRegular; src: url('chrome-extension://meimoidfecamngeoanhnpdjjdcefoldn/assets/fonts/Poppins-Regular.otf'); }@font-face { font-family: Roboto; src: url('chrome-extension://meimoidfecamngeoanhnpdjjdcefoldn/assets/fonts/Roboto-Regular.ttf'); }@font-face { font-family: Inter; src: url('chrome-extension://meimoidfecamngeoanhnpdjjdcefoldn/assets/fonts/Inter-VariableFont_opsz,wght.ttf'); }</style></head>
+<body>
+  <main class="md-body">
+<h1 id="ping-post-v3-api" tabindex="-1">Ping Post <strong>v3</strong> API <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<div class="warning">
+<p>All material confidential. Materials constitute proprietary information of Modernize Home Services and QuinStreet, Inc. and may be used by the recipient solely to evaluate an existing business relationship with Modernize Home Services. All other rights reserved by Modernize Home Services.</p>
+</div>
+<p>This document contains detailed instructions and examples for how to sell leads to Modernize Home Services through our Ping Post web API, using a two-step process known as “Ping/Post.”</p>
+<h2 id="contents" tabindex="-1">Contents <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#contents" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p></p><div class="md-toc"><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api">Ping Post v3 API </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#contents">Contents </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#how-it-works">How It Works </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#before-you-start">Before You Start </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#environments">Environments </a></li></ul></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#ping">Ping </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#post">Post </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#common-parameters-case-sensitive">Common Parameters [CASE-SENSITIVE] </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#service-specific-parameters-case-sensitive">Service-Specific Parameters [CASE-SENSITIVE] </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#common-services">Common Services </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#other-services">Other Services </a></li></ul></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#example">Example </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#ping-1">Ping </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#post-lead">Post Lead </a></li></ul></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#response--error-codes">Response &amp; Error Codes </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#ping-errors">Ping Errors </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#post-errors">Post Errors </a></li></ul></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#faq">FAQ </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#how-long-is-a-pingtoken-valid">How long is a pingToken valid? </a></li></ul></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#appendix">Appendix </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#additional-tips">Additional Tips </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#tagid-field">tagId Field </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#tcpa-consent">TCPA Consent </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#compliance-certification-token">Compliance Certification Token </a></li></ul></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#successful-testing-in-staging">Successful Testing in Staging </a><ul><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#solar">Solar </a></li><li><a href="https://apidoc.modernize.com/publishers/ping-post.html#roofing">Roofing </a></li></ul></li></ul></li></ul></div><p></p>
+<p><strong>Document Revision:</strong> <em>DRAFT Jan 2025</em></p>
+<h2 id="how-it-works" tabindex="-1">How It Works <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#how-it-works" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>Ping/Post is a two-step process:</p>
+<ol>
+<li><code>Ping</code> - You offer a lead to us by first sending our API partial information about the lead, e.g., service and zipcode. We respond, indicating whether we can buy the lead and for how much ($).</li>
+<li><code>Post</code> - You send us the full details of the lead. We respond, confirming receipt. If the lead is a duplicate or invalid lead, we return an error response indicating the reason.</li>
+</ol>
+<p>Details for each step are explained in-depth below.</p>
+<h2 id="before-you-start" tabindex="-1">Before You Start <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#before-you-start" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>Before you start sending leads, you will need the following:</p>
+<ul>
+<li>An active QuinStreet publisher account</li>
+<li>Authorization for the service(s) for which you wish to sell us leads</li>
+<li><code>tagId</code>, to be used in your production API requests (see below)</li>
+</ul>
+<h2 id="environments" tabindex="-1">Environments <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#environments" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>Modernize hosts two API environments, one for production operations and another for testing:</p>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Hostname</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Production</td>
+<td><code>form-service-hs.qnst.com</code></td>
+</tr>
+<tr>
+<td>Staging (Test)</td>
+<td><code>hsapiservice.quinstage.com</code></td>
+</tr>
+</tbody>
+</table>
+<p>The Staging environment is for testing. No staging environment leads will be billable.</p>
+<div class="info">
+<p><strong>IMPORTANT:</strong> Before sending real leads to the Production environment, you must first test using the Staging environment. This process ensures that you are correctly authenticating, formatting data fields, and authorized to send us leads for your given service(s). During this step, you will test on your end to confirm functionality. Once testing is complete, we will verify that everything looks correct and confirm that you are ready to go. After our confirmation, you can move to the Production environment once we enable you.</p>
+</div>
+<h1 id="ping" tabindex="-1">Ping <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#ping" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<p>Use the following HTTP API to offer a lead for sale to Modernize by sending partial information about the lead.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>URL</td>
+<td><code>https://&lt;host&gt;/ping-post/pings</code></td>
+</tr>
+<tr>
+<td>HTTP Method</td>
+<td><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST" target="_blank" rel="noopener"><code>POST</code></a></td>
+</tr>
+<tr>
+<td>Required Request Headers</td>
+<td><code>Content-Type: application/json</code></td>
+</tr>
+<tr>
+<td>Request Body</td>
+<td>Must contain all <a href="https://apidoc.modernize.com/publishers/ping-post.html#common-parameters-case-sensitive" target="_blank" rel="noopener">Common Parameters</a> required for Ping, plus any required <a href="https://apidoc.modernize.com/publishers/ping-post.html#service-specific-parameters-case-sensitive" target="_blank" rel="noopener">Service-Specific Parameters</a>. Keys and values must be encoded in <a href="https://developer.mozilla.org/en-US/docs/Glossary/JSON" target="_blank" rel="noopener">JSON</a> format.</td>
+</tr>
+</tbody>
+</table>
+<h1 id="post" tabindex="-1">Post <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#post" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<p>Use the following API after a successful Ping response (see above) to transact a sale of a lead to Modernize Home Services, by sending full details of the lead along with a <code>pingToken</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base URL</td>
+<td><code>https://&lt;host&gt;/ping-post/posts</code></td>
+</tr>
+<tr>
+<td>HTTP Method</td>
+<td><code>POST</code></td>
+</tr>
+<tr>
+<td>Required Request Headers</td>
+<td><code>Content-Type: application/json</code></td>
+</tr>
+<tr>
+<td>Request Body</td>
+<td>Must contain all <a href="https://apidoc.modernize.com/publishers/ping-post.html#common-parameters-case-sensitive" target="_blank" rel="noopener">Common Parameters</a> required for Post, plus <a href="https://apidoc.modernize.com/publishers/ping-post.html#service-specific-parameters-case-sensitive" target="_blank" rel="noopener">Service-Specific Parameters</a>. Keys and values must be encoded in <a href="https://developer.mozilla.org/en-US/docs/Glossary/JSON" target="_blank" rel="noopener">JSON</a> format.</td>
+</tr>
+</tbody>
+</table>
+<h1 id="common-parameters-case-sensitive" tabindex="-1">Common Parameters [CASE-SENSITIVE] <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#common-parameters-case-sensitive" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<p>Unless otherwise indicated, the parameters below are accepted for all services.</p>
+<div class="info">
+<p>IMPORTANT: <strong>PARAMETER NAMES HAVE CHANGED in our new API</strong>. Additionally, all keys and values are <strong>CASE-SENSITIVE AND MAY FOLLOW A DIFFERENT CASING CONVENTION</strong>. Some parameters follow the “<code>camelCase</code>”-style convention, while other may follow a “<code>TitleCase</code>”-style convention; E.g., use <code>ownHome</code>, not <code>OwnHome</code>. Please look closely at this document to understand the exact required names for parameters and their possible values.  If you pass an invalid parameter name or value, your lead may be rejected.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Parameter Key/Name</th>
+<th>Value(s)</th>
+<th>Required on Ping?</th>
+<th>Required on Post?</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tagId</code></td>
+<td>(provided by account manager). IMPORTANT: <code>tagId</code> varies by environment. When submitting to the production environment, use your production <code>tagId</code>. Test submissions to the staging environment should use <code>204670250</code>. Note that test submissions are not billable.</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>204670250</code></td>
+</tr>
+<tr>
+<td><code>service</code></td>
+<td>see Service-Specific Parameter below</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>WINDOWS</code></td>
+</tr>
+<tr>
+<td><code>postalCode</code></td>
+<td>5-digit US zip code</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>99751</code></td>
+</tr>
+<tr>
+<td><code>buyTimeframe</code></td>
+<td>(<code>Immediately</code>, <code>1-6 months</code>, <code>Don't know</code>)</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>Immediately</code></td>
+</tr>
+<tr>
+<td><code>ownHome</code></td>
+<td>(<code>Yes</code>, <code>No</code>) If not the owner, but is authorized to make improvements, use <code>Yes</code></td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>Yes</code></td>
+</tr>
+<tr>
+<td><code>partnerSourceId</code></td>
+<td>Value to identify campaigns by marketing efforts or channels on the publisher side. Helps Modernize track and report quality back to publisher</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>CampaignA</code></td>
+</tr>
+<tr>
+<td><code>pingToken</code></td>
+<td>POST ONLY. Set to <code>pingToken</code> value received from successful Ping response.</td>
+<td>No</td>
+<td>Yes</td>
+<td>1234567890</td>
+</tr>
+<tr>
+<td><code>homePhoneConsentLanguage</code></td>
+<td>POST ONLY. Complete, string of consent language displayed to consumer. Send on Posts only.</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>Fake example I consent to receiving calls etc.</code> (abbreviated for clarity)</td>
+</tr>
+<tr>
+<td><code>leadIDToken</code></td>
+<td>32-char Jornaya LeadiD Token</td>
+<td>No</td>
+<td>Yes*</td>
+<td><code>EAF0AAF2-55CD-08A7-DE78-C5A090B3A57B</code></td>
+</tr>
+<tr>
+<td><code>trustedFormToken</code></td>
+<td>TrustedForm token or token URL</td>
+<td>No</td>
+<td>Yes*</td>
+<td><code>https://cert.trustedform.com/5d9f37382eca1518c752db469cacb6668049c8d3</code></td>
+</tr>
+<tr>
+<td><code>publisherSubId</code></td>
+<td>Publisher’s own transaction-level identifier for the lead.</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><code>123456</code></td>
+</tr>
+<tr>
+<td><code>firstName</code></td>
+<td>First name</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>Quin</code></td>
+</tr>
+<tr>
+<td><code>lastName</code></td>
+<td>Last name</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>Street</code></td>
+</tr>
+<tr>
+<td><code>address</code></td>
+<td>Address</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>9305 Nimbus Ave</code></td>
+</tr>
+<tr>
+<td><code>city</code></td>
+<td>City</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>Kobuk</code></td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td>State (USPS abbreviation)</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>AK</code></td>
+</tr>
+<tr>
+<td><code>phone</code></td>
+<td>Phone (10-digit US, no special chars)</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>5039065030</code></td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>Email</td>
+<td>No</td>
+<td>Yes</td>
+<td><code>bizdev@quinstreet.com</code></td>
+</tr>
+</tbody>
+</table>
+<p>* A compliance certification token is required for all leads. You must pass the <code>trustedFormToken</code> (ActiveProspect) for a lead to be accepted. The <code>leadIDToken</code> (Jornaya) may be passed along with the <code>trustedFormToken</code> but is not required.</p>
+<h1 id="service-specific-parameters-case-sensitive" tabindex="-1">Service-Specific Parameters [CASE-SENSITIVE] <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#service-specific-parameters-case-sensitive" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<p>The following parameters are optional on the Post operation, unless otherwise indicated. Providing these additional parameters can help reduce the likelihood of a post reject occuring. If Parameter Name is <code>N/A</code> below, no additional parameters are required for the service.</p>
+<blockquote>
+<p>IMPORTANT: <strong>PARAMETER NAMES HAVE CHANGED in our new API</strong>. Additionally, all keys and values are <strong>CASE-SENSITIVE AND MAY FOLLOW A DIFFERENT CASING CONVENTION</strong>. Some parameters follow the “<code>camelCase</code>”-style convention, while other may follow a “<code>TitleCase</code>”-style convention; E.g., use <code>GuttersType</code>, not <code>guttersType</code>. Please look closely at this document to understand the exact required names for parameters and their possible values.  If you pass an invalid parameter name or value, your lead may be rejected.</p>
+</blockquote>
+<h2 id="common-services" tabindex="-1">Common Services <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#common-services" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Parameter Name</th>
+<th>Possible Values</th>
+<th>Required?</th>
+<th>Example (URL-Encoded)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ALERTS_MEDICAL</code></td>
+<td><code>MedicalAlertProtection</code></td>
+<td>(<code>Home</code>, <code>OnTheGo</code>, <code>Both</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>ALERTS_MEDICAL</code></td>
+<td><code>WhoseMedicalAlert</code></td>
+<td>(<code>Myself</code>, <code>SomebodyElse</code>)</td>
+<td>Yes</td>
+<td><code>Myself</code></td>
+</tr>
+<tr>
+<td><code>BATH_REMODEL</code></td>
+<td><code>OptIn1</code></td>
+<td>Whether the remodel requires removing or adding any walls (<code>No</code>, <code>Yes</code>)</td>
+<td>No</td>
+<td><code>No</code></td>
+</tr>
+<tr>
+<td><code>BATHROOM_REFACING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>DRAINS</code></td>
+<td><code>DrainageIssue</code></td>
+<td>(<code>Pumps</code>, <code>Garbage disposal</code>, <code>Leak</code>)</td>
+<td>Yes</td>
+<td><code>Leak</code></td>
+</tr>
+<tr>
+<td><code>DUMPSTER_RENTAL</code></td>
+<td><code>BuyTimeframe</code></td>
+<td>(<code>Within a week</code>, <code>Within two weeks</code>, <code>Within a month</code>, <code>Immediately</code>)</td>
+<td>No</td>
+<td><code>Immediately</code></td>
+</tr>
+<tr>
+<td><code>FULL_SERVICE_JUNK_REMOVAL</code></td>
+<td><code>JunkVolume</code></td>
+<td>(<code>Single item</code>, <code>Multiple items</code>, <code>Room of items</code>, <code>Full cleanout</code>)</td>
+<td>Yes</td>
+<td><code>Full  cleanout</code></td>
+</tr>
+<tr>
+<td><code>GENERATOR</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>GENERATOR</code></td>
+<td><code>GeneratorType</code></td>
+<td>(<code>Portable</code>, <code>Non-portable</code>)</td>
+<td>Yes</td>
+<td><code>Portable</code></td>
+</tr>
+<tr>
+<td><code>GUTTER_COVERS</code></td>
+<td><code>GuttersProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>GUTTER_COVERS</code></td>
+<td><code>CommercialLocation</code></td>
+<td>Kind of location (<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>GUTTERS</code></td>
+<td><code>GutterType</code></td>
+<td>(<code>Copper</code>, <code>Galvanized</code>, <code>PVC</code>, <code>Seamless Metal</code>, <code>Wood</code>)</td>
+<td>Yes</td>
+<td><code>Seamless Metal</code></td>
+</tr>
+<tr>
+<td><code>GUTTERS</code></td>
+<td><code>GuttersProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>GUTTERS</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>GUTTER_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>HOME_SECURITY</code></td>
+<td><code>HomeSecurityProjectScope</code></td>
+<td>(<code>Equipment</code>, <code>Install</code>, <code>Reactivate</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>HOME_SECURITY</code></td>
+<td><code>SecuritySystemInstallationType</code></td>
+<td>(<code>NoPreference</code>, <code>SelfInstall</code>, <code>ProfessionalInstall</code>)</td>
+<td>Yes</td>
+<td><code>ProfessionalInstall</code></td>
+</tr>
+<tr>
+<td><code>HOME_SECURITY</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>HOME_WARRANTY</code></td>
+<td><code>Interest</code></td>
+<td>Why are you interested? (<code>BuyHome</code>, <code>ProtectHome</code>, <code>RealEstateProfessional</code>, <code>Other</code>)</td>
+<td>Yes</td>
+<td><code>BuyHome</code></td>
+</tr>
+<tr>
+<td><code>HOT_TUBS</code></td>
+<td><code>HotTubUse</code></td>
+<td>(<code>Relaxation</code>, <code>PainAndHealth</code>, <code>Other</code>)</td>
+<td>Yes</td>
+<td><code>PainAndHealth</code></td>
+</tr>
+<tr>
+<td><code>HOT_TUBS</code></td>
+<td><code>HotTubType</code></td>
+<td>(<code>Large</code>, <code>Medium</code>, <code>Small</code>)</td>
+<td>Yes</td>
+<td><code>Large</code></td>
+</tr>
+<tr>
+<td><code>HVAC</code></td>
+<td><code>HVACInterest</code></td>
+<td>(<code>Install Boiler/Radiator</code>, <code>Install Central AC</code>, <code>Install Central Heating</code>, <code>Repair Boiler/Radiator</code>, <code>Repair Central AC</code>, <code>Repair Central Heating </code>)</td>
+<td>Yes</td>
+<td><code>Install Central AC</code></td>
+</tr>
+<tr>
+<td><code>HVAC</code></td>
+<td><code>BoilerSystemInstallType</code></td>
+<td>(<code>NaturalGas</code>, <code>Electric</code>, <code>Oil</code>, <code>PropaneGas</code>, <code>Do Not Know</code>)</td>
+<td>Yes</td>
+<td><code>NaturalGas</code></td>
+</tr>
+<tr>
+<td><code>HVAC</code></td>
+<td><code>CentralHeatingInstallType</code></td>
+<td>(<code>NaturalGas</code>, <code>Electric</code>, <code>Oil</code>, <code>PropaneGas</code>, <code>Do Not Know</code>)</td>
+<td>Yes</td>
+<td><code>NaturalGas</code></td>
+</tr>
+<tr>
+<td><code>HVAC</code></td>
+<td><code>BoilerSystemRepairType</code></td>
+<td>(<code>NaturalGas</code>, <code>Electric</code>, <code>Oil</code>, <code>PropaneGas</code>)</td>
+<td>Yes</td>
+<td><code>NaturalGas</code></td>
+</tr>
+<tr>
+<td><code>HVAC</code></td>
+<td><code>CentralHeatingRepairType</code></td>
+<td>(<code>NaturalGas</code>, <code>Electric</code>, <code>Oil</code>, <code>PropaneGas</code>)</td>
+<td>Yes</td>
+<td><code>NaturalGas</code></td>
+</tr>
+<tr>
+<td><code>LABOR_SERVICES</code></td>
+<td><code>BuyTimeFrame</code></td>
+<td>(<code>Within a week</code>, <code>Within two weeks</code>, <code>Within a month</code>, <code>Immediately</code>)</td>
+<td>No</td>
+<td><code>Immediately</code></td>
+</tr>
+<tr>
+<td><code>MOVING</code></td>
+<td><code>BuyTimeFrame</code></td>
+<td>(<code>Within a week</code>, <code>Within two weeks</code>, <code>Within a month</code>, <code>Immediately</code>)</td>
+<td>No</td>
+<td><code>Immediately</code></td>
+</tr>
+<tr>
+<td><code>PLUMBING</code></td>
+<td><code>PlumbingProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Repair</code></td>
+</tr>
+<tr>
+<td><code>REPIPE</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_ASPHALT</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_CEDAR_SHAKE</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_COMPOSITE</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_METAL</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_NATURAL_SLATE</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_TAR_TORCHDOWN</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>ROOFING_TILE</code></td>
+<td><code>RoofingPlan</code></td>
+<td>(<code>Completely replace roof</code>, <code>Repair existing roof</code>, <code>Install roof on new construction</code>)</td>
+<td>Yes</td>
+<td><code>Completely replace roof</code></td>
+</tr>
+<tr>
+<td><code>SEWER</code></td>
+<td><code>DrainageIssue</code></td>
+<td>(<code>Slow drainage</code>, <code>Water backing up/gurgling</code>)</td>
+<td>Yes</td>
+<td><code>Slow drainage</code></td>
+</tr>
+<tr>
+<td><code>SIDING_ALUMINIUM</code></td>
+<td><code>ProjectPlan</code></td>
+<td>(<code>Siding for a new home</code>, <code>Replace existing siding</code>, <code>Repair section(s) of siding</code>, <code>Siding for a new addition</code>)</td>
+<td>Yes</td>
+<td><code>Replace existing siding</code></td>
+</tr>
+<tr>
+<td><code>SIDING_BRICKFACE</code></td>
+<td><code>ProjectPlan</code></td>
+<td>(<code>Siding for a new home</code>, <code>Replace existing siding</code>, <code>Repair section(s) of siding</code>, <code>Siding for a new addition</code>)</td>
+<td>Yes</td>
+<td><code>Replace existing siding</code></td>
+</tr>
+<tr>
+<td><code>SIDING_COMPOSITE_WOOD</code></td>
+<td><code>ProjectPlan</code></td>
+<td>(<code>Siding for a new home</code>, <code>Replace existing siding</code>, <code>Repair section(s) of siding</code>, <code>Siding for a new addition</code>)</td>
+<td>Yes</td>
+<td><code>Replace existing siding</code></td>
+</tr>
+<tr>
+<td><code>SIDING_STONEFACE</code></td>
+<td><code>ProjectPlan</code></td>
+<td>(<code>Siding for a new home</code>, <code>Replace existing siding</code>, <code>Repair section(s) of siding</code>, <code>Siding for a new addition</code>)</td>
+<td>Yes</td>
+<td><code>Replace existing siding</code></td>
+</tr>
+<tr>
+<td><code>SIDING_VINYL</code></td>
+<td><code>ProjectPlan</code></td>
+<td>(<code>Siding for a new home</code>, <code>Replace existing siding</code>, <code>Repair section(s) of siding</code>, <code>Siding for a new addition</code>)</td>
+<td>Yes</td>
+<td><code>Replace existing siding</code></td>
+</tr>
+<tr>
+<td><code>SOLAR</code></td>
+<td><code>ElectricBill</code></td>
+<td>(<code>Under $100</code>, <code>$100 - $200</code>, <code>$200 - $300</code>, <code>$300+</code>)</td>
+<td>Yes</td>
+<td><code>$200 - $300</code></td>
+</tr>
+<tr>
+<td><code>STAIR_LIFTS</code></td>
+<td><code>ReasonForStairLift</code></td>
+<td>(<code>Safety</code>, <code>Mobility</code>, <code>Other</code>)</td>
+<td>Yes</td>
+<td><code>Safety</code></td>
+</tr>
+<tr>
+<td><code>TREE_SERVICES</code></td>
+<td><code>JobType</code></td>
+<td>(<code>Tree Removal</code>, <code>Tree Trimming</code>, <code>Stump Removal</code>, <code>Other</code>)</td>
+<td>Yes</td>
+<td><code>Tree Removal</code></td>
+</tr>
+<tr>
+<td><code>TREE_SERVICES</code></td>
+<td><code>NumberOfTrees</code></td>
+<td>(<code>1</code>, <code>2</code>, <code>3</code>, <code>4+</code>)</td>
+<td>Yes</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>WALK_IN_TUBS</code></td>
+<td><code>Interest</code></td>
+<td>(<code>Safety</code>, <code>Therapeutic</code>, <code>Other</code>)</td>
+<td>Yes</td>
+<td><code>Safety</code></td>
+</tr>
+<tr>
+<td><code>WATER_MAIN</code></td>
+<td><code>PortalServiceCode</code></td>
+<td>(<code>SEWER</code>, <code>WATER_MAIN</code>, <code>DRAINS</code>, <code>WATER_HEATERS</code>)</td>
+<td>Yes</td>
+<td><code>DRAINS</code></td>
+</tr>
+<tr>
+<td><code>WATER_HEATERS</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>WATER_TREATMENT</code></td>
+<td><code>BuyTimeFrame</code></td>
+<td>(<code>Immediately</code>, <code>Within two weeks</code>, <code>Flexible</code>)</td>
+<td>No</td>
+<td><code>Immediately</code></td>
+</tr>
+<tr>
+<td><code>WATER_TREATMENT</code></td>
+<td><code>ServiceType</code></td>
+<td>(<code>CITY_WATER</code>, <code>WELL_WATER</code>, <code>UNSURE</code>)</td>
+<td>Yes</td>
+<td><code>CITY_WATER</code></td>
+</tr>
+<tr>
+<td><code>WINDOWS</code></td>
+<td><code>NumberOfWindows</code></td>
+<td>(<code>1</code>, <code>2</code>, <code>3-5</code>, <code>6-9</code>) If more than 9 windows, use <code>6-9</code></td>
+<td>Yes</td>
+<td><code>6-9</code></td>
+</tr>
+<tr>
+<td><code>WINDOWS</code></td>
+<td><code>WindowsProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>WALK_IN_SHOWERS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="other-services" tabindex="-1">Other Services <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#other-services" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Parameter Name</th>
+<th>Possible Values</th>
+<th>Required?</th>
+<th>Example (URL-Encoded)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ARCHITECTURAL_PLAN_DESIGNS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>ASPHALT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>BASEMENT_REMODELING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>BASEMENT_WATERPROOFING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CRAWLSPACE_ENCAPSULATION</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>BRICK_WORK</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CABINET_INSTALL</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CABINET_REFACING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CARPENTRY</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CARPET_WHOLESALE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CHIMNEY_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CARPET_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CRAWLSPACE_ENCAPSULATION</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>HOUSE_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>OFFICE_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>UPHOLSTERY_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WINDOWS_CLEANING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CONCRETE_FLATWORK</code></td>
+<td><code>ConcreteProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>CONCRETE_FLATWORK</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Home</code>,<code>Business</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>CONCRETE_FOUNDATION</code></td>
+<td><code>ConcreteProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>CONCRETE_FOUNDATION</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Home</code>,<code>Business</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>CONCRETE_STAMPED_COLOR</code></td>
+<td><code>ConcreteProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>CONCRETE_STAMPED_COLOR</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Home</code>,<code>Business</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>CONCRETE_LIFT_LEVEL</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>COUNTERTOP</code></td>
+<td><code>CountertopType</code></td>
+<td>(<code>Concrete</code>, <code>Granite</code>, <code>Laminate</code>, <code>Marble</code>, <code>Other Solid Stone</code>, <code>Solid Surface</code>, <code>Stainless Steel</code>, <code>Wood</code>)</td>
+<td>Yes</td>
+<td><code>Marble</code></td>
+</tr>
+<tr>
+<td><code>COUNTERTOP</code></td>
+<td><code>CountertopProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>CUSTOM_HOMES_WITH_LOT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>CUSTOM_HOMES_WITHOUT_LOT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>DECK</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Cleaning</code>, <code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>DOOR</code></td>
+<td><code>DoorType</code></td>
+<td>(<code>Storm Door</code>, <code>Exterior</code>, <code>Interior</code>, <code>Sliding Door</code>)</td>
+<td>Yes</td>
+<td><code>Storm Door</code></td>
+</tr>
+<tr>
+<td><code>DOOR</code></td>
+<td><code>DoorProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>DOOR</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>DRAINAGE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>DRYROT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>DRYWALL_SHEETROCK</code></td>
+<td><code>DrywallProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>ELECTRICAL</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>EXCAVATION</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>FENCE_VINYL</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FENCE_WOOD</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FENCE_METAL</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FENCING_CHAINLINK</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>CARPET</code></td>
+<td><code>FlooringProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>CARPET</code></td>
+<td><code>MaterialPurchase</code></td>
+<td>Have you already purchased materials (<code>Yes</code>, <code>No</code>)</td>
+<td>No</td>
+<td><code>No</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_HARDWOOD</code></td>
+<td><code>FlooringProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>, <code>Refinishing</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_HARDWOOD</code></td>
+<td><code>MaterialPurchase</code></td>
+<td>Have you already purchased materials (<code>Yes</code>, <code>No</code>)</td>
+<td>No</td>
+<td><code>No</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_HARDWOOD</code></td>
+<td><code>CommercialLocation</code></td>
+<td>Kind of location (<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td></td>
+</tr>
+<tr>
+<td><code>FLOORING_LAMINATE</code></td>
+<td><code>FlooringProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_LAMINATE</code></td>
+<td><code>MaterialPurchase</code></td>
+<td>Have you already purchased materials (<code>Yes</code>, <code>No</code>)</td>
+<td>No</td>
+<td><code>No</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_LAMINATE</code></td>
+<td><code>CommercialLocation</code></td>
+<td>Kind of location (<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_SUBFLOORS</code></td>
+<td><code>FlooringProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_TILE</code></td>
+<td><code>FlooringProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_VINYL_LINOLEUM</code></td>
+<td><code>FlooringProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_VINYL_LINOLEUM</code></td>
+<td><code>MaterialPurchase</code></td>
+<td>Have you already purchased materials (<code>Yes</code>, <code>No</code>)</td>
+<td>No</td>
+<td><code>No</code></td>
+</tr>
+<tr>
+<td><code>FLOORING_VINYL_LINOLEUM</code></td>
+<td><code>CommercialLocation</code></td>
+<td>Kind of location (<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>FRAMING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>GARAGE_DOOR</code></td>
+<td><code>GarageDoorProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>GARAGE_DOOR</code></td>
+<td><code>CommercialLocation</code></td>
+<td>Kind of location (<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>GARAGE_REMODEL</code></td>
+<td><code>CommercialLocation</code></td>
+<td>Kind of location (<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>HANDYMAN</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>HOME_MAGAZINE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>INSULATION</code></td>
+<td><code>SubProductService</code></td>
+<td>(<code>Batts</code>, <code>Blown</code>, <code>Spray</code>, <code>NotSure</code>)</td>
+<td>Yes</td>
+<td><code>Blown</code></td>
+</tr>
+<tr>
+<td><code>INSULATION</code></td>
+<td><code>InsulationLocation</code></td>
+<td>(<code>Attic</code>, <code>Walls</code>, <code>Basement</code>, <code>CrawlSpace</code>, <code>Other</code>)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>KITCHEN_REMODEL</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>KITCHEN_REMODEL</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>DEBRIS_HAULING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LANDSCAPING_ARCHITECT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LANDSCAPING_DESIGN_INSTALL</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LANDSCAPING_LAWN_AERATING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LANDSCAPING_LAWN_SEEDING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LANDSCAPING_MAINTENANCE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LANDSCAPING_SOD</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>LAWN_TREATMENT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>MOLD_REMEDIATION</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>RETAINING_WALLS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>SPRINKLER</code></td>
+<td><code>SprinklerProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>MARBLE_AND_GRANITE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>EXTERIOR_PAINTING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>INTERIOR_PAINTING</code></td>
+<td><code>NumberOfRooms</code></td>
+<td>(<code>1-2</code>, <code>3-4</code>, <code>5-6</code>, <code>7-8</code>, <code>9 or more</code>)</td>
+<td>Yes</td>
+<td><code>9 or more</code></td>
+</tr>
+<tr>
+<td><code>PAVERS</code></td>
+<td><code>ProjectScope</code></td>
+<td>(<code>Install</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>PATIO_COVERS </code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>PEST_CONTROL</code></td>
+<td><code>PestType</code></td>
+<td>(<code>BirdsBats</code>, <code>BugsInsects</code>, <code>Rodents</code>, <code>SmallAnimals</code>, <code>Termite</code>)</td>
+<td>Yes</td>
+<td><code>BugsInsects</code></td>
+</tr>
+<tr>
+<td><code>PEST_CONTROL</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>POOL</code></td>
+<td><code>PoolType</code></td>
+<td>(<code>InGround</code>, <code>AboveGround</code>)</td>
+<td>Yes</td>
+<td><code>InGround</code></td>
+</tr>
+<tr>
+<td><code>POOL</code></td>
+<td><code>PoolProjectScope</code></td>
+<td>(<code>Install</code>, <code>Maintenance</code>, <code>Repair</code>)</td>
+<td>Yes</td>
+<td><code>Install</code></td>
+</tr>
+<tr>
+<td><code>POOL</code></td>
+<td><code>InGroundType</code></td>
+<td>(<code>Concrete</code>, <code>Fiberglass</code>, <code>VinylLined</code>)</td>
+<td>Yes</td>
+<td><code>Fiberglass</code></td>
+</tr>
+<tr>
+<td><code>POOL</code></td>
+<td><code>CommercialLocation</code></td>
+<td>(<code>Business</code>, <code>Home</code>)</td>
+<td>Yes</td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><code>POOL</code></td>
+<td><code>MaterialPurchase</code></td>
+<td>Have you already purchased materials (<code>Yes</code>, <code>No</code>)</td>
+<td>No</td>
+<td><code>No</code></td>
+</tr>
+<tr>
+<td><code>POWER_WASHING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>REMODELING</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>ROOM_ADDITIONS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>SATELLITE_TV</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>SEPTIC_SEWER</code> [DEPRECATED]</td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>SHEDS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>STUCCO_EXTERIOR</code></td>
+<td><code>ProjectPlan</code></td>
+<td>(<code>Siding for a new home</code>, <code>Replace existing siding</code>, <code>Repair section(s) of siding</code>, <code>Siding for a new addition</code>)</td>
+<td>Yes</td>
+<td><code>Replace existing siding</code></td>
+</tr>
+<tr>
+<td><code>SKYLIGHT</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>SNOW_REMOVAL</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>STONE_MASONRY</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>STORAGE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>STUCCO_INTERIOR</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>SUNROOM</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>TILE_EXTERIOR</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>TILE_INTERIOR</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WALLPAPER</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WATER_DAMAGE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WINDOW_BLINDS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WINDOW_DRAPERIES</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WINDOW_SHUTTERS</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>WIRING_LOW_VOLTAGE</code></td>
+<td>N/A</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h1 id="example" tabindex="-1">Example <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#example" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<h2 id="ping-1" tabindex="-1">Ping <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#ping-1" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>Example Ping Request:</p>
+<pre class="hljs"><code>POST /ping-post/pings HTTP/<span class="hljs-number">1.1</span>
+Host<span class="hljs-punctuation">:</span> &lt;hostname&gt;
+Content-Type<span class="hljs-punctuation">:</span> application/json
+<span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"tagId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"204670250"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"service"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"WINDOWS"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"postalCode"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"99751"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"buyTimeFrame"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Immediately"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"ownHome"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Yes"</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>Example Ping Response - Success:</p>
+<pre class="hljs"><code><span class="hljs-number">201</span> Created
+<span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"status"</span><span class="hljs-punctuation">:</span><span class="hljs-string">"success"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"pingToken"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"VBny1dlGo483ZVsJj24BW1xWpA0RrK5z"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"price"</span><span class="hljs-punctuation">:</span><span class="hljs-string">"50"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>Example Ping Response - Rejected</p>
+<pre class="hljs"><code><span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"status"</span><span class="hljs-punctuation">:</span><span class="hljs-string">"rejected"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"pingToken"</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"price"</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>Example Ping Response - Error</p>
+<pre class="hljs"><code><span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"status"</span><span class="hljs-punctuation">:</span><span class="hljs-string">"error"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"postalCode is required."</span> 
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<h2 id="post-lead" tabindex="-1">Post Lead <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#post-lead" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>Example Post Request (newline characters shown for clarity):</p>
+<pre class="hljs"><code>POST /ping-post/posts HTTP/<span class="hljs-number">1.1</span>
+Host<span class="hljs-punctuation">:</span> &lt;hostname&gt;
+Content-Type<span class="hljs-punctuation">:</span> application/json
+<span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"pingToken"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"VBny1dlGo483ZVsJj24BW1xWpA0RrK5z"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"tagId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"204670250"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"service"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"WINDOWS"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"NumberOfWindows"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"6-9"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"WindowsProjectScope"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Install"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"buyTimeframe"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Immediately"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"ownHome"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Yes"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"leadIDToken"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"EAF0AAF2-55CD-08A7-DE78-C5A090B3A57B"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"trustedFormToken"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"https://cert.trustedform.com/5d9f37382eca1518c752db469cacb6668049c8d3"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"publisherSubId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"123456"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"partnerSourceId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"CampaignA"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"firstName"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"John"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"lastName"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"doe"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"email"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"john.doe@gmail.com"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"phone"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"5403216765"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"state"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"CA"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"address"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"1234 st"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"postalCode"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"99751"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"homePhoneConsentLanguage"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Fake example I consent to receiving calls etc."</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>Example Post Response - Success:</p>
+<pre class="hljs"><code><span class="hljs-number">201</span> Created
+<span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"status"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"success"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"leadId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"50108462152"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>Example Post Response - Rejected</p>
+<pre class="hljs"><code><span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"status"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"rejected"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"pingToken invalid/ pingToken expired"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"leadId"</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<h1 id="response--error-codes" tabindex="-1">Response &amp; Error Codes <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#response--error-codes" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<h2 id="ping-errors" tabindex="-1">Ping Errors <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#ping-errors" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>STATUS</th>
+<th>VALIDATION MESSAGE</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rejected</code></td>
+<td>N/A</td>
+<td>No matches were found for the given lead</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>100-Invalid Username and Password</code></td>
+<td>You are not authorized to use the service with the given credentials. Check your <code>tagId</code> and consult with your account manager if needed. IMPORTANT: <code>tagId</code> varies by environment. When submitting to the production environment, use your production <code>tagID</code>. Test submissions to the staging environment should use <code>204670250</code>. Test submissions are not billable.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>200-Service is required</code></td>
+<td>A <code>service</code> field was either not given or contains an invalid value. NOTE: check casing of both the key and value. See <a href="https://apidoc.modernize.com/publishers/ping-post.html#common-parameters-case-sensitive" target="_blank" rel="noopener">Common Parameters</a> and list of service codes above.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>300-Zipcode is required</code></td>
+<td>A zip/postal code (<code>PC</code> field) was either not found or is invalid.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>900- Duplicate Ping Request</code></td>
+<td>The ping is a duplicate, meaning we have received another ping with the same service + zip from you within the past 10 minutes.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>900- Service/Pricing not setup - please contact your account representative. You are not authorized to post leads for the given service code. Consult your account manager if needed.</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="post-errors" tabindex="-1">Post Errors <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#post-errors" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>STATUS</th>
+<th>VALIDATION MESSAGE</th>
+<th>ERRORS</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rejected</code></td>
+<td><code>Lead is rejected</code></td>
+<td>N/A</td>
+<td>No matches were found for the given lead.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>Lead is already submitted for the vendors matched</code></td>
+<td>N/A</td>
+<td>Matched vendors have already received the lead.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>Lead is rejected as rejected by matched vendors</code></td>
+<td>N/A</td>
+<td>Matched vendors did not accept the lead.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>Lead is rejected</code></td>
+<td><code>OwnHome () is a Required field</code></td>
+<td>Invalid or missing <code>OwnHome</code> field.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>Lead is rejected</code></td>
+<td><code>Service () is a Required field</code></td>
+<td>Invalid or missing <code>service</code> field.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>Lead is rejected</code></td>
+<td><code>[{}]</code></td>
+<td>Another validation error occurred. Examples include: invalid contact information (first name, last name, address), obscenity, invalid compliance token (e.g., TrustedForm), fraud detected, or other error.</td>
+</tr>
+</tbody>
+</table>
+<h1 id="faq" tabindex="-1">FAQ <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#faq" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<h2 id="how-long-is-a-pingtoken-valid" tabindex="-1">How long is a <code>pingToken</code> valid? <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#how-long-is-a-pingtoken-valid" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>While most posts are expected to be completed within a few minutes of the ping (typically 3 minutes or less), we understand that some consumers may take longer to finish their actions. Therefore, <code>pingToken</code> validity extends up to 30 minutes, accommodating these scenarios.</p>
+<h1 id="appendix" tabindex="-1">Appendix <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#appendix" aria-hidden="true" target="_blank" rel="noopener">#</a></h1>
+<h2 id="additional-tips" tabindex="-1">Additional Tips <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#additional-tips" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<h3 id="tagid-field" tabindex="-1"><code>tagId</code> Field <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#tagid-field" aria-hidden="true" target="_blank" rel="noopener">#</a></h3>
+<p>The <code>tagId</code> is unique to your publisher account and authorizes you to send leads for particular services. <code>tagID=204670250</code> is used only for the Staging environment. Once we confirm stage tests and you move to using the production API, this value must be replaced with the <code>tagID</code> value given to you by your account manager. NOTE: Test submissions are not billable.</p>
+<h3 id="tcpa-consent" tabindex="-1">TCPA Consent <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#tcpa-consent" aria-hidden="true" target="_blank" rel="noopener">#</a></h3>
+<ul>
+<li>On Post, pass <code>"homePhoneConsentLanguage": "&lt;...&gt;"</code>, including the full language that was shown to the user on-site. Please ask your account manager for details on what exact language we accept.</li>
+</ul>
+<h3 id="compliance-certification-token" tabindex="-1">Compliance Certification Token <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#compliance-certification-token" aria-hidden="true" target="_blank" rel="noopener">#</a></h3>
+<ul>
+<li>You must ALWAYS pass an ActiveProspect certificate token in the <code>trustedFormToken</code> field.</li>
+<li>Some services additionally require a Jornaya certificate, whose token must be passed in the <code>leadIDToken</code> field. Check with your account manager if there are any issues.</li>
+<li>Pass the <code>trustedFormToken</code> and <code>leadIDToken</code> on Post requests.</li>
+</ul>
+<h2 id="successful-testing-in-staging" tabindex="-1">Successful Testing in Staging <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#successful-testing-in-staging" aria-hidden="true" target="_blank" rel="noopener">#</a></h2>
+<p>While integrating with the API in our staging environment you’ll need to test successful matches scenarios. To guarantee your testing lead matches with clients, you can use one of the following trade specific examples with either of the following postal codes.</p>
+<h3 id="solar" tabindex="-1">Solar <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#solar" aria-hidden="true" target="_blank" rel="noopener">#</a></h3>
+<pre class="hljs"><code><span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"tagId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"204670250"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"service"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"SOLAR"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"postalCode"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"99004"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"buyTimeframe"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Immediately"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"ownHome"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Yes"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"partnerSourceId"</span> <span class="hljs-punctuation">:</span> <span class="hljs-string">"campaignA"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"publisherSubId"</span> <span class="hljs-punctuation">:</span> <span class="hljs-string">"123456678"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"ElectricBill"</span> <span class="hljs-punctuation">:</span> <span class="hljs-string">"$100 - $200"</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Postal Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>06880</td>
+</tr>
+<tr>
+<td>93212</td>
+</tr>
+<tr>
+<td>23324</td>
+</tr>
+<tr>
+<td>92604</td>
+</tr>
+<tr>
+<td>80504</td>
+</tr>
+<tr>
+<td>92345</td>
+</tr>
+</tbody>
+</table>
+<h3 id="roofing" tabindex="-1">Roofing <a class="header-anchor" href="https://apidoc.modernize.com/publishers/ping-post.html#roofing" aria-hidden="true" target="_blank" rel="noopener">#</a></h3>
+<pre class="hljs"><code><span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"tagId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"204670250"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"service"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"ROOFING_METAL"</span><span class="hljs-punctuation">,</span> <span class="hljs-comment">// ROOFING_COMPOSITE, ROOFING_ASPHALT, or </span>
+    <span class="hljs-attr">"postalCode"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"84601"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"buyTimeframe"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Immediately"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"ownHome"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Yes"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"partnerSourceId"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"CampaignA"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"publisherSubId"</span> <span class="hljs-punctuation">:</span> <span class="hljs-string">"123456678"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"RoofingPlan"</span> <span class="hljs-punctuation">:</span> <span class="hljs-string">"Install roof on new construction"</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Postal Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>98532</td>
+</tr>
+<tr>
+<td>97080</td>
+</tr>
+<tr>
+<td>75215</td>
+</tr>
+<tr>
+<td>27046</td>
+</tr>
+</tbody>
+</table>
+
+  </main>
+
+</body></html>

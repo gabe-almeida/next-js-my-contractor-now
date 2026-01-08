@@ -85,7 +85,9 @@ export const windowsFormSchema = z.object({
   zipCode: zipCodeSchema,
   ownsHome: z.boolean(),
   timeframe: timeframeSchema,
-  numberOfWindows: z.enum(['1-3', '4-6', '7-10', '11-15', '16+']),
+  // Match actual form options: '1', '2', '3-5', '6-9', '9+'
+  numberOfWindows: z.enum(['1', '2', '3-5', '6-9', '9+']),
+  // Window types is optional - not collected in current flow
   windowTypes: z.array(z.enum([
     'double_hung',
     'casement',
@@ -95,11 +97,13 @@ export const windowsFormSchema = z.object({
     'picture',
     'single_hung',
     'garden'
-  ])).min(1, 'Select at least one window type'),
+  ])).optional(),
+  // Match actual form options: 'repair', 'install'
   projectScope: z.enum([
-    'full_replacement',
-    'installation_only', 
     'repair',
+    'install',
+    'full_replacement',
+    'installation_only',
     'not_sure'
   ]),
   budgetRange: z.enum([

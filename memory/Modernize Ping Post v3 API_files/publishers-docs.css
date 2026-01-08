@@ -1,0 +1,253 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Roboto&display=swap");
+
+:root {
+	--dark-purple-100: #d7d3dd;
+	--dark-purple-200: #aea6bc;
+	--dark-purple-300: #867a9a;
+	--dark-purple-400: #5d4d79;
+	--dark-purple-500: #352157;
+	--dark-purple-600: #2a1a46;
+	--dark-purple-700: #201434;
+	--dark-purple-800: #150d23;
+	--dark-purple-900: #0b0711;
+	--electric-purple-100: #e9d0fd;
+	--electric-purple-200: #d4a1fb;
+	--electric-purple-300: #be73fa;
+	--electric-purple-400: #a944f8;
+	--electric-purple-500: #9315f6;
+	--electric-purple-600: #7611c5;
+	--electric-purple-700: #580d94;
+	--electric-purple-800: #3b0862;
+	--electric-purple-900: #1d0431;
+	--medium-purple-100: #e6e0f0;
+	--medium-purple-200: #beb0d7;
+	--medium-purple-300: #9e88c2;
+	--medium-purple-400: #7d61ae;
+	--medium-purple-500: #5d399a;
+	--medium-purple-600: #4a2e7b;
+	--medium-purple-700: #38225c;
+	--medium-purple-800: #25173e;
+	--medium-purple-900: #130b1f;
+	--orange-100: #fce9d1;
+}
+
+* {
+	box-sizing: border-box;
+	font-family: Montserrat, sans-serif;
+}
+
+body>* {
+	scroll-margin-top: 80px;
+}
+
+body {
+	color: var(--dark-purple-900);
+	font-weight: 500;
+	line-height: 1.75;
+	margin-left: 28%;
+	margin-top: 80px;
+	overflow-x: hidden;
+	padding: 0 12px;
+	position: relative;
+	scroll-behavior: smooth;
+	width: 70%;
+	z-index: 2;
+}
+
+body::before {
+	background: var(--electric-purple-500) url('https://modernize.com/quote/resources/assets/images/logos/modernize/logo--white-bw-new.svg');
+	background-position: 30px 15px;
+	background-repeat: no-repeat;
+	background-size: 152px 35px;
+	content: '';
+	display: block;
+	height: 60px;
+	left: 50%;
+
+	/* background: gray; */
+	position: fixed;
+	right: 50%;
+	scroll-margin-bottom: 80px;
+	top: 0;
+	transform: translateX(-50%);
+	width: 100vw;
+}
+
+body a {
+	color: var(--medium-purple-500);
+	text-decoration: underline;
+}
+
+/* Left Navigation */
+
+.md-toc {
+	background-color: #F6F5F1;
+	font-size: 15px;
+	font-weight: 700;
+	list-style: none;
+	margin: 0;
+	padding: 18px 14px;
+	position: fixed;
+	right: 75%;
+	top: 60px;
+
+    a {
+        color: var(--medium-purple-500);
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    li {
+        list-style: none;
+        padding-top: 10px;
+    }
+
+    li ul {
+        font-size: 14px;
+        font-weight: 600;
+    }
+}
+
+#contents, .md-toc > ul > li:nth-child(1) > ul > li:nth-child(1) {
+    display: none;
+    padding: 0;
+}
+
+/* Right Section - Text */
+h1 {
+	font-size: 42px;
+	font-weight: 600;
+	letter-spacing: -0.4px;
+	line-height: 48px;
+}
+
+.warning {
+	background-color: var(--orange-100);
+	margin-bottom: 1em;
+	padding: 10px 10px 5px;
+}
+
+.info {
+	background-color: var(--medium-purple-100);
+	margin-bottom: 1em;
+	padding: 10px 10px 5px;
+}
+
+blockquote {
+	background-color: var(--medium-purple-100);
+	border: 1px solid var(--medium-purple-500);
+    margin-bottom: 10px;
+}
+
+table {
+	border-collapse: collapse;
+	border-radius: 2rem;
+	width: 100%;
+}
+
+table td,
+table th {
+	border: 1px solid #ddd;
+	padding: 8px;
+}
+
+table th {
+	background-color: var(--medium-purple-600);
+	color: #fff;
+	padding-bottom: 12px;
+	padding-top: 12px;
+	text-align: left;
+}
+
+table tr:nth-child(even) {
+	background-color: #FDFDFC;
+}
+
+table tr:hover {
+	background-color: #f8f8f8;
+}
+
+table th:empty {
+	display: none;
+}
+
+th>code,
+td>code,
+a>code,
+li>code,
+p>code,
+h1>code,
+h2>code,
+h3>code {
+	color: var(--electric-purple-500) !important;
+	word-break: break-all;
+}
+
+table:nth-child(29)>thead>tr>th:nth-child(1),
+table:nth-child(35)>thead>tr>th:nth-child(1),
+table:nth-child(35)>thead>tr>th:nth-child(2),
+table:nth-child(37)>thead>tr>th:nth-child(1),
+table:nth-child(37)>thead>tr>th:nth-child(2),
+table:nth-child(40)>thead>tr>th:nth-child(1),
+table:nth-child(40)>thead>tr>th:nth-child(2),
+table:nth-child(46)>thead>tr>th:nth-child(1),
+table:nth-child(46)>thead>tr>th:nth-child(2) {
+	width: 242px !important;
+}
+
+table:nth-child(57) > thead > tr > th:nth-child(1),
+table:nth-child(59) > thead > tr > th:nth-child(1),
+table:nth-child(62)>thead>tr>th:nth-child(1),
+table:nth-child(64)>thead>tr>th:nth-child(1),
+table:nth-child(78)>thead>tr>th:nth-child(1),
+table:nth-child(80)>thead>tr>th:nth-child(1) {
+	width: 150px !important;
+}
+
+.hljs {
+	background: #0A0E15;
+	color: #A1A09A;
+    padding: 1em;
+	z-index: -1;
+}
+
+code>div>span {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+.hljs-number {
+	color: #BC8BDD;
+}
+
+.hljs-attr {
+	color: #00ABD6;
+}
+
+.hljs-string {
+	color: #87BE21;
+}
+
+pre:nth-child(40)>code>div>span.hljs-string::after {
+	color: #BC8BDD;
+}
+
+.hljs-attribute,
+.hljs-keyword,
+.hljs-title,
+.hljs-section,
+.hljs-built_in,
+.hljs-literal,
+.hljs-type,
+.hljs-addition,
+.hljs-tag,
+.hljs-quote,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-variable,
+pre:nth-child(40)>code>div>span.hljs-string,
+pre:nth-child(49)>code>div>span.hljs-string {
+	color: #A1A09A;
+}

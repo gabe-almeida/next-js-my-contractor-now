@@ -29,5 +29,7 @@
     ]
   },
   "includeCoAuthoredBy": true,
-  "enabledMcpjsonServers": []
+  "enabledMcpjsonServers": [
+    "ruv-swarm"
+  ]
 }

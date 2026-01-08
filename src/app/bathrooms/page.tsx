@@ -39,7 +39,9 @@ export default function BathroomsPage() {
       if (result.success) {
         window.location.href = `/thank-you?leadId=${result.data.leadId}`;
       } else {
-        alert('Error submitting form: ' + result.message);
+        const errorMsg = result.message || result.error || 'Unknown error';
+        const details = result.details ? '\n' + result.details.map((d: any) => d.message).join('\n') : '';
+        alert('Error submitting form: ' + errorMsg + details);
       }
     } catch (error) {
       console.error('Error submitting form:', error);

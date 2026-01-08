@@ -186,7 +186,7 @@ Use `/gabe-os/edit-project-notes` from the main menu to add custom preferences s
 
 Gabe-OS is a production-grade system for spec-driven development with AI coding agents. It provides enforced quality standards, intelligent parallel execution, and visual spec management to transform AI agents into disciplined, efficient developers.
 
-**Version:** 1.2.2
+**Version:** 1.2.4
 **Type:** Standalone AI Development System
 **Repository:** ~/Dev/Gabe-OS
 **Author:** Gabe
@@ -203,6 +203,7 @@ Gabe-OS uses a **3-layer context approach**:
 
 Gabe-OS provides slash commands in Claude Code (namespaced under `/gabe-os/`):
 
+- `/gabe-os/init-project` - Bootstrap a brand new project from scratch (greenfield projects)
 - `/gabe-os/new-spec` - Initialize a new feature specification with requirements gathering
 - `/gabe-os/create-spec` - Generate detailed spec and task breakdown (standalone)
 - `/gabe-os/implement-spec` - Execute implementation with intelligent parallel batching
@@ -217,6 +218,9 @@ Gabe-OS provides slash commands in Claude Code (namespaced under `/gabe-os/`):
 ## Available Agents
 
 Gabe-OS includes specialized agents in `.claude/agents/gabe-os/`:
+
+### Project Initialization Phase
+- **project-initializer** - Bootstrap brand new projects with tech stack and boilerplate
 
 ### Specification Phase
 - **spec-initializer** - Create spec folder structure (via bash script)
@@ -302,13 +306,29 @@ your-project/
 
 ## Workflow
 
-### 1. Plan Your Product
+**Choose your starting point:**
+
+### For Brand New Projects (Greenfield)
+```bash
+/gabe-os/init-project
+```
+- Asks 10 targeted questions (project type, tech stack, database, auth, etc.)
+- Creates complete project structure
+- Generates all config files (package.json, tsconfig.json, etc.)
+- Sets up boilerplate code
+- Installs Gabe-OS
+- Creates product roadmap with your core features
+- **Result:** A ready-to-run project with `npm install && npm run dev`
+
+### For Existing Projects (Add Features)
+
+#### 1. Plan Your Product
 ```bash
 /gabe-os/plan-product
 ```
 Creates or updates `@gabe-os/product/roadmap.md` with features and priorities.
 
-### 2. Initialize New Spec
+#### 2. Initialize New Spec
 ```bash
 /gabe-os/new-spec "Add user authentication"
 ```
@@ -344,7 +364,7 @@ Creates or updates `@gabe-os/product/roadmap.md` with features and priorities.
 
 ## Configuration
 
-Gabe-OS v1.2.2 includes these enforced quality settings:
+Gabe-OS v1.2.4 includes these enforced quality settings:
 
 ```yaml
 quality:
@@ -413,7 +433,7 @@ standards:
 
 ## Token Savings
 
-**v1.2.2 Improvements:**
+**v1.2.4 Improvements:**
 - 42,000 tokens saved with zero-token main menu dashboard
 - 37,000 tokens saved per spec (Skills vs file injection)
 - 1,000 tokens saved per audit (mechanical pre-checks)
@@ -454,7 +474,7 @@ When Gabe-OS is NOT detected, ask the user ONCE per session:
 ```
 🤖 Gabe-OS not detected in this directory.
 
-Would you like to install Gabe-OS v1.2.2?
+Would you like to install Gabe-OS v1.2.4?
 
 This will add:
 ✅ Production-grade coding standards (500-line limits, WHY/WHEN/HOW docs)
@@ -477,9 +497,10 @@ Install now? [y/n]:
 
 Then confirm installation:
 ```
-✅ Gabe-OS v1.2.2 installed successfully!
+✅ Gabe-OS v1.2.4 installed successfully!
 
 Available commands (always use /gabe-os/ namespace):
+• /gabe-os/init-project - Bootstrap a brand new project from scratch
 • /gabe-os/new-spec - Create complete feature specification in ONE command
 • /gabe-os/create-spec - Generate standalone spec and tasks
 • /gabe-os/implement-spec - Execute with parallel batching + quality gates
@@ -511,4 +532,4 @@ To install later, run:
 
 ---
 
-**Gabe-OS v1.2.2** | Based on Agent OS 2.0.3 | Built with 💙 by Gabe
+**Gabe-OS v1.2.4** | Standalone AI Development System | Built with 💙 by Gabe

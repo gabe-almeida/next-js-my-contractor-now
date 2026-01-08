@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ruv-swarm",
+      "mcp__claude-flow",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(~/gabe-os/scripts/init-spec.sh:*)",
+      "Read(//Users/Gabe/Dev/**)"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "claude-flow",
+    "ruv-swarm",
+    "obsidian",
+    "meta-ads",
+    "supabase"
+  ]
+}
