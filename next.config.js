@@ -26,15 +26,21 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trustedform.com https://*.lidstatic.com https://api.radar.io",
-              "style-src 'self' 'unsafe-inline'", // Required for styled-components and Tailwind
+              // TrustedForm needs blob: for workers, Jornaya/LeadID needs its domains
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com https://api.radar.io blob:",
+              "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.radar.io https://*.trustedform.com https://*.lidstatic.com" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
-              "frame-src 'self' https://*.trustedform.com",
+              // Allow connections to TrustedForm, Jornaya/LeadID, and Radar
+              "connect-src 'self' https://api.radar.io https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
+              // Allow iframes for TrustedForm and Jornaya/LeadID
+              "frame-src 'self' https://*.trustedform.com https://*.leadid.com",
+              // TrustedForm uses blob workers
+              "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
-              "form-action 'self'",
+              // Jornaya/LeadID uses iframe form submissions
+              "form-action 'self' https://*.leadid.com",
               "upgrade-insecure-requests"
             ].join('; ')
           },
