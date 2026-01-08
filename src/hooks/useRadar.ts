@@ -106,26 +106,49 @@ export function useRadar(): UseRadarReturn {
       }
       
       // Filter to only include actual street addresses (not just cities or places)
-      const filteredAddresses = addresses.filter((address: any) => {
-        const formattedAddress = address.address?.formattedAddress || address.formattedAddress || address.address?.addressLabel || '';
-        const addressLabel = address.address?.addressLabel || address.addressLabel || '';
-        
-        // Check if the address contains a street number and street name
-        // This regex looks for addresses that start with a number (street number)
-        // and contain typical street indicators
-        const hasStreetNumber = /^\d+\s+/.test(formattedAddress) || /^\d+\s+/.test(addressLabel);
-        
-        // Also check for common street suffixes to ensure it's a real address
-        const hasStreetSuffix = /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|cir|circle|ter|terrace|pkwy|parkway)\b/i.test(formattedAddress) || 
-                               /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|cir|circle|ter|terrace|pkwy|parkway)\b/i.test(addressLabel);
-        
-        // Exclude results that are just "City, State ZIP" format (no street address)
-        const isCityOnly = /^[^,]+,\s*[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(formattedAddress.trim()) || 
-                          /^[^,]+,\s*[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(addressLabel.trim());
-        
-        return hasStreetNumber && hasStreetSuffix && !isCityOnly;
-      });
-      
+      // and transform to expected format (RadarAutocompleteResult with nested address)
+      const filteredAddresses = addresses
+        .filter((addr: any) => {
+          // Get the formatted address from wherever it exists in the response
+          const formattedAddress = addr.formattedAddress || addr.address?.formattedAddress || '';
+          const addressLabel = addr.addressLabel || addr.address?.addressLabel || '';
+
+          // Check if the address contains a street number and street name
+          const hasStreetNumber = /^\d+\s+/.test(formattedAddress) || /^\d+\s+/.test(addressLabel);
+
+          // Check for common street suffixes
+          const hasStreetSuffix = /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|cir|circle|ter|terrace|pkwy|parkway|hwy|highway)\b/i.test(formattedAddress) ||
+                                 /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|cir|circle|ter|terrace|pkwy|parkway|hwy|highway)\b/i.test(addressLabel);
+
+          // Exclude results that are just "City, State ZIP" format
+          const isCityOnly = /^[^,]+,\s*[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(formattedAddress.trim());
+
+          return hasStreetNumber && hasStreetSuffix && !isCityOnly;
+        })
+        .map((addr: any) => {
+          // Transform to expected RadarAutocompleteResult format with nested address
+          // The Radar API returns flat objects, but our types expect { address: {...} }
+          if (addr.address) {
+            // Already in expected format
+            return addr;
+          }
+          // Wrap flat API response in expected structure
+          return {
+            address: {
+              formattedAddress: addr.formattedAddress,
+              addressLabel: addr.addressLabel,
+              city: addr.city,
+              state: addr.state || addr.stateCode,
+              postalCode: addr.postalCode,
+              country: addr.country || addr.countryCode,
+              latitude: addr.latitude,
+              longitude: addr.longitude,
+            },
+            distance: addr.distance,
+            layer: addr.layer,
+          };
+        });
+
       return filteredAddresses;
     } catch (error: any) {
       secureLog.error('Radar autocomplete error:', error);

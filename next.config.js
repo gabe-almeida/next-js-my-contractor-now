@@ -26,13 +26,13 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // TrustedForm needs blob: for workers, Jornaya/LeadID needs its domains
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com https://api.radar.io blob:",
+              // TrustedForm needs blob: for workers, Jornaya/LeadID needs its domains, Radar needs multiple domains
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com https://*.radar.io https://*.radar.com https://radar-verify.com blob:",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              // Allow connections to TrustedForm, Jornaya/LeadID, and Radar
-              "connect-src 'self' https://api.radar.io https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
+              // Allow connections to TrustedForm, Jornaya/LeadID, and Radar (including verified and CDN endpoints)
+              "connect-src 'self' https://*.radar.io https://*.radar.com https://radar-verify.com https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
               // Allow iframes for TrustedForm, Jornaya/LeadID, and their CDNs
               "frame-src 'self' https://*.trustedform.com https://*.leadid.com https://*.cloudfront.net",
               // TrustedForm uses data: and blob: workers
