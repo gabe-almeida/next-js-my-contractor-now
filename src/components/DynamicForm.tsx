@@ -239,8 +239,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   value={formData.firstName}
                   onChange={(e) => updateField('firstName', formatName(e.target.value))}
                   onKeyDown={blockInvalidNameKeys}
+                  onBlur={() => setFieldTouched('firstName')}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    validation.firstName.message
+                    touched.firstName && validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.firstName.isValid
                       ? 'border-green-300 focus:border-green-500'
@@ -248,7 +249,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   }`}
                   placeholder="First name"
                 />
-                {validation.firstName.message && (
+                {touched.firstName && validation.firstName.message && (
                   <p className="mt-1 text-sm text-red-600">{validation.firstName.message}</p>
                 )}
               </div>
@@ -261,8 +262,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   value={formData.lastName}
                   onChange={(e) => updateField('lastName', formatName(e.target.value))}
                   onKeyDown={blockInvalidNameKeys}
+                  onBlur={() => setFieldTouched('lastName')}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    validation.lastName.message
+                    touched.lastName && validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.lastName.isValid
                       ? 'border-green-300 focus:border-green-500'
@@ -270,7 +272,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   }`}
                   placeholder="Last name"
                 />
-                {validation.lastName.message && (
+                {touched.lastName && validation.lastName.message && (
                   <p className="mt-1 text-sm text-red-600">{validation.lastName.message}</p>
                 )}
               </div>
@@ -407,8 +409,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   value={formData.firstName}
                   onChange={(e) => updateField('firstName', formatContactName(e.target.value))}
                   onKeyDown={blockInvalidContactNameKeys}
+                  onBlur={() => setFieldTouched('firstName')}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    validation.firstName.message
+                    touched.firstName && validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.firstName.isValid
                       ? 'border-green-300 focus:border-green-500'
@@ -416,7 +419,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   }`}
                   placeholder="First name"
                 />
-                {validation.firstName.message && (
+                {touched.firstName && validation.firstName.message && (
                   <p className="mt-1 text-sm text-red-600">{validation.firstName.message}</p>
                 )}
               </div>
@@ -429,8 +432,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   value={formData.lastName}
                   onChange={(e) => updateField('lastName', formatContactName(e.target.value))}
                   onKeyDown={blockInvalidContactNameKeys}
+                  onBlur={() => setFieldTouched('lastName')}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    validation.lastName.message
+                    touched.lastName && validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'
                       : validation.lastName.isValid
                       ? 'border-green-300 focus:border-green-500'
@@ -438,7 +442,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                   }`}
                   placeholder="Last name"
                 />
-                {validation.lastName.message && (
+                {touched.lastName && validation.lastName.message && (
                   <p className="mt-1 text-sm text-red-600">{validation.lastName.message}</p>
                 )}
               </div>
