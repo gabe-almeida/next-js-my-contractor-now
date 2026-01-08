@@ -579,6 +579,7 @@ export function toServiceConfig(
 
   // Convert field mappings from database format to TemplateMapping format
   // FieldMapping uses includeInPing/includeInPost booleans
+  // CRITICAL: Copy valueMap for database-driven value conversion
   for (const mapping of dbConfig.fieldMappingConfig.mappings) {
     const templateMapping: TemplateMapping = {
       sourceField: mapping.sourceField,
@@ -586,6 +587,9 @@ export function toServiceConfig(
       required: mapping.required || false,
       transform: mapping.transform || undefined,
       defaultValue: mapping.defaultValue,
+      // Database-driven value mapping - applied BEFORE transform in TemplateEngine
+      // This replaces hardcoded transforms like modernize.buyTimeframe
+      valueMap: mapping.valueMap,
     };
 
     // Add to appropriate template based on includeIn flags

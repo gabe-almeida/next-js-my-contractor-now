@@ -211,7 +211,18 @@ export class TemplateEngine {
       }
     }
 
-    // Apply transformation if specified
+    // Apply valueMap if specified (database-driven value conversion)
+    // This happens BEFORE transforms - converts "within_3_months" → "1-6 months"
+    // This is ADMIN-CONFIGURABLE - no hardcoded transforms needed!
+    if (mapping.valueMap && typeof value === 'string') {
+      const mappedValue = mapping.valueMap[value];
+      if (mappedValue !== undefined) {
+        value = mappedValue;
+      }
+      // If no match in valueMap, keep original value
+    }
+
+    // Apply transformation if specified (formatting like phone.digitsOnly, boolean.yesNo)
     if (mapping.transform) {
       value = await this.applyTransformation(value, mapping.transform, context);
     }

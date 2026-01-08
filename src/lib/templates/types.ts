@@ -11,6 +11,19 @@ export interface TemplateMapping {
   defaultValue?: any;
   required?: boolean;
   validation?: ValidationRule;
+  /**
+   * Database-driven value mapping (applied BEFORE transform)
+   *
+   * WHY: Each buyer expects different values for the same field
+   *      (e.g., "within_3_months" → "1-6 months" for Modernize)
+   * WHEN: Applied during payload generation, before any transform
+   * HOW: Simple key-value lookup, falls back to original if no match
+   *
+   * Example: { "within_3_months": "1-6 months", "repair": "Repair" }
+   *
+   * This is ADMIN-CONFIGURABLE via the UI - no code changes needed!
+   */
+  valueMap?: Record<string, string>;
 }
 
 export interface TransformFunction {
