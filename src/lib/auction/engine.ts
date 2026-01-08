@@ -1,6 +1,59 @@
 /**
- * Auction Engine
- * Parallel PING system with bid collection and winner selection
+ * ============================================================================
+ * LEAD FLOW DOCUMENTATION - STEP 3 & 6: AUCTION ENGINE
+ * ============================================================================
+ *
+ * WHAT: Runs PING/POST auction to match leads with buyers
+ * WHY:  Maximize revenue by getting competitive bids from multiple buyers
+ * WHEN: Lead processor pulls lead from queue and calls runAuction()
+ *
+ * PREVIOUS STEP: src/app/api/leads/route.ts (adds lead to queue)
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │                        LEAD FLOW OVERVIEW                                │
+ * │                                                                          │
+ * │  [STEP 1] DynamicForm.tsx          → Form submission                    │
+ * │      ↓ FormSubmission object                                            │
+ * │  [STEP 2] /api/leads/route.ts      → Creates Lead in DB                 │
+ * │      ↓ Lead added to processing queue                                   │
+ * │  [STEP 3] auction/engine.ts        ← YOU ARE HERE (eligibility)         │
+ * │      ↓ Buyer configs loaded from database                               │
+ * │  [STEP 4] database-buyer-loader.ts → Loads FieldMappingConfig           │
+ * │      ↓ Converts to TemplateMapping with valueMap                        │
+ * │  [STEP 5] templates/engine.ts      → Applies valueMap + transforms      │
+ * │      ↓ Generates PING/POST payloads                                     │
+ * │  [STEP 6] auction/engine.ts        ← AND HERE (PING/POST)               │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * AUCTION FLOW:
+ * 1. runAuction(lead) called by lead processor
+ * 2. getEligibleBuyers() finds buyers matching ZIP + service type
+ * 3. Split buyers by type: NETWORK (PING/POST) vs CONTRACTOR (direct delivery)
+ * 4. For NETWORK buyers:
+ *    a. sendPingToBuyer() → TemplateEngine.transform() generates PING payload
+ *       → valueMap applied to convert "within_3_months" → "1-6 months"
+ *       → transforms applied (phone.digitsOnly, boolean.yesNo, etc.)
+ *    b. Collect bids from all buyers (parallel, with timeout)
+ *    c. selectWinner() picks highest bidder
+ *    d. deliverWithCascade() sends POST to winner (fallback to next if rejected)
+ * 5. For CONTRACTOR buyers:
+ *    a. ContractorDeliveryService delivers directly (no PING needed)
+ *
+ * KEY FUNCTIONS:
+ * - runAuction() → Main entry point
+ * - sendPingToBuyer() → Generates PING payload via TemplateEngine
+ * - sendPostToWinner() → Generates POST payload via TemplateEngine
+ * - deliverWithCascade() → Tries each bidder in order until one accepts
+ *
+ * DATABASE-DRIVEN CONFIGURATION:
+ * - loadBuyerConfigForAuction() loads from BuyerServiceConfig table
+ * - FieldMappingConfig.mappings[].valueMap defines value transformations
+ * - No hardcoded buyer-specific logic needed!
+ *
+ * NEXT STEPS:
+ * - For payload generation: src/lib/field-mapping/database-buyer-loader.ts
+ * - For transformation: src/lib/templates/engine.ts
+ * ============================================================================
  */
 
 import {

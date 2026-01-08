@@ -1,5 +1,47 @@
 'use client';
 
+/**
+ * ============================================================================
+ * LEAD FLOW DOCUMENTATION - STEP 1 OF 6: FORM SUBMISSION
+ * ============================================================================
+ *
+ * WHAT: User fills out the lead capture form and submits
+ * WHY:  Capture homeowner project requests for contractor matching
+ * WHEN: User visits /services/[service-type] page and submits form
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │                        LEAD FLOW OVERVIEW                                │
+ * │                                                                          │
+ * │  [STEP 1] DynamicForm.tsx          ← YOU ARE HERE                       │
+ * │      ↓ FormSubmission object                                            │
+ * │  [STEP 2] /api/leads/route.ts      → Creates Lead in DB                 │
+ * │      ↓ Lead added to processing queue                                   │
+ * │  [STEP 3] auction/engine.ts        → Finds eligible buyers              │
+ * │      ↓ Buyer configs loaded from database                               │
+ * │  [STEP 4] database-buyer-loader.ts → Loads FieldMappingConfig           │
+ * │      ↓ Converts to TemplateMapping with valueMap                        │
+ * │  [STEP 5] templates/engine.ts      → Applies valueMap + transforms      │
+ * │      ↓ Generates PING/POST payloads                                     │
+ * │  [STEP 6] auction/engine.ts        → Sends PING → Selects winner → POST │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * DATA FLOW:
+ * 1. User fills form fields (e.g., zipCode: "90210", projectScope: "repair")
+ * 2. TrustedForm and Jornaya compliance tokens are captured
+ * 3. Attribution data (UTM params, referrer) is captured
+ * 4. handleSubmit() creates FormSubmission object with RAW values
+ * 5. onSubmit() callback sends to /api/leads endpoint
+ *
+ * KEY FIELDS CAPTURED:
+ * - formState.values → Raw form data (zipCode, ownsHome, timeframe, etc.)
+ * - compliance.trustedFormCertUrl → TrustedForm certificate for TCPA compliance
+ * - compliance.jornayaLeadId → Jornaya LeadID for compliance verification
+ * - attribution → UTM params, ref codes, affiliate_id for tracking
+ *
+ * NEXT STEP: src/app/api/leads/route.ts
+ * ============================================================================
+ */
+
 import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';

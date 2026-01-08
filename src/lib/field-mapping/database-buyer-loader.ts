@@ -1,9 +1,52 @@
 /**
- * Database Buyer Loader
+ * ============================================================================
+ * LEAD FLOW DOCUMENTATION - STEP 4 OF 6: DATABASE BUYER LOADER
+ * ============================================================================
  *
- * WHY: Load buyer configurations from database instead of hardcoded registry
- * WHEN: Initializing auction engine, loading buyer configs for lead processing
- * HOW: Query Prisma for buyer and service configurations, cache results
+ * WHAT: Loads buyer configurations from database including field mappings
+ * WHY:  Database-driven config allows admin to change mappings without code
+ * WHEN: Called by auction engine when loading buyer configs for PING/POST
+ *
+ * PREVIOUS STEP: src/lib/auction/engine.ts (getEligibleBuyers)
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │                        LEAD FLOW OVERVIEW                                │
+ * │                                                                          │
+ * │  [STEP 1] DynamicForm.tsx          → Form submission                    │
+ * │      ↓ FormSubmission object                                            │
+ * │  [STEP 2] /api/leads/route.ts      → Creates Lead in DB                 │
+ * │      ↓ Lead added to processing queue                                   │
+ * │  [STEP 3] auction/engine.ts        → Finds eligible buyers              │
+ * │      ↓ Buyer configs loaded from database                               │
+ * │  [STEP 4] database-buyer-loader.ts ← YOU ARE HERE                       │
+ * │      ↓ Converts to TemplateMapping with valueMap                        │
+ * │  [STEP 5] templates/engine.ts      → Applies valueMap + transforms      │
+ * │      ↓ Generates PING/POST payloads                                     │
+ * │  [STEP 6] auction/engine.ts        → Sends PING → Selects winner → POST │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * DATABASE TABLES USED:
+ * - Buyer: Buyer info (name, apiUrl, authConfig, pingTimeout, postTimeout)
+ * - BuyerServiceConfig: Per-service settings (fieldMappings, pingTemplate, etc.)
+ * - ServiceType: Service type metadata
+ *
+ * KEY FUNCTION: toServiceConfig()
+ * - Loads FieldMappingConfig from BuyerServiceConfig.fieldMappings JSON
+ * - Converts FieldMapping[] to TemplateMapping[] for TemplateEngine
+ * - CRITICAL: Copies valueMap from database to TemplateMapping!
+ *   This is how database-driven value conversion works.
+ *
+ * VALUE MAPPING FLOW:
+ * 1. Admin configures valueMap in BuyerServiceConfig.fieldMappings JSON:
+ *    { "sourceField": "timeframe", "valueMap": { "within_3_months": "1-6 months" } }
+ * 2. toServiceConfig() copies valueMap to TemplateMapping
+ * 3. TemplateEngine.processMapping() applies valueMap before transforms
+ * 4. Result: "within_3_months" becomes "1-6 months" in PING/POST payload
+ *
+ * No hardcoded buyer-specific logic needed - all configurable from Admin UI!
+ *
+ * NEXT STEP: src/lib/templates/engine.ts (TemplateEngine.transform)
+ * ============================================================================
  */
 
 import { prisma } from "@/lib/prisma";

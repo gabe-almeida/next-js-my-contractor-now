@@ -1,10 +1,64 @@
+/**
+ * ============================================================================
+ * LEAD FLOW DOCUMENTATION - STEP 2 OF 6: LEAD CREATION API
+ * ============================================================================
+ *
+ * WHAT: API endpoint that receives form submissions and creates Lead records
+ * WHY:  Persist lead data and trigger async processing for buyer matching
+ * WHEN: Called by DynamicForm.onSubmit() after user submits the form
+ *
+ * PREVIOUS STEP: src/components/forms/dynamic/DynamicForm.tsx
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │                        LEAD FLOW OVERVIEW                                │
+ * │                                                                          │
+ * │  [STEP 1] DynamicForm.tsx          → Form submission                    │
+ * │      ↓ FormSubmission object                                            │
+ * │  [STEP 2] /api/leads/route.ts      ← YOU ARE HERE                       │
+ * │      ↓ Lead added to processing queue                                   │
+ * │  [STEP 3] auction/engine.ts        → Finds eligible buyers              │
+ * │      ↓ Buyer configs loaded from database                               │
+ * │  [STEP 4] database-buyer-loader.ts → Loads FieldMappingConfig           │
+ * │      ↓ Converts to TemplateMapping with valueMap                        │
+ * │  [STEP 5] templates/engine.ts      → Applies valueMap + transforms      │
+ * │      ↓ Generates PING/POST payloads                                     │
+ * │  [STEP 6] auction/engine.ts        → Sends PING → Selects winner → POST │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * DATA FLOW:
+ * 1. Receive FormSubmission from DynamicForm
+ * 2. Validate request with Zod schema (createLeadSchema)
+ * 3. Sanitize form data (prevent XSS)
+ * 4. Validate ZIP code with Radar.com
+ * 5. Verify TrustedForm certificate
+ * 6. Create Lead record in database with status=PENDING
+ *    → formData stored as JSON (RAW values - no transformation yet!)
+ * 7. Record affiliate conversion if ref code present
+ * 8. Add lead to 'lead-processing' queue for async auction
+ *
+ * DATABASE STORAGE:
+ * - Lead.formData = JSON.stringify(sanitizedFormData)  ← RAW form values!
+ * - Lead.status = 'PENDING'
+ * - Lead.trustedFormCertUrl = from compliance data
+ * - Lead.jornayaLeadId = from compliance data
+ * - Lead.complianceData = full compliance object
+ *
+ * IMPORTANT: Form data is stored as RAW values (e.g., "within_3_months")
+ * Transformation to buyer format happens later in Step 5 (TemplateEngine)
+ *
+ * NEXT STEP: Lead processor pulls from queue → src/lib/auction/engine.ts
+ * ============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { addToQueue } from '@/lib/redis';
 import { RadarService } from '@/lib/external/radar';
 import { TrustedFormService } from '@/lib/external/trustedform';
+import { createLeadSchema } from '@/lib/validations/lead';
+import { generateZodSchema } from '@/lib/validations/dynamic-schema';
+// Legacy schemas kept for fallback (feature flag: USE_DYNAMIC_VALIDATION)
 import {
-  createLeadSchema,
   windowsFormSchema,
   bathroomFormSchema,
   roofingFormSchema
@@ -100,20 +154,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate formData against service-specific schema
-    const schemaMap: Record<string, any> = {
-      'windows': windowsFormSchema,
-      'bathrooms': bathroomFormSchema,
-      'roofing': roofingFormSchema,
-    };
+    // Feature flag: USE_DYNAMIC_VALIDATION (default: true)
+    // Set to 'false' to use legacy hardcoded schemas
+    const useDynamicValidation = process.env.USE_DYNAMIC_VALIDATION !== 'false';
 
-    const serviceSchema = schemaMap[serviceType.name];
+    let serviceSchema: ReturnType<typeof generateZodSchema> | null = null;
+
+    if (useDynamicValidation && serviceType.formSchema) {
+      // Dynamic validation: Generate schema from database formSchema
+      try {
+        serviceSchema = generateZodSchema(serviceType.formSchema);
+      } catch (error) {
+        console.warn('Dynamic schema generation failed, falling back to legacy:', error);
+      }
+    }
+
+    // Fallback to legacy hardcoded schemas if dynamic fails or is disabled
     if (!serviceSchema) {
-      return NextResponse.json({
-        success: false,
-        error: 'Unsupported service type',
-        message: `Service type '${serviceType.name}' does not have a validation schema`,
-        timestamp: new Date().toISOString(),
-      }, { status: 400 });
+      const legacySchemaMap: Record<string, any> = {
+        'windows': windowsFormSchema,
+        'bathrooms': bathroomFormSchema,
+        'roofing': roofingFormSchema,
+      };
+
+      serviceSchema = legacySchemaMap[serviceType.name];
+
+      if (!serviceSchema) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unsupported service type',
+          message: `Service type '${serviceType.name}' does not have a validation schema. Add it via Admin UI or contact support.`,
+          timestamp: new Date().toISOString(),
+        }, { status: 400 });
+      }
     }
 
     // Validate complete form data against service-specific schema (using sanitized data)

@@ -1,4 +1,63 @@
 /**
+ * ============================================================================
+ * LEAD FLOW DOCUMENTATION - STEP 5 OF 6: TEMPLATE ENGINE
+ * ============================================================================
+ *
+ * WHAT: Transforms lead data into buyer-specific PING/POST payloads
+ * WHY:  Each buyer expects different field names and value formats
+ * WHEN: Called by auction engine before sending PING or POST requests
+ *
+ * PREVIOUS STEP: src/lib/field-mapping/database-buyer-loader.ts (toServiceConfig)
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │                        LEAD FLOW OVERVIEW                                │
+ * │                                                                          │
+ * │  [STEP 1] DynamicForm.tsx          → Form submission                    │
+ * │      ↓ FormSubmission object                                            │
+ * │  [STEP 2] /api/leads/route.ts      → Creates Lead in DB                 │
+ * │      ↓ Lead added to processing queue                                   │
+ * │  [STEP 3] auction/engine.ts        → Finds eligible buyers              │
+ * │      ↓ Buyer configs loaded from database                               │
+ * │  [STEP 4] database-buyer-loader.ts → Loads FieldMappingConfig           │
+ * │      ↓ Converts to TemplateMapping with valueMap                        │
+ * │  [STEP 5] templates/engine.ts      ← YOU ARE HERE                       │
+ * │      ↓ Generates PING/POST payloads                                     │
+ * │  [STEP 6] auction/engine.ts        → Sends PING → Selects winner → POST │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * TRANSFORMATION ORDER (processMapping):
+ * 1. Get source value from lead data (e.g., timeframe = "within_3_months")
+ * 2. Apply valueMap if specified (database-driven):
+ *    → "within_3_months" becomes "1-6 months"
+ *    → This is ADMIN-CONFIGURABLE in BuyerServiceConfig.fieldMappings
+ * 3. Apply transform if specified (code-driven):
+ *    → boolean.yesNo: true → "Yes"
+ *    → phone.digitsOnly: "(555) 123-4567" → "5551234567"
+ * 4. Set result to target field name (e.g., buyTimeframe)
+ *
+ * KEY FUNCTION: processMapping()
+ * - sourceField → Get value from lead
+ * - valueMap → Convert value (database-driven, admin-editable!)
+ * - transform → Format value (code functions like phone.digitsOnly)
+ * - targetField → Set in output payload
+ *
+ * EXAMPLE TRANSFORMATION:
+ * Input: { timeframe: "within_3_months", ownsHome: true, phone: "555-123-4567" }
+ * Mapping: [
+ *   { sourceField: "timeframe", targetField: "buyTimeframe",
+ *     valueMap: { "within_3_months": "1-6 months" } },
+ *   { sourceField: "ownsHome", targetField: "ownHome",
+ *     transform: "boolean.yesNo" },
+ *   { sourceField: "phone", targetField: "phone",
+ *     transform: "phone.digitsOnly" }
+ * ]
+ * Output: { buyTimeframe: "1-6 months", ownHome: "Yes", phone: "5551234567" }
+ *
+ * NEXT STEP: src/lib/auction/engine.ts (sendPingToBuyer, sendPostToWinner)
+ * ============================================================================
+ */
+
+/**
  * Template Engine Core
  * Central orchestrator for data transformation and validation
  */
