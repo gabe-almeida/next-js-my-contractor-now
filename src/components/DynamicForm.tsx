@@ -204,12 +204,20 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
         );
 
       case 'name_fields':
+        // Format name: only letters, spaces, hyphens, apostrophes; auto-capitalize first letter
+        const formatName = (value: string): string => {
+          // Remove any characters that aren't letters, spaces, hyphens, or apostrophes
+          const cleaned = value.replace(/[^a-zA-Z\s\-']/g, '');
+          // Capitalize first letter of each word (handles hyphenated names like Mary-Jane)
+          return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
+        };
+
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
               {currentQuestion.question}
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -218,7 +226,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 <input
                   type="text"
                   value={formData.firstName}
-                  onChange={(e) => updateField('firstName', e.target.value)}
+                  onChange={(e) => updateField('firstName', formatName(e.target.value))}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.firstName.message
                       ? 'border-red-300 focus:border-red-500'
@@ -239,7 +247,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
                 <input
                   type="text"
                   value={formData.lastName}
-                  onChange={(e) => updateField('lastName', e.target.value)}
+                  onChange={(e) => updateField('lastName', formatName(e.target.value))}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
                     validation.lastName.message
                       ? 'border-red-300 focus:border-red-500'
