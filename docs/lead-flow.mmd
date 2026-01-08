@@ -1,0 +1,105 @@
+flowchart TD
+    subgraph FORM["1. FORM SUBMISSION"]
+        A[User visits /services/windows] --> B[Fetch flow from API]
+        B --> C[(ServiceType.formSchema)]
+        C --> D[DynamicForm renders questions]
+        D --> E["User fills form:<br/>projectScope: 'install'<br/>numberOfWindows: '3-5'<br/>timeline: 'within_3_months'<br/>zipCode: '90210'"]
+        E --> F[Submit to /api/leads]
+        F --> G[("Lead.formData stored as JSON<br/>Lead.status = 'PENDING'")]
+    end
+
+    subgraph AUCTION["2. AUCTION ENGINE - ELIGIBILITY CHECK"]
+        G --> H["Lead.status = 'PROCESSING'"]
+        H --> I[Find Eligible Buyers]
+        I --> I1["Filter Criteria:<br/>✓ ZIP in BuyerServiceZipCode<br/>✓ ServiceType matches<br/>✓ Buyer.active = true<br/>✓ TrustedForm/Jornaya if required<br/>✓ Daily cap not exceeded"]
+        I1 --> J{"Buyer.type?"}
+    end
+
+    subgraph PARALLEL["3a. PARALLEL PING TO ALL NETWORK BUYERS"]
+        J -->|"NETWORK"| K["Found 4 eligible network buyers"]
+
+        K --> P1["PING Modernize<br/>━━━━━━━━━━━━━━━<br/>timeout: 3000ms"]
+        K --> P2["PING HomeAdvisor<br/>━━━━━━━━━━━━━━━<br/>timeout: 3000ms"]
+        K --> P3["PING Angi<br/>━━━━━━━━━━━━━━━<br/>timeout: 3000ms"]
+        K --> P4["PING QuinStreet<br/>━━━━━━━━━━━━━━━<br/>timeout: 3000ms"]
+
+        P1 --> R1["Response: $45.00 bid<br/>responseTime: 850ms"]
+        P2 --> R2["Response: $38.00 bid<br/>responseTime: 1200ms"]
+        P3 --> R3["Response: $52.00 bid ⭐<br/>responseTime: 920ms"]
+        P4 --> R4["Response: TIMEOUT<br/>no bid received"]
+
+        R1 & R2 & R3 & R4 --> COLLECT["Collect all responses<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>Wait for all or timeout"]
+    end
+
+    subgraph WINNER["3b. SELECT WINNER & RECORD RESULTS"]
+        COLLECT --> RANK["Rank by bid amount:<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>1. Angi: $52.00 ⭐ WINNER<br/>2. Modernize: $45.00<br/>3. HomeAdvisor: $38.00<br/>4. QuinStreet: NO BID"]
+
+        RANK --> RECORD["Record ALL auction results:<br/>━━━━━━━━━━━━━━━━━━━━━━━━"]
+
+        RECORD --> REC1[("Transaction: Angi<br/>actionType: 'PING'<br/>status: 'SUCCESS'<br/>bidAmount: $52.00<br/>isWinner: true")]
+
+        RECORD --> REC2[("Transaction: Modernize<br/>actionType: 'PING'<br/>status: 'SUCCESS'<br/>bidAmount: $45.00<br/>isWinner: false<br/>lostReason: 'OUTBID'")]
+
+        RECORD --> REC3[("Transaction: HomeAdvisor<br/>actionType: 'PING'<br/>status: 'SUCCESS'<br/>bidAmount: $38.00<br/>isWinner: false<br/>lostReason: 'OUTBID'")]
+
+        RECORD --> REC4[("Transaction: QuinStreet<br/>actionType: 'PING'<br/>status: 'TIMEOUT'<br/>bidAmount: null<br/>isWinner: false<br/>lostReason: 'TIMEOUT'")]
+    end
+
+    subgraph POST["3c. POST TO WINNER"]
+        REC1 --> SENDPOST["Send POST to Angi<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>Full lead data + compliance"]
+        SENDPOST --> ACCEPT{Angi accepts?}
+
+        ACCEPT -->|"YES"| SUCCESS["Transaction: Angi<br/>actionType: 'POST'<br/>status: 'SUCCESS'<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>Lead.status = 'SOLD'<br/>Lead.winningBuyerId = Angi<br/>Lead.winningBid = $52.00"]
+
+        ACCEPT -->|"NO - Rejected"| FALLBACK["Try next highest bidder"]
+        FALLBACK --> NEXT["Send POST to Modernize<br/>(2nd place: $45.00)"]
+        NEXT --> ACCEPT2{Modernize accepts?}
+        ACCEPT2 -->|"YES"| SUCCESS2["Lead SOLD to Modernize<br/>Record Angi rejection"]
+        ACCEPT2 -->|"NO"| FALLBACK2["Continue to HomeAdvisor..."]
+    end
+
+    subgraph CONTRACTOR["3d. CONTRACTOR BUYERS - DIRECT DELIVERY"]
+        J -->|"CONTRACTOR"| T["No PING needed<br/>Contractors pre-set their bid/priority"]
+        T --> U["Rank by:<br/>• BuyerServiceZipCode.priority<br/>• BuyerServiceConfig.maxBid"]
+        U --> V{Exclusive or Shared?}
+        V -->|Exclusive| W[Deliver to #1 ranked contractor]
+        V -->|Shared| X[Deliver to top N contractors]
+        W & X --> Y["Delivery Methods:<br/>• Webhook POST<br/>• Email notification<br/>• Dashboard alert"]
+        Y --> Z[Lead SOLD to contractor]
+    end
+
+    subgraph TRANSFORM["4. DATA TRANSFORMATION - DATABASE DRIVEN"]
+        TR1["Raw Lead Data<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>timeline: 'within_3_months'<br/>projectScope: 'repair'<br/>numberOfWindows: '9+'<br/>ownsHome: true"]
+
+        TR1 --> TR2["Load FieldMappingConfig<br/>from BuyerServiceConfig.fieldMappings"]
+
+        TR2 --> TR3["Step 1: VALUE MAP<br/>(Database-driven, Admin UI editable)<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>valueMap: {<br/>  'within_3_months': '1-6 months',<br/>  'repair': 'Repair',<br/>  '9+': '6-9'<br/>}"]
+
+        TR3 --> TR4["Step 2: TRANSFORM<br/>(Code functions)<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>boolean.yesNo: true → 'Yes'<br/>phone.digitsOnly: remove dashes"]
+
+        TR4 --> TR5["Final PING Payload<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>postalCode: '90210'<br/>buyTimeframe: '1-6 months'<br/>ownHome: 'Yes'<br/>service: 'WINDOWS'"]
+
+        TR4 --> TR6["Final POST Payload<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>All PING fields +<br/>NumberOfWindows: '6-9'<br/>WindowsProjectScope: 'Repair'<br/>firstName, lastName, etc."]
+    end
+
+    subgraph ADMIN["5. ADMIN UI - FIELD MAPPING EDITOR"]
+        AA["/admin/buyers"] --> AB["Edit Buyer:<br/>• name, apiUrl, authConfig<br/>• type: NETWORK or CONTRACTOR<br/>• pingTimeout, postTimeout"]
+
+        AB --> AC["/admin/buyers/[id]/services"]
+        AC --> AD["Edit BuyerServiceConfig:<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>• fieldMappings (JSON)<br/>• staticFields<br/>• minBid, maxBid"]
+
+        AD --> AE["Field Mapping Config:<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>sourceField: 'timeline'<br/>targetField: 'buyTimeframe'<br/>valueMap: { ... } ← EDITABLE!<br/>transform: 'boolean.yesNo'"]
+
+        AE --> AE2["VALUE MAP = Admin Editable!<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>Change 'within_3_months' mapping<br/>from '1-6 months' to 'Immediately'<br/>WITHOUT code deployment"]
+
+        AC --> AF["/admin/buyers/[id]/zip-codes"]
+        AF --> AG["Edit coverage:<br/>• zipCode, priority<br/>• maxLeadsPerDay<br/>• active"]
+    end
+
+    subgraph ANALYTICS["6. ANALYTICS & REPORTING"]
+        SUCCESS --> STATS
+        SUCCESS2 --> STATS
+        Z --> STATS
+
+        STATS["Dashboard shows:<br/>━━━━━━━━━━━━━━━━━━━━━━━━<br/>• Win rate per buyer<br/>• Avg bid by buyer<br/>• Timeout rate<br/>• Rejection rate<br/>• Revenue by buyer<br/>• Lost leads analysis"]
+    end

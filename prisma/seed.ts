@@ -60,86 +60,209 @@ async function main() {
   // ==========================================
   console.log('📝 Creating service types...')
 
+  // Windows service - formSchema defines service-specific questions
+  // Standard questions (address, timeline, isHomeowner, name, contact) are added by flow builder
   const windows = await prisma.serviceType.create({
     data: {
       name: 'windows',
       displayName: 'Windows Installation',
       formSchema: JSON.stringify({
         fields: [
-          { name: 'zipCode', type: 'text', required: true, label: 'ZIP Code' },
-          { name: 'ownsHome', type: 'radio', required: true, label: 'Do you own your home?', options: ['Yes', 'No'] },
-          { name: 'timeframe', type: 'select', required: true, label: 'When do you need this done?', options: ['Immediately', '1-3 months', '3-6 months', '6+ months'] },
-          { name: 'numberOfWindows', type: 'select', required: true, label: 'How many windows?', options: ['1-3', '4-6', '7-10', '11+'] },
-          { name: 'windowType', type: 'select', required: true, label: 'Window type?', options: ['Double Hung', 'Casement', 'Sliding', 'Bay/Bow', 'Not Sure'] },
-          { name: 'firstName', type: 'text', required: true, label: 'First Name' },
-          { name: 'lastName', type: 'text', required: true, label: 'Last Name' },
-          { name: 'email', type: 'email', required: true, label: 'Email' },
-          { name: 'phone', type: 'tel', required: true, label: 'Phone' }
+          {
+            name: 'projectScope',
+            type: 'select',
+            label: 'Are you looking to repair existing windows or install new windows?',
+            required: true,
+            options: [
+              { value: 'repair', label: 'Repair' },
+              { value: 'install', label: 'Install' }
+            ]
+          },
+          {
+            name: 'numberOfWindows',
+            type: 'select',
+            label: 'How many windows?',
+            required: true,
+            options: [
+              { value: '1', label: '1 window' },
+              { value: '2', label: '2 windows' },
+              { value: '3-5', label: '3-5 windows' },
+              { value: '6-9', label: '6-9 windows' },
+              { value: '9+', label: '9+ windows' }
+            ]
+          },
+          {
+            name: 'windowType',
+            type: 'select',
+            label: 'What type of windows?',
+            required: true,
+            options: [
+              { value: 'double_hung', label: 'Double Hung' },
+              { value: 'casement', label: 'Casement' },
+              { value: 'sliding', label: 'Sliding' },
+              { value: 'bay_bow', label: 'Bay/Bow' },
+              { value: 'not_sure', label: 'Not Sure' }
+            ]
+          }
         ]
       }),
       active: true
     }
   })
 
+  // Bathrooms service - formSchema defines service-specific questions
   const bathrooms = await prisma.serviceType.create({
     data: {
       name: 'bathrooms',
       displayName: 'Bathroom Remodeling',
       formSchema: JSON.stringify({
         fields: [
-          { name: 'zipCode', type: 'text', required: true, label: 'ZIP Code' },
-          { name: 'ownsHome', type: 'radio', required: true, label: 'Do you own your home?', options: ['Yes', 'No'] },
-          { name: 'timeframe', type: 'select', required: true, label: 'When do you need this done?', options: ['Immediately', '1-3 months', '3-6 months', '6+ months'] },
-          { name: 'bathroomCount', type: 'select', required: true, label: 'How many bathrooms?', options: ['1', '2', '3', '4+'] },
-          { name: 'remodelType', type: 'select', required: true, label: 'Type of remodel?', options: ['Full Remodel', 'Partial Update', 'Fixtures Only', 'Not Sure'] },
-          { name: 'firstName', type: 'text', required: true, label: 'First Name' },
-          { name: 'lastName', type: 'text', required: true, label: 'Last Name' },
-          { name: 'email', type: 'email', required: true, label: 'Email' },
-          { name: 'phone', type: 'tel', required: true, label: 'Phone' }
+          {
+            name: 'projectScope',
+            type: 'select',
+            label: 'What type of bathroom work do you need?',
+            required: true,
+            options: [
+              { value: 'full_renovation', label: 'Full bathroom renovation' },
+              { value: 'partial_remodel', label: 'Partial remodel/updates' },
+              { value: 'new_bathroom', label: 'New bathroom addition' },
+              { value: 'repair', label: 'Repair/maintenance work' }
+            ]
+          },
+          {
+            name: 'bathroomType',
+            type: 'select',
+            label: 'What type of bathroom is this?',
+            required: true,
+            options: [
+              { value: 'master_bath', label: 'Master bathroom' },
+              { value: 'guest_bath', label: 'Guest bathroom' },
+              { value: 'half_bath', label: 'Half bathroom/powder room' },
+              { value: 'other', label: 'Other' }
+            ]
+          },
+          {
+            name: 'bathroomCount',
+            type: 'select',
+            label: 'How many bathrooms need work?',
+            required: true,
+            options: [
+              { value: '1', label: '1 bathroom' },
+              { value: '2', label: '2 bathrooms' },
+              { value: '3', label: '3 bathrooms' },
+              { value: '4+', label: '4+ bathrooms' }
+            ]
+          },
+          {
+            name: 'projectSize',
+            type: 'select',
+            label: 'What is the approximate size of your bathroom?',
+            required: true,
+            options: [
+              { value: 'small', label: 'Small (under 40 sq ft)' },
+              { value: 'medium', label: 'Medium (40-100 sq ft)' },
+              { value: 'large', label: 'Large (over 100 sq ft)' }
+            ]
+          }
         ]
       }),
       active: true
     }
   })
 
+  // Roofing service - formSchema defines service-specific questions
   const roofing = await prisma.serviceType.create({
     data: {
       name: 'roofing',
       displayName: 'Roofing Services',
       formSchema: JSON.stringify({
         fields: [
-          { name: 'zipCode', type: 'text', required: true, label: 'ZIP Code' },
-          { name: 'ownsHome', type: 'radio', required: true, label: 'Do you own your home?', options: ['Yes', 'No'] },
-          { name: 'timeframe', type: 'select', required: true, label: 'When do you need this done?', options: ['Immediately', '1-3 months', '3-6 months', '6+ months'] },
-          { name: 'roofType', type: 'select', required: true, label: 'What type of roof?', options: ['Asphalt Shingles', 'Metal', 'Tile', 'Flat', 'Not Sure'] },
-          { name: 'roofSize', type: 'select', required: true, label: 'Approximate roof size?', options: ['Small (under 1,500 sq ft)', 'Medium (1,500-3,000 sq ft)', 'Large (over 3,000 sq ft)', 'Not Sure'] },
-          { name: 'serviceNeeded', type: 'select', required: true, label: 'Service needed?', options: ['New Roof', 'Repair', 'Inspection', 'Not Sure'] },
-          { name: 'firstName', type: 'text', required: true, label: 'First Name' },
-          { name: 'lastName', type: 'text', required: true, label: 'Last Name' },
-          { name: 'email', type: 'email', required: true, label: 'Email' },
-          { name: 'phone', type: 'tel', required: true, label: 'Phone' }
+          {
+            name: 'projectScope',
+            type: 'select',
+            label: 'What type of roofing work do you need?',
+            required: true,
+            options: [
+              { value: 'repair', label: 'Repair existing roof' },
+              { value: 'replacement', label: 'Full roof replacement' },
+              { value: 'installation', label: 'New roof installation' }
+            ]
+          },
+          {
+            name: 'roofType',
+            type: 'select',
+            label: 'What type of roof?',
+            required: true,
+            options: [
+              { value: 'asphalt_shingles', label: 'Asphalt Shingles' },
+              { value: 'metal', label: 'Metal' },
+              { value: 'tile', label: 'Tile' },
+              { value: 'flat', label: 'Flat' },
+              { value: 'not_sure', label: 'Not Sure' }
+            ]
+          },
+          {
+            name: 'roofSize',
+            type: 'select',
+            label: 'Approximate roof size?',
+            required: true,
+            options: [
+              { value: 'small', label: 'Small (under 1,500 sq ft)' },
+              { value: 'medium', label: 'Medium (1,500-3,000 sq ft)' },
+              { value: 'large', label: 'Large (over 3,000 sq ft)' }
+            ]
+          }
         ]
       }),
       active: true
     }
   })
 
+  // HVAC service - formSchema defines service-specific questions
   const hvac = await prisma.serviceType.create({
     data: {
       name: 'hvac',
       displayName: 'HVAC Services',
       formSchema: JSON.stringify({
         fields: [
-          { name: 'zipCode', type: 'text', required: true, label: 'ZIP Code' },
-          { name: 'ownsHome', type: 'radio', required: true, label: 'Do you own your home?', options: ['Yes', 'No'] },
-          { name: 'timeframe', type: 'select', required: true, label: 'When do you need this done?', options: ['Immediately', '1-3 months', '3-6 months', '6+ months'] },
-          { name: 'systemType', type: 'select', required: true, label: 'System type?', options: ['Central AC', 'Furnace', 'Heat Pump', 'Ductless', 'Not Sure'] },
-          { name: 'serviceType', type: 'select', required: true, label: 'Service needed?', options: ['New Installation', 'Replacement', 'Repair', 'Maintenance', 'Not Sure'] },
-          { name: 'homeSize', type: 'select', required: true, label: 'Home size?', options: ['Under 1,500 sq ft', '1,500-2,500 sq ft', '2,500-3,500 sq ft', 'Over 3,500 sq ft'] },
-          { name: 'firstName', type: 'text', required: true, label: 'First Name' },
-          { name: 'lastName', type: 'text', required: true, label: 'Last Name' },
-          { name: 'email', type: 'email', required: true, label: 'Email' },
-          { name: 'phone', type: 'tel', required: true, label: 'Phone' }
+          {
+            name: 'systemType',
+            type: 'select',
+            label: 'What type of HVAC system?',
+            required: true,
+            options: [
+              { value: 'central_ac', label: 'Central AC' },
+              { value: 'furnace', label: 'Furnace' },
+              { value: 'heat_pump', label: 'Heat Pump' },
+              { value: 'ductless', label: 'Ductless Mini-Split' },
+              { value: 'not_sure', label: 'Not Sure' }
+            ]
+          },
+          {
+            name: 'serviceType',
+            type: 'select',
+            label: 'What service do you need?',
+            required: true,
+            options: [
+              { value: 'new_installation', label: 'New Installation' },
+              { value: 'replacement', label: 'Replacement' },
+              { value: 'repair', label: 'Repair' },
+              { value: 'maintenance', label: 'Maintenance' },
+              { value: 'not_sure', label: 'Not Sure' }
+            ]
+          },
+          {
+            name: 'homeSize',
+            type: 'select',
+            label: 'What is your home size?',
+            required: true,
+            options: [
+              { value: 'under_1500', label: 'Under 1,500 sq ft' },
+              { value: '1500_2500', label: '1,500-2,500 sq ft' },
+              { value: '2500_3500', label: '2,500-3,500 sq ft' },
+              { value: 'over_3500', label: 'Over 3,500 sq ft' }
+            ]
+          }
         ]
       }),
       active: true
@@ -258,6 +381,14 @@ async function main() {
       businessEmail: 'office@abcroofing.com',
       businessPhone: '555-123-4568',
       active: true,
+      // Contractor delivery settings - EXCLUSIVE with FIXED pricing
+      deliveryMode: 'EXCLUSIVE',
+      maxSharedLeads: 1,
+      fixedLeadPrice: 45.00,
+      pricingModel: 'FIXED',
+      notifyEmail: true,
+      notifyWebhook: true, // Has CRM integration
+      notifyDashboard: true,
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['cert_url', 'trustedform_cert'],
@@ -302,6 +433,14 @@ async function main() {
       businessEmail: 'contact@xyzwindows.com',
       businessPhone: '555-987-6544',
       active: true,
+      // Contractor delivery settings - AUCTION pricing (competes with networks)
+      deliveryMode: 'EXCLUSIVE',
+      maxSharedLeads: 1,
+      fixedLeadPrice: null, // Uses auction bidding
+      pricingModel: 'AUCTION',
+      notifyEmail: true,
+      notifyWebhook: false, // No CRM integration
+      notifyDashboard: true,
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['tf_url', 'cert_link'],
@@ -325,6 +464,43 @@ async function main() {
           city: ['city_name'],
           state: ['state_abbr']
         }
+      })
+    }
+  })
+
+  // New contractor - SHARED delivery mode example
+  const qualityBathPros = await prisma.buyer.create({
+    data: {
+      name: 'Quality Bath Pros',
+      displayName: 'Quality Bath Professionals',
+      type: 'CONTRACTOR',
+      apiUrl: '', // No API - email/dashboard only
+      authConfig: null,
+      webhookSecret: null,
+      authType: null,
+      pingTimeout: 0,
+      postTimeout: 0,
+      contactName: 'Tom Williams',
+      contactEmail: 'tom@qualitybathpros.com',
+      contactPhone: '555-456-7890',
+      businessEmail: 'leads@qualitybathpros.com',
+      businessPhone: '555-456-7891',
+      active: true,
+      // Contractor delivery settings - SHARED with FIXED pricing
+      // Multiple contractors can receive the same lead, each pays full price
+      deliveryMode: 'SHARED',
+      maxSharedLeads: 3, // Up to 3 contractors get this lead
+      fixedLeadPrice: 25.00, // Lower price for shared leads
+      pricingModel: 'FIXED',
+      notifyEmail: true,
+      notifyWebhook: false,
+      notifyDashboard: true,
+      complianceFieldMappings: JSON.stringify({
+        trustedForm: { certUrl: ['cert_url'], certId: ['cert_id'] },
+        jornaya: { leadId: ['leadid'] },
+        tcpa: { consent: ['consent'], timestamp: ['timestamp'] },
+        technical: { ipAddress: ['ip'], userAgent: ['ua'], timestamp: ['ts'] },
+        geo: { latitude: ['lat'], longitude: ['lng'], city: ['city'], state: ['state'] }
       })
     }
   })
@@ -373,7 +549,7 @@ async function main() {
     }
   })
 
-  console.log(`✅ Created 5 buyers\n`)
+  console.log(`✅ Created 6 buyers (3 NETWORK, 3 CONTRACTOR)\n`)
 
   // ==========================================
   // 3. ZIP CODE METADATA
@@ -601,7 +777,7 @@ async function main() {
         buyerId: modernize.id,
         serviceTypeId: bathrooms.id,
         pingTemplate: JSON.stringify({ zip: '{{zipCode}}', owns_home: '{{ownsHome}}' }),
-        postTemplate: JSON.stringify({ zip: '{{zipCode}}', owns_home: '{{ownsHome}}', bathroom_count: '{{bathroomCount}}', remodel_type: '{{remodelType}}' }),
+        postTemplate: JSON.stringify({ zip: '{{zipCode}}', owns_home: '{{ownsHome}}', bathroom_count: '{{bathroomCount}}', remodel_type: '{{projectScope}}', bathroom_type: '{{bathroomType}}' }),
         fieldMappings: JSON.stringify({ zipCode: 'zip', ownsHome: 'owns_home' }),
         requiresTrustedForm: false,
         requiresJornaya: true,
@@ -644,7 +820,7 @@ async function main() {
         buyerId: abcRoofing.id,
         serviceTypeId: roofing.id,
         pingTemplate: JSON.stringify({ zip: '{{zipCode}}', owns: '{{ownsHome}}' }),
-        postTemplate: JSON.stringify({ zip: '{{zipCode}}', owns: '{{ownsHome}}', type: '{{roofType}}', size: '{{roofSize}}', service: '{{serviceNeeded}}' }),
+        postTemplate: JSON.stringify({ zip: '{{zipCode}}', owns: '{{ownsHome}}', type: '{{roofType}}', size: '{{roofSize}}', service: '{{projectScope}}' }),
         fieldMappings: JSON.stringify({ zipCode: 'zip', ownsHome: 'owns' }),
         requiresTrustedForm: false,
         requiresJornaya: false,
@@ -680,6 +856,23 @@ async function main() {
         requiresJornaya: false,
         minBid: 12.00,
         maxBid: 50.00
+      }
+    })
+  )
+
+  // Quality Bath Pros - Bathrooms only (CONTRACTOR with SHARED delivery)
+  buyerServiceConfigs.push(
+    await prisma.buyerServiceConfig.create({
+      data: {
+        buyerId: qualityBathPros.id,
+        serviceTypeId: bathrooms.id,
+        pingTemplate: JSON.stringify({}), // No PING for contractors
+        postTemplate: JSON.stringify({ zip: '{{zipCode}}', project: '{{projectScope}}', type: '{{bathroomType}}' }),
+        fieldMappings: JSON.stringify({ zipCode: 'zip', projectScope: 'project' }),
+        requiresTrustedForm: false,
+        requiresJornaya: false,
+        minBid: 25.00, // Fixed price
+        maxBid: 25.00
       }
     })
   )
@@ -834,6 +1027,21 @@ async function main() {
     }
   }
 
+  // Quality Bath Pros - Florida only, bathrooms only (SHARED delivery)
+  const qualityBathZips = ['33101', '33102', '33103', '33104', '33105', '32801', '32802', '32803', '33301', '33302']
+  for (const zip of qualityBathZips) {
+    buyerServiceZipCodes.push({
+      buyerId: qualityBathPros.id,
+      serviceTypeId: bathrooms.id,
+      zipCode: zip,
+      active: true,
+      priority: 7, // High priority for local contractor
+      maxLeadsPerDay: 10,
+      minBid: 25.00, // Fixed price
+      maxBid: 25.00
+    })
+  }
+
   await prisma.buyerServiceZipCode.createMany({
     data: buyerServiceZipCodes
   })
@@ -976,20 +1184,31 @@ async function main() {
     auditLogCount++
 
     // PING transactions (parallel to all qualified buyers)
+    // Track bids to determine winners/losers
+    const pingBids: { buyerId: string; bidAmount: number }[] = []
+
     for (const buyer of buyers) {
+      const bidAmount = 25 + (Math.random() * 50)
+      pingBids.push({ buyerId: buyer.id, bidAmount })
+
       await prisma.transaction.create({
         data: {
           leadId: lead.id,
           buyerId: buyer.id,
           actionType: 'PING',
           payload: JSON.stringify({ zipCode: lead.zipCode, serviceType: lead.serviceTypeId }),
-          response: JSON.stringify({ bid: 25 + (Math.random() * 50), accept: true }),
+          response: JSON.stringify({ bid: bidAmount, accept: true }),
           status: 'SUCCESS',
-          bidAmount: 25 + (Math.random() * 50),
+          bidAmount,
           responseTime: 100 + Math.floor(Math.random() * 400), // 100-500ms
           complianceIncluded: true,
           trustedFormPresent: true,
           jornayaPresent: true,
+          // New fields for winner/loser tracking
+          isWinner: buyer.id === lead.winningBuyerId,
+          lostReason: buyer.id === lead.winningBuyerId ? null : 'OUTBID',
+          winningBidAmount: lead.winningBid ? Number(lead.winningBid) : null,
+          cascadePosition: null, // PING doesn't have cascade position
           createdAt: new Date(lead.createdAt.getTime() + 1000) // 1 second after lead created
         }
       })
@@ -1002,7 +1221,7 @@ async function main() {
         leadId: lead.id,
         buyerId: lead.winningBuyerId!,
         actionType: 'POST',
-        payload: JSON.stringify({ 
+        payload: JSON.stringify({
           lead_id: lead.id,
           zipCode: lead.zipCode,
           formData: JSON.parse(lead.formData)
@@ -1014,6 +1233,11 @@ async function main() {
         complianceIncluded: true,
         trustedFormPresent: true,
         jornayaPresent: true,
+        // Winner's POST transaction
+        isWinner: true,
+        lostReason: null,
+        winningBidAmount: lead.winningBid ? Number(lead.winningBid) : null,
+        cascadePosition: 1, // First attempt succeeded
         createdAt: new Date(lead.createdAt.getTime() + 5000) // 5 seconds after lead created
       }
     })
@@ -1028,7 +1252,7 @@ async function main() {
   console.log('Summary:')
   console.log(`- Admin Users: 3`)
   console.log(`- Service Types: 4`)
-  console.log(`- Buyers: 5`)
+  console.log(`- Buyers: 6 (3 NETWORK, 3 CONTRACTOR)`)
   console.log(`- ZIP Codes: ${zipCodes.length}`)
   console.log(`- Buyer Service Configs: ${buyerServiceConfigs.length}`)
   console.log(`- Buyer Service ZIP Codes: ${buyerServiceZipCodes.length}`)

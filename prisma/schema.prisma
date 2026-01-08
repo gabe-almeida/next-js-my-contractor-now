@@ -26,7 +26,7 @@ model Buyer {
   id                      String                @id @default(uuid())
   name                    String
   displayName             String?               @map("display_name")
-  type                    String                @default("CONTRACTOR")
+  type                    String                @default("CONTRACTOR") // NETWORK or CONTRACTOR
   apiUrl                  String                @map("api_url")
   authConfig              String?               @map("auth_config")
   webhookSecret           String?               @map("webhook_secret")
@@ -45,6 +45,18 @@ model Buyer {
   additionalPhones        String?               @map("additional_phones")
   additionalContacts      String?               @map("additional_contacts")
   notes                   String?               @db.Text // Internal notes: docs links, tagId info, integration notes
+
+  // Contractor delivery settings (supports lead-flow.mmd diagram)
+  deliveryMode            String                @default("EXCLUSIVE") @map("delivery_mode") // EXCLUSIVE or SHARED
+  maxSharedLeads          Int                   @default(3) @map("max_shared_leads") // If SHARED, how many contractors get lead
+  fixedLeadPrice          Decimal?              @map("fixed_lead_price") @db.Decimal(10, 2) // For FIXED pricing model
+  pricingModel            String                @default("AUCTION") @map("pricing_model") // FIXED, AUCTION, or HYBRID
+
+  // Notification channel preferences for contractors
+  notifyEmail             Boolean               @default(true) @map("notify_email")
+  notifyWebhook           Boolean               @default(false) @map("notify_webhook")
+  notifyDashboard         Boolean               @default(true) @map("notify_dashboard")
+
   createdAt               DateTime              @default(now()) @map("created_at")
   updatedAt               DateTime              @updatedAt @map("updated_at")
   serviceConfigs          BuyerServiceConfig[]
@@ -52,6 +64,8 @@ model Buyer {
   wonLeads                Lead[]
   transactions            Transaction[]
 
+  @@index([type])
+  @@index([pricingModel])
   @@map("buyers")
 }
 
@@ -121,16 +135,28 @@ model Transaction {
   id                 String   @id @default(uuid())
   leadId             String   @map("lead_id")
   buyerId            String   @map("buyer_id")
-  actionType         String   @map("action_type")
+  actionType         String   @map("action_type") // PING, POST, DELIVERY
   payload            String
   response           String?
-  status             String
-  bidAmount          Decimal? @map("bid_amount")
+  status             String   // SUCCESS, FAILED, TIMEOUT, REJECTED
+  bidAmount          Decimal? @map("bid_amount") @db.Decimal(10, 2)
   responseTime       Int?     @map("response_time")
   errorMessage       String?  @map("error_message")
   complianceIncluded Boolean  @default(false) @map("compliance_included")
   trustedFormPresent Boolean  @default(false) @map("trusted_form_present")
   jornayaPresent     Boolean  @default(false) @map("jornaya_present")
+
+  // Winner/Loser tracking for analytics (supports lead-flow.mmd diagram)
+  isWinner           Boolean? @map("is_winner")
+  lostReason         String?  @map("lost_reason") // OUTBID, TIMEOUT, NO_BID, BELOW_MIN_BID, POST_REJECTED, DUPLICATE_LEAD, OUTSIDE_HOURS, CAP_REACHED, CASCADE_EXHAUSTED, NOT_SELECTED, EXCLUSIVE_TAKEN, LOWER_PRIORITY
+  winningBidAmount   Decimal? @map("winning_bid_amount") @db.Decimal(10, 2) // For analytics: what the winner bid
+
+  // Cascade tracking for fallback delivery
+  cascadePosition    Int?     @map("cascade_position") // 1 = first attempt, 2 = second, etc.
+
+  // Contractor delivery tracking
+  deliveryMethod     String?  @map("delivery_method") // EMAIL, WEBHOOK, DASHBOARD, SMS
+
   createdAt          DateTime @default(now()) @map("created_at")
   buyer              Buyer    @relation(fields: [buyerId], references: [id])
   lead               Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
@@ -140,6 +166,8 @@ model Transaction {
   @@index([status])
   @@index([createdAt])
   @@index([complianceIncluded])
+  @@index([isWinner])
+  @@index([lostReason])
   @@map("transactions")
 }
 

@@ -354,7 +354,7 @@ export interface TransactionLog {
   id: string;
   leadId: string;
   buyerId: string;
-  actionType: 'PING' | 'POST' | 'WEBHOOK' | 'RETRY';
+  actionType: 'PING' | 'POST' | 'WEBHOOK' | 'RETRY' | 'DELIVERY';
   status: 'pending' | 'success' | 'failed' | 'timeout';
   payload: Record<string, any>;
   response?: Record<string, any>;
@@ -363,6 +363,12 @@ export interface TransactionLog {
   retryCount: number;
   timestamp: Date;
   metadata: Record<string, any>;
+  // Winner/loser tracking (for analytics)
+  isWinner?: boolean;
+  lostReason?: string;
+  winningBidAmount?: number;
+  cascadePosition?: number;
+  deliveryMethod?: string;
 }
 
 // Error types

@@ -21,6 +21,7 @@ import { BuyerConfigurationRegistry } from '../buyers/configurations';
 import { BuyerEligibilityService, EligibleBuyer } from '../services/buyer-eligibility-service';
 import { BuyerResponseParser } from '../buyers/response-parser';
 import { loadBuyerConfigForAuction } from '../field-mapping/database-buyer-loader';
+import { ContractorDeliveryService, LeadForDelivery } from '../services/contractor-delivery-service';
 import { logger } from '../logger';
 
 export class AuctionEngine {
@@ -37,6 +38,10 @@ export class AuctionEngine {
 
   /**
    * Run auction for a lead across all eligible buyers
+   *
+   * Task 4.2: Split flow by buyer type
+   * - NETWORK buyers → PING/POST auction flow
+   * - CONTRACTOR buyers → Direct delivery flow
    */
   static async runAuction(
     lead: LeadData,
@@ -49,79 +54,280 @@ export class AuctionEngine {
       // Get eligible buyers for this service type
       const eligibleBuyers = await this.getEligibleBuyers(lead, config);
 
-      if (eligibleBuyers.length === 0) {
-        return this.createFailedResult(lead.id, 'No eligible buyers found', []);
-      }
+      // Task 4.2: Split by buyer type (NETWORK vs CONTRACTOR)
+      // Check if any buyers are contractors by querying the database
+      const buyerTypes = await this.getBuyerTypes(eligibleBuyers.map(b => b.buyer.id));
 
-      // Initialize auction state
-      const auctionState: AuctionState = {
-        auctionId,
-        leadId: lead.id,
-        serviceTypeId: lead.serviceTypeId,
-        startTime,
-        buyers: eligibleBuyers,
-        bids: [],
-        status: 'running'
-      };
-
-      this.activeAuctions.set(auctionId, auctionState);
-
-      // Send parallel PINGs to all eligible buyers
-      const bidPromises = eligibleBuyers.map(buyer =>
-        this.sendPingToBuyer(lead, buyer, config.timeoutMs)
+      const networkBuyers = eligibleBuyers.filter(b =>
+        buyerTypes.get(b.buyer.id) === 'NETWORK' || !buyerTypes.has(b.buyer.id)
       );
+      const hasContractors = Array.from(buyerTypes.values()).includes('CONTRACTOR');
 
-      // Wait for all bids with timeout
-      const bidResults = await Promise.allSettled(bidPromises);
+      logger.info('Auction buyer type split', {
+        leadId: lead.id,
+        totalEligible: eligibleBuyers.length,
+        networkBuyers: networkBuyers.length,
+        hasContractors,
+      });
 
-      // Process bid results
-      const validBids = this.processBidResults(bidResults, eligibleBuyers);
-      auctionState.bids = validBids;
+      // If we have network buyers, run the network auction first
+      if (networkBuyers.length > 0) {
+        const networkResult = await this.runNetworkAuction(lead, networkBuyers, config, auctionId, startTime);
 
-      // Apply auction logic to select winner
-      const winner = this.selectWinner(validBids, config);
-      auctionState.winner = winner;
-
-      // Send POST to winning buyer if auction successful
-      let postResult: PostResult | undefined;
-      if (winner) {
-        const winningBuyer = eligibleBuyers.find(b => b.buyer.id === winner.buyerId);
-        if (winningBuyer) {
-          // Pass the winning bid metadata (contains pingToken from PING response)
-          postResult = await this.sendPostToWinner(lead, winningBuyer, winner);
+        // If network auction succeeded, return the result
+        if (networkResult.status === 'completed' && networkResult.postResult?.success) {
+          return networkResult;
         }
+
+        // If network auction failed and we have contractors, fall back to contractor delivery
+        if (hasContractors && !networkResult.postResult?.success) {
+          logger.info('Network auction failed, falling back to contractor delivery', {
+            leadId: lead.id,
+            networkStatus: networkResult.status,
+          });
+
+          // Update network PING transactions to reflect they all lost (POST_REJECTED)
+          // since we're falling back to contractors
+          await this.markAllNetworkBiddersAsLosers(lead.id, networkResult.allBids);
+
+          return await this.deliverToContractorsWithResult(
+            lead,
+            networkResult.winningBidAmount, // Pass network bid for HYBRID pricing
+            auctionId,
+            startTime
+          );
+        }
+
+        return networkResult;
       }
 
-      // Create auction result
-      const auctionDurationMs = Date.now() - startTime;
-      const result: AuctionResult = {
-        leadId: lead.id,
-        winningBuyerId: winner?.buyerId,
-        winningBidAmount: winner?.bidAmount,
-        allBids: validBids,
-        auctionDurationMs,
-        participantCount: eligibleBuyers.length,
-        status: winner ? 'completed' : (validBids.length > 0 ? 'no_bids' : 'failed'),
-        postResult
-      };
+      // No network buyers - try contractor delivery directly
+      if (hasContractors) {
+        return await this.deliverToContractorsWithResult(lead, undefined, auctionId, startTime);
+      }
 
-      // Update performance metrics
-      this.updateMetrics(result, eligibleBuyers);
-
-      // Clean up auction state
-      this.activeAuctions.delete(auctionId);
-
-      return result;
+      // No eligible buyers at all
+      return this.createFailedResult(lead.id, 'No eligible buyers found', []);
 
     } catch (error) {
       this.activeAuctions.delete(auctionId);
-      
+
       throw new AuctionError(
         `Auction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         auctionId,
         { leadId: lead.id, error }
       );
     }
+  }
+
+  /**
+   * Mark all network bidders as losers when falling back to contractors
+   * This ensures accurate analytics - all network PING transactions show they lost
+   * because their POSTs were rejected and a contractor won instead.
+   */
+  private static async markAllNetworkBiddersAsLosers(
+    leadId: string,
+    allBids: BidResponse[]
+  ): Promise<void> {
+    try {
+      const { prisma } = await import('../db');
+
+      // Update all PING transactions for this lead to show they lost
+      // The lostReason is CASCADE_EXHAUSTED because all network POSTs were rejected
+      await prisma.transaction.updateMany({
+        where: {
+          leadId,
+          actionType: 'PING',
+        },
+        data: {
+          isWinner: false,
+          lostReason: 'CASCADE_EXHAUSTED',
+        },
+      });
+
+      logger.info('Marked all network bidders as losers for contractor fallback', {
+        leadId,
+        bidCount: allBids.length,
+      });
+    } catch (error) {
+      // Log but don't throw - this is for analytics and shouldn't break the flow
+      logger.error('Failed to mark network bidders as losers', {
+        leadId,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  /**
+   * Get buyer types from database
+   */
+  private static async getBuyerTypes(buyerIds: string[]): Promise<Map<string, string>> {
+    const { prisma } = await import('../db');
+
+    const buyers = await prisma.buyer.findMany({
+      where: { id: { in: buyerIds } },
+      select: { id: true, type: true },
+    });
+
+    return new Map(buyers.map(b => [b.id, b.type]));
+  }
+
+  /**
+   * Deliver to contractors and return AuctionResult format
+   */
+  private static async deliverToContractorsWithResult(
+    lead: LeadData,
+    networkWinningBid: number | undefined,
+    auctionId: string,
+    startTime: number
+  ): Promise<AuctionResult> {
+    const leadForDelivery: LeadForDelivery = {
+      id: lead.id,
+      serviceTypeId: lead.serviceTypeId,
+      zipCode: lead.zipCode,
+      formData: lead.formData,
+      trustedFormCertUrl: lead.trustedFormCertUrl,
+      trustedFormCertId: lead.trustedFormCertId,
+      ownsHome: lead.ownsHome,
+      timeframe: lead.timeframe,
+    };
+
+    const contractorResult = await ContractorDeliveryService.deliverToContractors(
+      leadForDelivery,
+      networkWinningBid
+    );
+
+    const auctionDurationMs = Date.now() - startTime;
+
+    // Convert contractor result to AuctionResult format
+    return {
+      leadId: lead.id,
+      winningBuyerId: contractorResult.deliveredTo[0]?.buyerId,
+      winningBidAmount: contractorResult.totalRevenue,
+      allBids: contractorResult.deliveredTo.map(d => ({
+        buyerId: d.buyerId,
+        bidAmount: d.price,
+        success: true,
+        responseTime: 0,
+      })),
+      auctionDurationMs,
+      participantCount: contractorResult.deliveredTo.length,
+      status: contractorResult.success ? 'completed' : 'failed',
+      postResult: contractorResult.success ? {
+        success: true,
+        statusCode: 200,
+        deliveryTime: auctionDurationMs,
+      } : undefined,
+    };
+  }
+
+  /**
+   * Run network auction (PING/POST flow for NETWORK buyers)
+   */
+  private static async runNetworkAuction(
+    lead: LeadData,
+    eligibleBuyers: EligibleBuyerWithConfig[],
+    config: AuctionConfig,
+    auctionId: string,
+    startTime: number
+  ): Promise<AuctionResult> {
+    // Initialize auction state
+    const auctionState: AuctionState = {
+      auctionId,
+      leadId: lead.id,
+      serviceTypeId: lead.serviceTypeId,
+      startTime,
+      buyers: eligibleBuyers,
+      bids: [],
+      status: 'running'
+    };
+
+    this.activeAuctions.set(auctionId, auctionState);
+
+    // Send parallel PINGs to all eligible buyers
+    const bidPromises = eligibleBuyers.map(buyer =>
+      this.sendPingToBuyer(lead, buyer, config.timeoutMs)
+    );
+
+    // Wait for all bids with timeout
+    const bidResults = await Promise.allSettled(bidPromises);
+
+    // Process bid results
+    const validBids = this.processBidResults(bidResults, eligibleBuyers);
+    auctionState.bids = validBids;
+
+    // Apply auction logic to select winner
+    const winner = this.selectWinner(validBids, config);
+    auctionState.winner = winner;
+
+    // Update PING transactions with winner/loser status for analytics
+    await this.updatePingTransactionsWithWinnerStatus(
+      lead.id,
+      winner?.buyerId,
+      winner?.bidAmount,
+      validBids
+    );
+
+    // Send POST with cascade fallback - tries all bidders until one accepts
+    let postResult: PostResult | undefined;
+    let finalWinner: BidResponse | undefined = winner;
+
+    if (validBids.some(b => b.success && b.bidAmount > 0)) {
+      // Use cascade delivery - tries each bidder in order until one accepts
+      const cascadeResult = await this.deliverWithCascade(
+        lead,
+        validBids,
+        eligibleBuyers
+      );
+      postResult = cascadeResult.postResult;
+      finalWinner = cascadeResult.acceptedBid;
+
+      // If cascade changed the winner, update the PING transactions
+      if (finalWinner && finalWinner.buyerId !== winner?.buyerId) {
+        await this.updatePingTransactionsWithWinnerStatus(
+          lead.id,
+          finalWinner.buyerId,
+          finalWinner.bidAmount,
+          validBids
+        );
+      }
+    }
+
+    // Create auction result (use finalWinner from cascade)
+    const auctionDurationMs = Date.now() - startTime;
+
+    // Determine status:
+    // - 'completed': POST succeeded (lead delivered)
+    // - 'failed': No valid bids or all POSTs rejected (cascade exhausted)
+    // - 'no_bids': Participants but no valid bids received
+    let status: 'completed' | 'failed' | 'timeout' | 'no_bids';
+    if (postResult?.success) {
+      status = 'completed';
+    } else if (validBids.filter(b => b.success && b.bidAmount > 0).length === 0) {
+      status = 'no_bids';
+    } else {
+      // Had valid bids but all POSTs rejected
+      status = 'failed';
+    }
+
+    const result: AuctionResult = {
+      leadId: lead.id,
+      winningBuyerId: finalWinner?.buyerId,
+      winningBidAmount: finalWinner?.bidAmount,
+      allBids: validBids,
+      auctionDurationMs,
+      participantCount: eligibleBuyers.length,
+      status,
+      postResult
+    };
+
+    // Update performance metrics
+    this.updateMetrics(result, eligibleBuyers);
+
+    // Clean up auction state
+    this.activeAuctions.delete(auctionId);
+
+    return result;
   }
 
   /**
@@ -212,12 +418,18 @@ export class AuctionEngine {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      // Log failed transaction
+      // Detect if this was a timeout (AbortController says "aborted")
+      const isTimeout = this.isTimeoutError(error);
+
+      // Log failed transaction with proper timeout status
       await this.logTransaction(lead.id, buyer.id, 'PING', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         responseTime,
-        success: false
+        success: false,
+        isTimeout, // Flag for status determination
+        lostReason: isTimeout ? 'TIMEOUT' : 'NO_BID',
       });
 
       return {
@@ -225,9 +437,27 @@ export class AuctionEngine {
         bidAmount: 0,
         success: false,
         responseTime,
-        error: error instanceof Error ? error.message : 'PING request failed'
+        error: isTimeout ? 'TIMEOUT: Request timed out' : errorMessage
       };
     }
+  }
+
+  /**
+   * Check if an error is a timeout/abort error
+   */
+  private static isTimeoutError(error: unknown): boolean {
+    if (error instanceof Error) {
+      const msg = error.message.toLowerCase();
+      const name = error.name.toLowerCase();
+      return (
+        msg.includes('timeout') ||
+        msg.includes('aborted') ||
+        msg.includes('abort') ||
+        name === 'aborterror' ||
+        name === 'timeouterror'
+      );
+    }
+    return false;
   }
 
   /**
@@ -293,13 +523,19 @@ export class AuctionEngine {
       const deliveryTime = Date.now() - startTime;
       const responseData = response.ok ? await response.json() : null;
 
-      // Log transaction
+      // Log transaction with winner tracking
       await this.logTransaction(lead.id, buyer.id, 'POST', {
         request: payload,
         response: responseData,
         statusCode: response.status,
         deliveryTime,
-        success: response.ok
+        success: response.ok,
+        bidAmount: winningBid?.bidAmount,
+        // Winner tracking fields
+        isWinner: response.ok, // Only true if POST succeeded
+        lostReason: response.ok ? null : 'POST_REJECTED',
+        winningBidAmount: winningBid?.bidAmount,
+        cascadePosition: 1, // First attempt (will be incremented in cascade fallback)
       });
 
       return {
@@ -312,11 +548,17 @@ export class AuctionEngine {
     } catch (error) {
       const deliveryTime = Date.now() - startTime;
 
-      // Log failed transaction
+      // Log failed transaction with winner tracking
       await this.logTransaction(lead.id, buyer.id, 'POST', {
         error: error instanceof Error ? error.message : 'Unknown error',
         deliveryTime,
-        success: false
+        success: false,
+        bidAmount: winningBid?.bidAmount,
+        // Winner tracking - POST failed
+        isWinner: false,
+        lostReason: 'POST_REJECTED',
+        winningBidAmount: winningBid?.bidAmount,
+        cascadePosition: 1,
       });
 
       return {
@@ -326,6 +568,302 @@ export class AuctionEngine {
         deliveryTime
       };
     }
+  }
+
+  /**
+   * Cascade delivery - tries each bidder in order until one accepts
+   *
+   * WHY: Network buyers can reject POSTs for various reasons (duplicate, cap reached, etc.)
+   *      Instead of failing the auction, we try the next highest bidder.
+   * WHEN: Called after PING auction completes with valid bids
+   * HOW: Sort bids descending, try POST to each, track cascade position
+   *
+   * @param lead - The lead to deliver
+   * @param validBids - All valid bids from PING phase (already filtered for success)
+   * @param eligibleBuyers - Buyer configurations for all participants
+   * @returns Object with postResult and the bid that was accepted (if any)
+   */
+  private static async deliverWithCascade(
+    lead: LeadData,
+    validBids: BidResponse[],
+    eligibleBuyers: EligibleBuyerWithConfig[]
+  ): Promise<{
+    postResult: PostResult | undefined;
+    acceptedBid: BidResponse | undefined;
+  }> {
+    // Task 3.2: Sort bids by amount descending
+    const rankedBids = [...validBids]
+      .filter(b => b.success && b.bidAmount > 0)
+      .sort((a, b) => b.bidAmount - a.bidAmount);
+
+    if (rankedBids.length === 0) {
+      return { postResult: undefined, acceptedBid: undefined };
+    }
+
+    logger.info('Starting cascade delivery', {
+      leadId: lead.id,
+      totalBids: rankedBids.length,
+      topBid: rankedBids[0]?.bidAmount,
+      bottomBid: rankedBids[rankedBids.length - 1]?.bidAmount
+    });
+
+    // Task 3.3: Implement cascade loop
+    let cascadePosition = 0;
+
+    for (const bid of rankedBids) {
+      cascadePosition++;
+
+      const buyerConfig = eligibleBuyers.find(b => b.buyer.id === bid.buyerId);
+      if (!buyerConfig) {
+        logger.warn('Buyer config not found for cascade attempt', {
+          leadId: lead.id,
+          buyerId: bid.buyerId,
+          cascadePosition
+        });
+        continue;
+      }
+
+      logger.info('Cascade attempt', {
+        leadId: lead.id,
+        buyerId: bid.buyerId,
+        buyerName: buyerConfig.buyer.name,
+        bidAmount: bid.bidAmount,
+        cascadePosition
+      });
+
+      // Attempt POST to this buyer
+      const postResult = await this.sendPostToBuyerWithCascade(
+        lead,
+        buyerConfig,
+        bid,
+        cascadePosition
+      );
+
+      if (postResult.success) {
+        // Winner found! Mark them and return
+        logger.info('Cascade delivery succeeded', {
+          leadId: lead.id,
+          buyerId: bid.buyerId,
+          cascadePosition,
+          bidAmount: bid.bidAmount
+        });
+
+        return {
+          postResult,
+          acceptedBid: bid
+        };
+      }
+
+      // POST rejected - log reason and continue to next bidder
+      // Task 3.4: Parse rejection reason
+      const lostReason = this.parseRejectionReason(postResult);
+      logger.info('Cascade POST rejected, trying next', {
+        leadId: lead.id,
+        buyerId: bid.buyerId,
+        cascadePosition,
+        lostReason,
+        error: postResult.error
+      });
+    }
+
+    // All bidders rejected - cascade exhausted
+    logger.warn('Cascade exhausted - all bidders rejected', {
+      leadId: lead.id,
+      totalAttempts: cascadePosition
+    });
+
+    return {
+      postResult: {
+        success: false,
+        statusCode: 0,
+        error: 'CASCADE_EXHAUSTED: All bidders rejected the lead',
+        deliveryTime: 0
+      },
+      acceptedBid: undefined
+    };
+  }
+
+  /**
+   * Send POST to a specific buyer during cascade delivery
+   * Tracks cascade position and rejection reasons
+   */
+  private static async sendPostToBuyerWithCascade(
+    lead: LeadData,
+    buyerConfig: EligibleBuyerWithConfig,
+    bid: BidResponse,
+    cascadePosition: number
+  ): Promise<PostResult> {
+    const startTime = Date.now();
+    const { buyer, serviceConfig } = buyerConfig;
+
+    try {
+      // Transform lead data using buyer's POST template
+      const payload = await TemplateEngine.transform(
+        lead,
+        buyer,
+        serviceConfig.postTemplate,
+        true // Always include compliance for POST
+      );
+
+      // Add auction metadata
+      payload.auction_winning_bid = bid.bidAmount;
+      payload.auction_timestamp = new Date().toISOString();
+      payload.cascade_position = cascadePosition;
+
+      // Include pingToken if present
+      if (bid.metadata?.pingToken) {
+        payload.pingToken = bid.metadata.pingToken;
+      }
+      if (bid.metadata?.buyerLeadId) {
+        payload.buyerLeadId = bid.metadata.buyerLeadId;
+      }
+
+      // Prepare request headers
+      const headers = this.prepareHeaders(buyer, serviceConfig, 'POST');
+
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        serviceConfig.webhookConfig!.timeouts.post
+      );
+
+      // Send POST request
+      const response = await fetch(serviceConfig.webhookConfig!.postUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      const deliveryTime = Date.now() - startTime;
+      let responseData: any = null;
+
+      try {
+        responseData = await response.json();
+      } catch {
+        // Response might not be JSON
+      }
+
+      // Determine if accepted - check status code and response
+      const isAccepted = response.ok && this.isPostAccepted(responseData);
+      const lostReason = isAccepted ? null : this.parseRejectionReason({
+        success: false,
+        statusCode: response.status,
+        response: responseData,
+        deliveryTime
+      });
+
+      // Log transaction with cascade tracking
+      await this.logTransaction(lead.id, buyer.id, 'POST', {
+        request: payload,
+        response: responseData,
+        statusCode: response.status,
+        deliveryTime,
+        success: isAccepted,
+        bidAmount: bid.bidAmount,
+        isWinner: isAccepted,
+        lostReason,
+        winningBidAmount: bid.bidAmount,
+        cascadePosition,
+      });
+
+      return {
+        success: isAccepted,
+        statusCode: response.status,
+        response: responseData,
+        deliveryTime,
+        error: isAccepted ? undefined : (responseData?.message || responseData?.error || `HTTP ${response.status}`)
+      };
+
+    } catch (error) {
+      const deliveryTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Detect if this was a timeout (AbortController says "aborted")
+      const isTimeout = this.isTimeoutError(error);
+
+      // Log failed transaction with proper timeout tracking
+      await this.logTransaction(lead.id, buyer.id, 'POST', {
+        error: errorMessage,
+        deliveryTime,
+        success: false,
+        bidAmount: bid.bidAmount,
+        isWinner: false,
+        isTimeout, // Flag for status determination
+        lostReason: isTimeout ? 'TIMEOUT' : 'POST_REJECTED',
+        winningBidAmount: bid.bidAmount,
+        cascadePosition,
+      });
+
+      return {
+        success: false,
+        statusCode: 0,
+        error: isTimeout ? 'TIMEOUT: Request timed out' : errorMessage,
+        deliveryTime
+      };
+    }
+  }
+
+  /**
+   * Check if POST response indicates acceptance
+   * Different buyers have different response formats
+   */
+  private static isPostAccepted(responseData: any): boolean {
+    if (!responseData) return false;
+
+    // Check common acceptance indicators
+    const acceptIndicators = [
+      responseData.accepted === true,
+      responseData.success === true,
+      responseData.status === 'accepted',
+      responseData.status === 'success',
+      responseData.result === 'accepted',
+      responseData.result === 'success',
+      responseData.leadId !== undefined, // Many buyers return a leadId on success
+      responseData.lead_id !== undefined,
+      responseData.confirmation !== undefined,
+    ];
+
+    return acceptIndicators.some(indicator => indicator === true);
+  }
+
+  /**
+   * Parse rejection reason from POST response
+   * Task 3.4: Map response to lostReason enum values
+   */
+  private static parseRejectionReason(postResult: PostResult): string {
+    const response = postResult.response;
+    const statusCode = postResult.statusCode;
+    const error = postResult.error?.toLowerCase() || '';
+
+    // Check HTTP status codes
+    if (statusCode === 409) return 'DUPLICATE_LEAD';
+    if (statusCode === 429) return 'CAP_REACHED';
+    if (statusCode === 403 || statusCode === 401) return 'POST_REJECTED';
+    if (statusCode >= 500) return 'POST_REJECTED';
+
+    // Check response body for rejection reasons
+    if (response) {
+      const reason = (response.reason || response.rejection_reason || response.error || '').toLowerCase();
+      const message = (response.message || '').toLowerCase();
+      const combined = reason + ' ' + message;
+
+      if (combined.includes('duplicate')) return 'DUPLICATE_LEAD';
+      if (combined.includes('cap') || combined.includes('limit')) return 'CAP_REACHED';
+      if (combined.includes('hours') || combined.includes('closed')) return 'OUTSIDE_HOURS';
+      if (combined.includes('compliance')) return 'COMPLIANCE_MISSING';
+      if (combined.includes('timeout')) return 'TIMEOUT';
+    }
+
+    // Check error message
+    if (error.includes('timeout') || error.includes('aborted')) return 'TIMEOUT';
+    if (error.includes('duplicate')) return 'DUPLICATE_LEAD';
+
+    // Default
+    return 'POST_REJECTED';
   }
 
   /**
@@ -837,19 +1375,45 @@ export class AuctionEngine {
 
   /**
    * Log transaction for audit trail
+   *
+   * @param leadId - Lead ID
+   * @param buyerId - Buyer ID
+   * @param actionType - PING, POST, or DELIVERY
+   * @param details - Transaction details including new winner/loser tracking fields:
+   *   - isWinner: Boolean indicating if this buyer won the auction
+   *   - lostReason: Why they lost (OUTBID, TIMEOUT, NO_BID, etc.)
+   *   - winningBidAmount: The winning bid amount (for analytics)
+   *   - cascadePosition: Position in cascade delivery (1 = first attempt)
+   *   - deliveryMethod: For contractors (EMAIL, WEBHOOK, DASHBOARD)
    */
   private static async logTransaction(
     leadId: string,
     buyerId: string,
-    actionType: 'PING' | 'POST',
+    actionType: 'PING' | 'POST' | 'DELIVERY',
     details: any
   ): Promise<void> {
+    // Determine status: SUCCESS, FAILED, or TIMEOUT
+    const getStatus = (): 'success' | 'failed' | 'timeout' => {
+      if (details.success) return 'success';
+      if (details.isTimeout) return 'timeout';
+      return 'failed';
+    };
+
+    const getDbStatus = (): 'SUCCESS' | 'FAILED' | 'TIMEOUT' => {
+      if (details.success) return 'SUCCESS';
+      if (details.isTimeout) return 'TIMEOUT';
+      return 'FAILED';
+    };
+
+    const status = getStatus();
+    const dbStatus = getDbStatus();
+
     const log: TransactionLog = {
       id: this.generateTransactionId(),
       leadId,
       buyerId,
       actionType,
-      status: details.success ? 'success' : 'failed',
+      status,
       payload: details.request || {},
       response: details.response,
       responseTime: details.responseTime || details.deliveryTime || 0,
@@ -871,20 +1435,104 @@ export class AuctionEngine {
           actionType,
           payload: JSON.stringify(details.request || {}),
           response: details.response ? JSON.stringify(details.response) : null,
-          status: details.success ? 'SUCCESS' : 'FAILED',
+          status: dbStatus,
           bidAmount: details.bidAmount || null,
           responseTime: details.responseTime || details.deliveryTime || 0,
           errorMessage: details.error || null,
           complianceIncluded: details.includeCompliance || false,
           trustedFormPresent: !!details.trustedFormCertId,
           jornayaPresent: !!details.jornayaLeadId,
+          // New winner/loser tracking fields (supports lead-flow.mmd diagram)
+          isWinner: details.isWinner ?? null,
+          lostReason: details.lostReason ?? null,
+          winningBidAmount: details.winningBidAmount ?? null,
+          cascadePosition: details.cascadePosition ?? null,
+          deliveryMethod: details.deliveryMethod ?? null,
         }
       });
 
-      console.log(`Transaction persisted: ${actionType} ${buyerId} -> ${details.success ? 'SUCCESS' : 'FAILED'}`);
+      logger.info('Transaction persisted', {
+        actionType,
+        buyerId,
+        status: dbStatus,
+        responseTime: details.responseTime || details.deliveryTime || 0,
+        isTimeout: details.isTimeout || false,
+      });
     } catch (error) {
       console.error('Failed to persist transaction to database:', error);
       // Don't throw - we don't want to fail the auction if logging fails
+    }
+  }
+
+  /**
+   * Update PING transactions with winner/loser status after auction completes
+   * This is called after selectWinner() to mark all PING participants
+   *
+   * WHY: PING transactions are logged before we know the winner. This updates them.
+   * WHEN: Called immediately after winner selection in runAuction()
+   * HOW: Bulk update using leadId + actionType filter, sets isWinner/lostReason
+   *
+   * @param leadId - Lead ID to update transactions for
+   * @param winningBuyerId - The buyer who won (null if no winner)
+   * @param winningBidAmount - The winning bid amount
+   * @param allBids - All bids from the auction (to determine lost reasons)
+   */
+  private static async updatePingTransactionsWithWinnerStatus(
+    leadId: string,
+    winningBuyerId: string | undefined,
+    winningBidAmount: number | undefined,
+    allBids: BidResponse[]
+  ): Promise<void> {
+    try {
+      const { prisma } = await import('../db');
+
+      // Update each PING transaction with winner/loser status
+      // Using individual updates to set correct lostReason per buyer
+      for (const bid of allBids) {
+        const isWinner = bid.buyerId === winningBuyerId;
+        let lostReason: string | null = null;
+
+        if (!isWinner) {
+          // Determine why they lost
+          if (!bid.success) {
+            // Failed to respond - check if it was a timeout
+            const errorLower = bid.error?.toLowerCase() || '';
+            const isTimeout = errorLower.includes('timeout') || errorLower.includes('abort');
+            lostReason = isTimeout ? 'TIMEOUT' : 'NO_BID';
+          } else if (bid.bidAmount <= 0) {
+            lostReason = 'NO_BID';
+          } else {
+            // They bid but lost - check why
+            lostReason = 'OUTBID';
+          }
+        }
+
+        await prisma.transaction.updateMany({
+          where: {
+            leadId,
+            buyerId: bid.buyerId,
+            actionType: 'PING',
+          },
+          data: {
+            isWinner,
+            lostReason,
+            winningBidAmount: winningBidAmount ?? null,
+          }
+        });
+      }
+
+      logger.info('Updated PING transactions with winner status', {
+        leadId,
+        winningBuyerId,
+        winningBidAmount,
+        totalBids: allBids.length
+      });
+    } catch (error) {
+      // Log but don't throw - analytics shouldn't break the auction
+      logger.error('Failed to update PING transactions with winner status', {
+        leadId,
+        error: (error as Error).message
+      });
     }
   }
 

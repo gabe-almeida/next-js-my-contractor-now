@@ -353,7 +353,17 @@ export function generatePayloadPreview(
         }
       }
 
-      // Apply transform if specified
+      // Apply valueMap if specified (database-driven value conversion)
+      // This happens BEFORE transforms - converts "within_3_months" → "1-3 Months"
+      if (mapping.valueMap && typeof value === "string") {
+        const mappedValue = mapping.valueMap[value];
+        if (mappedValue !== undefined) {
+          value = mappedValue;
+        }
+        // If no match in valueMap, keep original value
+      }
+
+      // Apply transform if specified (formatting like phone.digitsOnly)
       if (mapping.transform) {
         try {
           value = executeTransform(mapping.transform, value);
@@ -451,7 +461,17 @@ export function applyFieldMappings(
         }
       }
 
-      // Apply transform if specified
+      // Apply valueMap if specified (database-driven value conversion)
+      // This happens BEFORE transforms - converts "within_3_months" → "1-3 Months"
+      if (mapping.valueMap && typeof value === "string") {
+        const mappedValue = mapping.valueMap[value];
+        if (mappedValue !== undefined) {
+          value = mappedValue;
+        }
+        // If no match in valueMap, keep original value
+      }
+
+      // Apply transform if specified (formatting like phone.digitsOnly)
       if (mapping.transform) {
         value = executeTransform(mapping.transform, value);
       }

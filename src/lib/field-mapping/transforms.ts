@@ -279,6 +279,31 @@ export const AVAILABLE_TRANSFORMS: TransformDefinition[] = [
     example: { input: "1-3 months", output: "1_3_MONTHS" },
     acceptsTypes: ["string"],
   },
+  // Modernize-specific transforms
+  {
+    id: "modernize.buyTimeframe",
+    name: "Modernize Timeframe",
+    description: "Convert timeframe to Modernize's expected format",
+    category: "service",
+    example: { input: "within_3_months", output: "Within 3 Months" },
+    acceptsTypes: ["string"],
+  },
+  {
+    id: "modernize.numberOfWindows",
+    name: "Modernize Window Count",
+    description: "Convert window count to Modernize's expected format",
+    category: "service",
+    example: { input: "3-5", output: "3-5" },
+    acceptsTypes: ["string"],
+  },
+  {
+    id: "modernize.projectScope",
+    name: "Modernize Project Scope",
+    description: "Convert project scope to Modernize's expected format (Title Case)",
+    category: "service",
+    example: { input: "repair", output: "Repair" },
+    acceptsTypes: ["string"],
+  },
 ];
 
 /**
@@ -453,6 +478,14 @@ export function executeTransform(
         return mapRoofTypeToCode(String(value));
       case "service.timeframeCode":
         return mapTimeframeToCode(String(value));
+
+      // Modernize-specific transforms
+      case "modernize.buyTimeframe":
+        return mapModernizeBuyTimeframe(String(value));
+      case "modernize.numberOfWindows":
+        return mapModernizeNumberOfWindows(String(value));
+      case "modernize.projectScope":
+        return mapModernizeProjectScope(String(value));
 
       default:
         console.warn(`Unknown transform: ${transformId}`);
@@ -672,4 +705,79 @@ function mapTimeframeToCode(timeframe: string): string {
     "not sure": "UNSURE",
   };
   return codes[timeframe.toLowerCase()] || timeframe.toUpperCase().replace(/\s+/g, "_");
+}
+
+// ============================================================================
+// Modernize-Specific Transform Functions
+// ============================================================================
+
+/**
+ * Map our timeframe values to Modernize's expected buyTimeframe format
+ *
+ * Our form values: 'within_3_months', '3_plus_months', 'not_sure'
+ * Modernize expects: 'Immediately', 'Within 1 Month', '1-3 Months', '3-6 Months', etc.
+ */
+function mapModernizeBuyTimeframe(timeframe: string): string {
+  const mapping: Record<string, string> = {
+    // Our question flow values
+    "within_3_months": "1-3 Months",
+    "3_plus_months": "3-6 Months",
+    "not_sure": "Not Sure",
+    // Database form schema values (if used)
+    "immediately": "Immediately",
+    "1-3 months": "1-3 Months",
+    "3-6 months": "3-6 Months",
+    "6+ months": "6+ Months",
+    // Validation schema values
+    "within_1_month": "Within 1 Month",
+    "1_3_months": "1-3 Months",
+    "3_6_months": "3-6 Months",
+    "6_12_months": "6-12 Months",
+    "planning_phase": "Planning Phase",
+  };
+
+  const normalized = timeframe.toLowerCase().trim();
+  return mapping[normalized] || toTitleCase(timeframe.replace(/_/g, " "));
+}
+
+/**
+ * Map our numberOfWindows values to Modernize's expected format
+ *
+ * Our form values: '1', '2', '3-5', '6-9', '9+'
+ * Modernize expects: '1-2', '3-5', '6-10', 'More than 10'
+ */
+function mapModernizeNumberOfWindows(count: string): string {
+  const mapping: Record<string, string> = {
+    "1": "1-2",
+    "2": "1-2",
+    "3-5": "3-5",
+    "6-9": "6-10",
+    "9+": "More than 10",
+    // Database form schema values
+    "1-3": "1-2",
+    "4-6": "3-5",
+    "7-10": "6-10",
+    "11+": "More than 10",
+  };
+
+  return mapping[count] || count;
+}
+
+/**
+ * Map our projectScope values to Modernize's expected format (Title Case)
+ *
+ * Our form values: 'repair', 'install'
+ * Modernize expects: 'Repair', 'Install'
+ */
+function mapModernizeProjectScope(scope: string): string {
+  const mapping: Record<string, string> = {
+    "repair": "Repair",
+    "install": "Install",
+    "full_replacement": "Replace",
+    "installation_only": "Install",
+    "not_sure": "Not Sure",
+  };
+
+  const normalized = scope.toLowerCase().trim();
+  return mapping[normalized] || toTitleCase(scope.replace(/_/g, " "));
 }
