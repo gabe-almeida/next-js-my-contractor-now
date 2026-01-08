@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import Radar from 'radar-sdk-js';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UseRadarReturn {
   isReady: boolean;
@@ -9,7 +8,8 @@ interface UseRadarReturn {
   searchAddresses: (query: string) => Promise<any[]>;
 }
 
-// Track global initialization to handle React Strict Mode correctly
+// Store the Radar SDK instance globally after dynamic import
+let RadarSDK: any = null;
 let radarInitialized = false;
 
 export function useRadar(): UseRadarReturn {
@@ -17,22 +17,25 @@ export function useRadar(): UseRadarReturn {
   const [isLoading, setIsLoading] = useState(!radarInitialized);
   const [error, setError] = useState<string | null>(null);
   const [fallbackMode, setFallbackMode] = useState(false);
+  const initAttempted = useRef(false);
 
   useEffect(() => {
-    // Skip if already initialized globally (handles React Strict Mode)
-    if (radarInitialized) {
-      console.log('[Radar] Already initialized globally, skipping');
-      setIsReady(true);
-      setIsLoading(false);
+    // Skip if already initialized or if we've attempted init
+    if (radarInitialized || initAttempted.current) {
+      if (radarInitialized) {
+        setIsReady(true);
+        setIsLoading(false);
+      }
       return;
     }
+    initAttempted.current = true;
 
-    const initializeRadar = () => {
+    const initializeRadar = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Check if we're in browser environment
+        // Must be in browser environment
         if (typeof window === 'undefined') {
           console.log('[Radar] SSR detected, enabling fallback mode');
           setFallbackMode(true);
@@ -40,7 +43,16 @@ export function useRadar(): UseRadarReturn {
           return;
         }
 
-        // Use the correct publishable key from environment or hardcoded fallback
+        // Dynamically import Radar SDK (browser-only due to maplibre-gl dependency)
+        console.log('[Radar] Dynamically importing SDK...');
+        const RadarModule = await import('radar-sdk-js');
+        RadarSDK = RadarModule.default;
+
+        if (!RadarSDK) {
+          throw new Error('Failed to load Radar SDK');
+        }
+
+        // Get publishable key
         const publishableKey = process.env.NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY || 'prj_live_pk_91767cffe84243dd66aae8025c9c44e0e5ebce49';
 
         if (!publishableKey) {
@@ -52,8 +64,8 @@ export function useRadar(): UseRadarReturn {
 
         console.log('[Radar] Initializing SDK with key:', publishableKey.substring(0, 20) + '...');
 
-        // Initialize Radar SDK (synchronous - returns void)
-        Radar.initialize(publishableKey, {
+        // Initialize Radar SDK
+        RadarSDK.initialize(publishableKey, {
           debug: process.env.NODE_ENV === 'development',
           logLevel: 'info'
         });
@@ -84,11 +96,11 @@ export function useRadar(): UseRadarReturn {
   }, []);
 
   const searchAddresses = useCallback(async (query: string): Promise<any[]> => {
-    console.log('[Radar] searchAddresses called', { query, radarInitialized, isReady, fallbackMode });
+    console.log('[Radar] searchAddresses called', { query, radarInitialized, hasSDK: !!RadarSDK, fallbackMode });
 
-    // Use global flag to avoid stale closure issues
-    if (!radarInitialized || fallbackMode) {
-      console.log('[Radar] Not ready or in fallback mode, returning empty', { radarInitialized, fallbackMode });
+    // Check if SDK is ready
+    if (!radarInitialized || !RadarSDK || fallbackMode) {
+      console.log('[Radar] Not ready or in fallback mode, returning empty', { radarInitialized, hasSDK: !!RadarSDK, fallbackMode });
       return [];
     }
 
@@ -100,7 +112,7 @@ export function useRadar(): UseRadarReturn {
       console.log('[Radar] Calling autocomplete API for:', query);
 
       // Call the Radar autocomplete API with US addresses only
-      const result = await Radar.autocomplete({
+      const result = await RadarSDK.autocomplete({
         query: query.trim(),
         countryCode: 'US',
         layers: ['address'],
