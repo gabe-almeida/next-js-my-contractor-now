@@ -415,18 +415,23 @@ export async function POST(request: NextRequest) {
       // Process lead inline using AuctionEngine
       try {
         // Prepare lead data for auction
-        const leadDataForAuction: LeadData = {
+        // Note: complianceData is omitted as the type differs from LeadData.complianceData
+        // The compliance tokens are passed via trustedFormCertUrl/Id and jornayaLeadId
+        const leadDataForAuction = {
           id: result.id,
           serviceTypeId: serviceType.id,
+          serviceType: serviceType as any, // Prisma type differs from LeadData.ServiceType
           zipCode,
           formData: sanitizedFormData,
           ownsHome,
           timeframe,
+          status: 'PENDING',
           trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
           trustedFormCertId: complianceData?.trustedFormCertId || undefined,
           jornayaLeadId: complianceData?.jornayaLeadId || undefined,
-          complianceData: leadComplianceData || undefined,
-        };
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt,
+        } as LeadData;
 
         console.log('[API /api/leads] Starting inline auction for lead:', result.id);
         auctionResult = await AuctionEngine.runAuction(leadDataForAuction);
@@ -449,8 +454,7 @@ export async function POST(request: NextRequest) {
           data: {
             status: newStatus,
             winningBuyerId: auctionResult.winningBuyerId || null,
-            soldAmount: auctionResult.winningBidAmount ? auctionResult.winningBidAmount.toString() : null,
-            processedAt: new Date(),
+            winningBid: auctionResult.winningBidAmount || null,
           },
         });
 
