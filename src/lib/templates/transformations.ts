@@ -125,6 +125,19 @@ export class Transformations {
 
   // Phone number transformations
   static readonly phone = {
+    /**
+     * Strip all non-digit characters from phone number
+     *
+     * WHY: Many APIs (like Modernize) require phone numbers as digits only
+     * WHEN: Use when target API expects raw digits without formatting
+     * HOW: Removes all non-numeric characters using regex
+     *
+     * @example "(555) 123-4567" → "5551234567"
+     * @example "+1-555-123-4567" → "15551234567"
+     */
+    digitsOnly: (value: any): string => {
+      return String(value).replace(/\D/g, '');
+    },
     normalize: (value: any): string => {
       const digits = String(value).replace(/\D/g, '');
       if (digits.length === 10) {
