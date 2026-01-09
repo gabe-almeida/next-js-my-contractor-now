@@ -169,8 +169,8 @@ export default function DynamicServicePage() {
           ownsHome: answers.isHomeowner === 'yes',
           timeframe: answers.timeline,
           complianceData: {
-            // TCPA consent from form - NEVER hardcode
-            tcpaConsent: answers.tcpaConsent?.consented ?? false,
+            // TCPA consent from form - uses TCPAConsent object from createTCPAConsent()
+            tcpaConsent: answers.tcpaConsent?.isAccepted ?? false,
             tcpaTimestamp: answers.tcpaConsent?.timestamp || new Date().toISOString(),
             tcpaConsentText: answers.tcpaConsent?.text || 'TCPA consent not properly captured',
             // Marketing attribution data (UTM params, click IDs)

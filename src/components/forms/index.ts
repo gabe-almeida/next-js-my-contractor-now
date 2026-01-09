@@ -1,6 +1,5 @@
-// Main form components
-export { DynamicForm } from './dynamic/DynamicForm';
-export { FormSection } from './dynamic/FormSection';
+// Main form component is at @/components/DynamicForm.tsx (not in this directory)
+// The forms/dynamic/ directory was removed as it was unused legacy code.
 
 // Base form components
 export { FormField, EnhancedFormField } from './base/FormField';
