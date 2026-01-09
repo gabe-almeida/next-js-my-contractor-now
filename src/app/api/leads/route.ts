@@ -98,16 +98,27 @@ export async function POST(request: NextRequest) {
     // Sanitize form data to prevent XSS attacks
     const sanitizedFormData = sanitizeFormData(formData);
 
-    // Validate ZIP code with Radar.com (skip in test mode)
+    // Validate ZIP code with Radar.com (skip in test mode or if API key not configured)
     if (process.env.NODE_ENV !== 'test' && process.env.SKIP_RADAR_VALIDATION !== 'true') {
-      const zipValidation = await RadarService.validateZipCode(zipCode);
-      if (!zipValidation.isValid) {
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid ZIP code',
-          message: 'Please enter a valid US ZIP code',
-          timestamp: new Date().toISOString(),
-        }, { status: 400 });
+      try {
+        const zipValidation = await RadarService.validateZipCode(zipCode);
+        if (!zipValidation.isValid) {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid ZIP code',
+            message: 'Please enter a valid US ZIP code',
+            timestamp: new Date().toISOString(),
+          }, { status: 400 });
+        }
+      } catch (radarError: any) {
+        // If Radar API key is not configured, skip validation
+        // Address was already validated client-side via autocomplete
+        if (radarError?.code === 'RADAR_NOT_CONFIGURED') {
+          console.warn('Radar API key not configured, skipping server-side ZIP validation');
+        } else {
+          console.error('Radar validation error:', radarError);
+          // Don't block submission for Radar API errors - address was validated client-side
+        }
       }
     }
 
