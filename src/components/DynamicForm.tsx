@@ -88,9 +88,19 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
       navigator.userAgent
     );
 
+    // Extract firstName/lastName from nameInfo if present (for forms with separate name_fields step)
+    let nameData = {};
+    if (answers.nameInfo && typeof answers.nameInfo === 'object') {
+      nameData = {
+        firstName: answers.nameInfo.firstName,
+        lastName: answers.nameInfo.lastName
+      };
+    }
+
     const allAnswers = {
       ...answers,
       ...formData,
+      ...nameData,  // Override formData with actual name values from nameInfo step
       tcpaConsent
     };
     await handleComplete(allAnswers);
