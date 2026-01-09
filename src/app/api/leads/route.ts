@@ -71,6 +71,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // DEBUG: Log raw request body received by server
+    console.log('[API /api/leads] DEBUG - Raw request body:', {
+      'formData.firstName': body.formData?.firstName,
+      'formData.lastName': body.formData?.lastName,
+      'formData.email': body.formData?.email,
+      'formData.phone': body.formData?.phone,
+      'formData.nameInfo': body.formData?.nameInfo,
+      serviceTypeId: body.serviceTypeId,
+      zipCode: body.zipCode,
+    });
+
     // Validate the request body
     const validationResult = createLeadSchema.safeParse(body);
     if (!validationResult.success) {
@@ -189,16 +200,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate complete form data against service-specific schema (using sanitized data)
-    const formValidation = serviceSchema.safeParse({
+    // DEBUG: Log data being validated against service schema
+    const dataToValidate = {
       zipCode,
       ownsHome,
       timeframe,
       ...sanitizedFormData,
       complianceData,
+    };
+    console.log('[API /api/leads] DEBUG - Data being validated:', {
+      firstName: dataToValidate.firstName,
+      lastName: dataToValidate.lastName,
+      email: dataToValidate.email,
+      phone: dataToValidate.phone,
+      zipCode: dataToValidate.zipCode,
+      ownsHome: dataToValidate.ownsHome,
+      timeframe: dataToValidate.timeframe,
+      'typeof firstName': typeof dataToValidate.firstName,
+      'typeof lastName': typeof dataToValidate.lastName,
     });
 
+    // Validate complete form data against service-specific schema (using sanitized data)
+    const formValidation = serviceSchema.safeParse(dataToValidate);
+
     if (!formValidation.success) {
+      console.log('[API /api/leads] DEBUG - Validation FAILED:', {
+        errors: formValidation.error.errors,
+        dataKeys: Object.keys(dataToValidate),
+      });
       return NextResponse.json({
         success: false,
         error: 'Invalid form data',
