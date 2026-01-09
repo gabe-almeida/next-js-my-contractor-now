@@ -597,9 +597,11 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      {/* Form wrapper required for TrustedForm SDK to inject hidden certificate input */}
+      <form id="lead-form" onSubmit={(e) => e.preventDefault()}>
+        <Header />
 
-      {/* Progress Bar */}
+        {/* Progress Bar */}
       <div className="bg-gray-100 py-4">
         <div className="max-w-2xl mx-auto px-4">
           <div className="flex items-center justify-between mb-2">
@@ -640,6 +642,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
           </div>
         </div>
       </div>
+      </form>
     </div>
   );
 }
