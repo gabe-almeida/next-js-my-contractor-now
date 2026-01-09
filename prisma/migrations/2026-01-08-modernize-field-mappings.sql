@@ -84,10 +84,9 @@ SET field_mappings = '{
       "includeInPost": true,
       "description": "Project timeline - mapped to Modernize format",
       "valueMap": {
-        "within_3_months": "1-6 months",
+        "within_3_months": "Immediately",
         "3_plus_months": "1-6 months",
-        "not_sure": "Don''t know",
-        "immediately": "Immediately"
+        "not_sure": "Don''t know"
       }
     },
     {
@@ -107,9 +106,9 @@ SET field_mappings = '{
       "targetField": "NumberOfWindows",
       "required": true,
       "order": 4,
-      "includeInPing": false,
+      "includeInPing": true,
       "includeInPost": true,
-      "description": "Number of windows - POST only per Modernize API docs",
+      "description": "Number of windows for routing and lead data",
       "valueMap": {
         "1": "1",
         "2": "2",
@@ -124,9 +123,9 @@ SET field_mappings = '{
       "targetField": "WindowsProjectScope",
       "required": true,
       "order": 5,
-      "includeInPing": false,
+      "includeInPing": true,
       "includeInPost": true,
-      "description": "Project type - Install/Repair - POST only per Modernize API docs",
+      "description": "Project type - Install/Repair for routing and lead data",
       "valueMap": {
         "repair": "Repair",
         "install": "Install"
@@ -235,10 +234,14 @@ SET field_mappings = '{
       "description": "Transaction-level identifier"
     }
   ],
-  "staticFields": {
+  "pingStaticFields": {
+    "tagId": "204670250",
+    "service": "WINDOWS"
+  },
+  "postStaticFields": {
     "tagId": "204670250",
     "service": "WINDOWS",
-    "homePhoneConsentLanguage": "By clicking Submit, I agree to receive calls and texts, including by automated dialing systems, from My Contractor Now and its partners regarding home improvement services at the phone number provided. I understand consent is not required to make a purchase."
+    "homePhoneConsentLanguage": "By submitting your information, you authorize My Contractor Now and up to four of its affiliated Home Improvement Companies to contact you at the telephone number and email address provided — including through automated dialing systems, artificial/prerecorded voice, and SMS/MMS text messages — regarding your inquiry. You acknowledge and agree that this consent allows us to contact you even if your telephone number is on a federal, state, or corporate Do-Not-Call (DNC) registry. Message and data rates may apply; message frequency may vary. Your consent is not required as a condition of purchase, and you may revoke your consent at any time (e.g., by replying STOP to any text, etc.) By submitting, you agree to our Privacy Policy and Terms and Conditions."
   },
   "meta": {
     "createdAt": "2026-01-08T00:00:00.000Z",
@@ -276,10 +279,9 @@ SET field_mappings = '{
       "includeInPost": true,
       "description": "Project timeline - mapped to Modernize format",
       "valueMap": {
-        "within_3_months": "1-6 months",
+        "within_3_months": "Immediately",
         "3_plus_months": "1-6 months",
-        "not_sure": "Don''t know",
-        "immediately": "Immediately"
+        "not_sure": "Don''t know"
       }
     },
     {
@@ -412,10 +414,14 @@ SET field_mappings = '{
       "description": "Transaction-level identifier"
     }
   ],
-  "staticFields": {
+  "pingStaticFields": {
+    "tagId": "204670250",
+    "service": "BATH_REMODEL"
+  },
+  "postStaticFields": {
     "tagId": "204670250",
     "service": "BATH_REMODEL",
-    "homePhoneConsentLanguage": "By clicking Submit, I agree to receive calls and texts, including by automated dialing systems, from My Contractor Now and its partners regarding home improvement services at the phone number provided. I understand consent is not required to make a purchase."
+    "homePhoneConsentLanguage": "By submitting your information, you authorize My Contractor Now and up to four of its affiliated Home Improvement Companies to contact you at the telephone number and email address provided — including through automated dialing systems, artificial/prerecorded voice, and SMS/MMS text messages — regarding your inquiry. You acknowledge and agree that this consent allows us to contact you even if your telephone number is on a federal, state, or corporate Do-Not-Call (DNC) registry. Message and data rates may apply; message frequency may vary. Your consent is not required as a condition of purchase, and you may revoke your consent at any time (e.g., by replying STOP to any text, etc.) By submitting, you agree to our Privacy Policy and Terms and Conditions."
   },
   "meta": {
     "createdAt": "2026-01-08T00:00:00.000Z",
@@ -453,10 +459,9 @@ SET field_mappings = '{
       "includeInPost": true,
       "description": "Project timeline - mapped to Modernize format",
       "valueMap": {
-        "within_3_months": "1-6 months",
+        "within_3_months": "Immediately",
         "3_plus_months": "1-6 months",
-        "not_sure": "Don''t know",
-        "immediately": "Immediately"
+        "not_sure": "Don''t know"
       }
     },
     {
@@ -591,10 +596,14 @@ SET field_mappings = '{
       "description": "Transaction-level identifier"
     }
   ],
-  "staticFields": {
+  "pingStaticFields": {
+    "tagId": "204670250",
+    "service": "HVAC"
+  },
+  "postStaticFields": {
     "tagId": "204670250",
     "service": "HVAC",
-    "homePhoneConsentLanguage": "By clicking Submit, I agree to receive calls and texts, including by automated dialing systems, from My Contractor Now and its partners regarding home improvement services at the phone number provided. I understand consent is not required to make a purchase."
+    "homePhoneConsentLanguage": "By submitting your information, you authorize My Contractor Now and up to four of its affiliated Home Improvement Companies to contact you at the telephone number and email address provided — including through automated dialing systems, artificial/prerecorded voice, and SMS/MMS text messages — regarding your inquiry. You acknowledge and agree that this consent allows us to contact you even if your telephone number is on a federal, state, or corporate Do-Not-Call (DNC) registry. Message and data rates may apply; message frequency may vary. Your consent is not required as a condition of purchase, and you may revoke your consent at any time (e.g., by replying STOP to any text, etc.) By submitting, you agree to our Privacy Policy and Terms and Conditions."
   },
   "meta": {
     "createdAt": "2026-01-08T00:00:00.000Z",
@@ -632,10 +641,9 @@ SET field_mappings = '{
       "includeInPost": true,
       "description": "Project timeline - mapped to Modernize format",
       "valueMap": {
-        "within_3_months": "1-6 months",
+        "within_3_months": "Immediately",
         "3_plus_months": "1-6 months",
-        "not_sure": "Don''t know",
-        "immediately": "Immediately"
+        "not_sure": "Don''t know"
       }
     },
     {
@@ -767,10 +775,14 @@ SET field_mappings = '{
       "description": "Transaction-level identifier"
     }
   ],
-  "staticFields": {
+  "pingStaticFields": {
+    "tagId": "204670250",
+    "service": "ROOFING_ASPHALT"
+  },
+  "postStaticFields": {
     "tagId": "204670250",
     "service": "ROOFING_ASPHALT",
-    "homePhoneConsentLanguage": "By clicking Submit, I agree to receive calls and texts, including by automated dialing systems, from My Contractor Now and its partners regarding home improvement services at the phone number provided. I understand consent is not required to make a purchase."
+    "homePhoneConsentLanguage": "By submitting your information, you authorize My Contractor Now and up to four of its affiliated Home Improvement Companies to contact you at the telephone number and email address provided — including through automated dialing systems, artificial/prerecorded voice, and SMS/MMS text messages — regarding your inquiry. You acknowledge and agree that this consent allows us to contact you even if your telephone number is on a federal, state, or corporate Do-Not-Call (DNC) registry. Message and data rates may apply; message frequency may vary. Your consent is not required as a condition of purchase, and you may revoke your consent at any time (e.g., by replying STOP to any text, etc.) By submitting, you agree to our Privacy Policy and Terms and Conditions."
   },
   "meta": {
     "createdAt": "2026-01-08T00:00:00.000Z",

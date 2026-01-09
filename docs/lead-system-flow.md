@@ -216,7 +216,8 @@ flowchart TB
         FMC["FieldMappingConfig {
           version: 1.0,
           mappings: FieldMapping[],
-          staticFields: {},
+          pingStaticFields: {tagId, service},
+          postStaticFields: {tagId, service, homePhoneConsentLanguage},
           meta: {}
         }"]
     end

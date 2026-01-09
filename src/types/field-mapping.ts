@@ -73,8 +73,25 @@ export interface FieldMappingConfig {
   /** Array of field mappings */
   mappings: FieldMapping[];
 
-  /** Static fields always included in payload */
-  staticFields: Record<string, string | number | boolean>;
+  /**
+   * Static fields always included in payload (LEGACY - deprecated)
+   * Use pingStaticFields/postStaticFields instead for PING/POST differentiation
+   */
+  staticFields?: Record<string, string | number | boolean>;
+
+  /**
+   * Static fields included ONLY in PING requests
+   * WHY: PING typically needs fewer fields (e.g., tagId, service for routing)
+   * WHEN: Applied when building PING payload
+   */
+  pingStaticFields?: Record<string, string | number | boolean>;
+
+  /**
+   * Static fields included ONLY in POST requests
+   * WHY: POST needs all static fields including consent language (homePhoneConsentLanguage)
+   * WHEN: Applied when building POST payload
+   */
+  postStaticFields?: Record<string, string | number | boolean>;
 
   /** Configuration metadata */
   meta: {
@@ -292,7 +309,8 @@ export function createEmptyFieldMappingConfig(): FieldMappingConfig {
   return {
     version: "1.0",
     mappings: [],
-    staticFields: {},
+    pingStaticFields: {},
+    postStaticFields: {},
     meta: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

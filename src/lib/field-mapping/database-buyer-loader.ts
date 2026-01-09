@@ -645,7 +645,11 @@ export function toServiceConfig(
   }
 
   // Include static fields as additionalFields in the templates
-  const staticFields = dbConfig.fieldMappingConfig.staticFields || {};
+  // Use pingStaticFields for PING and postStaticFields for POST
+  // Fallback to legacy staticFields for backward compatibility with old configs
+  const { pingStaticFields, postStaticFields, staticFields } = dbConfig.fieldMappingConfig;
+  const pingFields = pingStaticFields || staticFields || {};
+  const postFields = postStaticFields || staticFields || {};
 
   return {
     buyerId: dbConfig.buyerId,
@@ -663,12 +667,12 @@ export function toServiceConfig(
     pingTemplate: {
       mappings: pingMappings,
       includeCompliance: dbConfig.requiresTrustedForm || dbConfig.requiresJornaya,
-      additionalFields: staticFields,
+      additionalFields: pingFields,
     },
     postTemplate: {
       mappings: postMappings,
       includeCompliance: true, // Always include compliance in POST
-      additionalFields: staticFields,
+      additionalFields: postFields,
     },
     webhookConfig: {
       pingUrl: dbConfig.webhookConfig.pingUrl,
