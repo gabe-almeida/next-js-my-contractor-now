@@ -33,7 +33,9 @@ const SHARED_TRANSFORMS = new Set([
   // Date
   'date.isoDate', 'date.usDate', 'date.usDateShort', 'date.timestamp', 'date.timestampMs', 'date.iso8601',
   // Number
-  'number.integer', 'number.round', 'number.twoDecimals', 'number.currency', 'number.percentage'
+  'number.integer', 'number.round', 'number.twoDecimals', 'number.currency', 'number.percentage',
+  // Address
+  'address.stateAbbrev'
 ]);
 
 /**

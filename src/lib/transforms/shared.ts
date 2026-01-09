@@ -253,6 +253,42 @@ export function dateToISO8601(value: unknown): string {
 }
 
 // =============================================================================
+// Address/State Transforms
+// =============================================================================
+
+/**
+ * US State name to abbreviation mapping
+ */
+const STATE_ABBREVIATIONS: Record<string, string> = {
+  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
+  'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA',
+  'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA',
+  'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+  'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO',
+  'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH',
+  'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT',
+  'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
+  'district of columbia': 'DC', 'puerto rico': 'PR', 'guam': 'GU', 'virgin islands': 'VI'
+};
+
+/**
+ * Convert state name to 2-letter abbreviation
+ * WHY: Modernize and other buyers expect state as 2-letter code
+ * WHEN: Processing address.state field
+ * HOW: Lookup in map, return original if already abbreviated or not found
+ */
+export function stateToAbbreviation(value: unknown): string {
+  const str = String(value).trim();
+  // If already 2 letters, assume it's an abbreviation
+  if (str.length === 2) return str.toUpperCase();
+  // Look up full name
+  const abbrev = STATE_ABBREVIATIONS[str.toLowerCase()];
+  return abbrev || str;
+}
+
+// =============================================================================
 // Number Transforms
 // =============================================================================
 
@@ -382,6 +418,10 @@ export function executeTransform(transformId: string, value: unknown): unknown {
       return toCurrency(value);
     case 'number.percentage':
       return toPercentage(value);
+
+    // Address transforms
+    case 'address.stateAbbrev':
+      return stateToAbbreviation(value);
 
     default:
       console.warn(`Unknown transform: ${transformId}, returning original value`);
