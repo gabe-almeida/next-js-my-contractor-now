@@ -21,7 +21,7 @@ interface FormSchemaField {
   type: string;
   label: string;
   required?: boolean;
-  options?: string[];
+  options?: (string | { value: string; label: string })[];
   validation?: {
     min?: number;
     max?: number;
@@ -83,8 +83,12 @@ function buildFieldValidator(field: FormSchemaField): z.ZodTypeAny {
     case 'select':
     case 'radio':
       if (field.options && field.options.length > 0) {
-        // Create enum from options
-        validator = z.enum(field.options as [string, ...string[]]);
+        // Extract values from options (supports both string[] and {value, label}[] formats)
+        const optionValues = field.options.map(opt =>
+          typeof opt === 'string' ? opt : (opt as { value: string }).value
+        );
+        // Create enum from option values
+        validator = z.enum(optionValues as [string, ...string[]]);
       } else {
         // No options defined, accept any string
         validator = z.string();
