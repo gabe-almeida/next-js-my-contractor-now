@@ -1,0 +1,14 @@
+# Render ignore file - reduce upload size
+node_modules
+.git
+*.md
+*.log
+.env*
+tests/
+__tests__/
+coverage/
+.next/cache
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
