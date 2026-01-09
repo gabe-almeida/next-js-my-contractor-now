@@ -27,7 +27,14 @@ export interface QuestionFlow {
   questions: { [key: string]: Question };
 }
 
+/**
+ * @deprecated Use database-driven flows via /api/services/[slug]/flow instead
+ * These hardcoded flows are kept only for backwards compatibility during migration.
+ * The database formSchema in ServiceType.formSchema is the source of truth.
+ */
+
 // Windows service flow configuration
+/** @deprecated Use API: GET /api/services/windows/flow */
 export const windowsFlow: QuestionFlow = {
   serviceType: 'windows',
   steps: [
@@ -123,7 +130,8 @@ export const windowsFlow: QuestionFlow = {
   }
 };
 
-// Roofing service flow configuration  
+// Roofing service flow configuration
+/** @deprecated Use API: GET /api/services/roofing/flow */
 export const roofingFlow: QuestionFlow = {
   serviceType: 'roofing',
   steps: [
@@ -232,6 +240,7 @@ export const roofingFlow: QuestionFlow = {
 };
 
 // Bathroom service flow configuration
+/** @deprecated Use API: GET /api/services/bathrooms/flow */
 export const bathroomFlow: QuestionFlow = {
   serviceType: 'bathrooms',
   steps: [
@@ -334,6 +343,7 @@ export const bathroomFlow: QuestionFlow = {
 };
 
 // Question flow registry
+/** @deprecated Use API: GET /api/services/[slug]/flow instead */
 export const questionFlows: { [key: string]: QuestionFlow } = {
   windows: windowsFlow,
   roofing: roofingFlow,
@@ -341,6 +351,11 @@ export const questionFlows: { [key: string]: QuestionFlow } = {
 };
 
 // Helper functions
+/**
+ * @deprecated Use API: GET /api/services/[slug]/flow instead
+ * This function returns hardcoded flows. For dynamic database-driven flows,
+ * fetch from /api/services/[slug]/flow which reads from ServiceType.formSchema
+ */
 export function getQuestionFlow(serviceType: string): QuestionFlow | null {
   return questionFlows[serviceType] || null;
 }

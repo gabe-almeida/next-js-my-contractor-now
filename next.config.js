@@ -80,6 +80,21 @@ const nextConfig = {
         source: '/api/ws',
         destination: '/api/websocket',
       },
+      // Legacy service routes → dynamic service page
+      // WHY: Backward compatibility for existing bookmarks/links
+      // The new /services/[slug] pattern handles all services dynamically
+      {
+        source: '/windows',
+        destination: '/services/windows',
+      },
+      {
+        source: '/roofing',
+        destination: '/services/roofing',
+      },
+      {
+        source: '/bathrooms',
+        destination: '/services/bathrooms',
+      },
     ];
   },
   webpack: (config, { isServer }) => {

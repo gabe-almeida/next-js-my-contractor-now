@@ -4,12 +4,13 @@
  * Provides safe decimal arithmetic for money operations
  */
 
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
+type DecimalType = InstanceType<typeof Decimal>;
 
 /**
  * Convert any value to Decimal safely
  */
-export function toDecimal(value: any): Decimal {
+export function toDecimal(value: any): DecimalType {
   if (value instanceof Decimal) {
     return value;
   }
@@ -26,7 +27,7 @@ export function toDecimal(value: any): Decimal {
 /**
  * Convert Decimal to number for legacy APIs
  */
-export function toNumber(value: Decimal | number | null | undefined): number {
+export function toNumber(value: DecimalType | number | null | undefined): number {
   if (value === null || value === undefined) {
     return 0;
   }
@@ -39,7 +40,7 @@ export function toNumber(value: Decimal | number | null | undefined): number {
 /**
  * Convert Decimal to string for database storage
  */
-export function toDecimalString(value: Decimal | number | null | undefined): string {
+export function toDecimalString(value: DecimalType | number | null | undefined): string {
   if (value === null || value === undefined) {
     return '0.00';
   }
@@ -52,7 +53,7 @@ export function toDecimalString(value: Decimal | number | null | undefined): str
 /**
  * Find maximum bid from array of bid amounts
  */
-export function maxBid(bids: (Decimal | number)[]): Decimal {
+export function maxBid(bids: (DecimalType | number)[]): DecimalType {
   if (bids.length === 0) {
     return new Decimal(0);
   }
@@ -64,7 +65,7 @@ export function maxBid(bids: (Decimal | number)[]): Decimal {
 /**
  * Find minimum bid from array of bid amounts
  */
-export function minBid(bids: (Decimal | number)[]): Decimal {
+export function minBid(bids: (DecimalType | number)[]): DecimalType {
   if (bids.length === 0) {
     return new Decimal(0);
   }
@@ -77,9 +78,9 @@ export function minBid(bids: (Decimal | number)[]): Decimal {
  * Check if bid is within valid range
  */
 export function isBidInRange(
-  bidAmount: Decimal | number,
-  minBid: Decimal | number,
-  maxBid: Decimal | number
+  bidAmount: DecimalType | number,
+  minBid: DecimalType | number,
+  maxBid: DecimalType | number
 ): boolean {
   const bid = toDecimal(bidAmount);
   const min = toDecimal(minBid);
@@ -92,10 +93,10 @@ export function isBidInRange(
  * Clamp bid to valid range
  */
 export function clampBid(
-  bidAmount: Decimal | number,
-  minBid: Decimal | number,
-  maxBid: Decimal | number
-): Decimal {
+  bidAmount: DecimalType | number,
+  minBid: DecimalType | number,
+  maxBid: DecimalType | number
+): DecimalType {
   const bid = toDecimal(bidAmount);
   const min = toDecimal(minBid);
   const max = toDecimal(maxBid);
@@ -112,7 +113,7 @@ export function clampBid(
 /**
  * Compare two bid amounts
  */
-export function compareBids(bid1: Decimal | number, bid2: Decimal | number): number {
+export function compareBids(bid1: DecimalType | number, bid2: DecimalType | number): number {
   const decimal1 = toDecimal(bid1);
   const decimal2 = toDecimal(bid2);
 
@@ -124,15 +125,15 @@ export function compareBids(bid1: Decimal | number, bid2: Decimal | number): num
 /**
  * Check if two bids are equal
  */
-export function bidsEqual(bid1: Decimal | number, bid2: Decimal | number): boolean {
+export function bidsEqual(bid1: DecimalType | number, bid2: DecimalType | number): boolean {
   return toDecimal(bid1).equals(toDecimal(bid2));
 }
 
 /**
  * Add multiple bid amounts together
  */
-export function sumBids(bids: (Decimal | number)[]): Decimal {
-  return bids.reduce<Decimal>((sum, bid) => {
+export function sumBids(bids: (DecimalType | number)[]): DecimalType {
+  return bids.reduce<DecimalType>((sum, bid) => {
     return sum.plus(toDecimal(bid));
   }, new Decimal(0));
 }
@@ -140,7 +141,7 @@ export function sumBids(bids: (Decimal | number)[]): Decimal {
 /**
  * Calculate average bid amount
  */
-export function averageBid(bids: (Decimal | number)[]): Decimal {
+export function averageBid(bids: (DecimalType | number)[]): DecimalType {
   if (bids.length === 0) {
     return new Decimal(0);
   }
@@ -152,14 +153,14 @@ export function averageBid(bids: (Decimal | number)[]): Decimal {
 /**
  * Round to 2 decimal places (currency precision)
  */
-export function roundCurrency(amount: Decimal | number): Decimal {
+export function roundCurrency(amount: DecimalType | number): DecimalType {
   return toDecimal(amount).toDecimalPlaces(2);
 }
 
 /**
  * Format as currency string
  */
-export function formatCurrency(amount: Decimal | number, currencySymbol: string = '$'): string {
+export function formatCurrency(amount: DecimalType | number, currencySymbol: string = '$'): string {
   const decimal = toDecimal(amount).toDecimalPlaces(2);
   return `${currencySymbol}${decimal.toString()}`;
 }
@@ -167,7 +168,7 @@ export function formatCurrency(amount: Decimal | number, currencySymbol: string 
 /**
  * Parse currency string to Decimal
  */
-export function parseCurrency(currencyString: string): Decimal {
+export function parseCurrency(currencyString: string): DecimalType {
   // Remove currency symbols and commas
   const cleanString = currencyString.replace(/[$,]/g, '').trim();
   return toDecimal(cleanString);

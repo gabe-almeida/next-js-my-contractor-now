@@ -333,6 +333,7 @@ export function createFieldMapping(
     sourceField: partial.sourceField,
     targetField: partial.targetField,
     transform: partial.transform,
+    valueMap: partial.valueMap,
     required: partial.required ?? true,
     defaultValue: partial.defaultValue,
     description: partial.description,

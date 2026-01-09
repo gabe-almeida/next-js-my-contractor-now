@@ -240,6 +240,69 @@ Before creating new code, check:
 - `src/lib/logger.ts` - Centralized logging
 - `src/lib/security/` - Encryption and webhook signatures
 
+## 🗄️ Production Database Access
+
+**Supabase PostgreSQL (My Contractor Now)**
+
+```
+Host: db.cnogfaqqilmutqhpjhgl.supabase.co
+Port: 6543
+Database: postgres
+User: postgres
+Password: CgDWlr8Bk9O6DVoX
+```
+
+**Connection String:**
+```
+postgres://postgres:CgDWlr8Bk9O6DVoX@db.cnogfaqqilmutqhpjhgl.supabase.co:6543/postgres
+```
+
+**Push schema to production:**
+```bash
+DATABASE_URL="postgres://postgres:CgDWlr8Bk9O6DVoX@db.cnogfaqqilmutqhpjhgl.supabase.co:6543/postgres" npx prisma db push
+```
+
+**Generate Prisma client after schema changes:**
+```bash
+npx prisma generate
+```
+
+## 🔄 Buyer Field Mapping System
+
+**Dynamic configuration is stored in the database, NOT hardcoded:**
+
+- Buyer configurations: `Buyer` table
+- Service-specific configs: `BuyerServiceConfig` table
+- Field mappings: `fieldMappings` JSON column in `BuyerServiceConfig`
+
+**FieldMappingConfig JSON structure:**
+```json
+{
+  "version": "1.0",
+  "mappings": [
+    {
+      "id": "unique-id",
+      "sourceField": "zipCode",
+      "targetField": "postalCode",
+      "transform": "none",
+      "required": true,
+      "includeInPing": true,
+      "includeInPost": true
+    }
+  ],
+  "staticFields": {
+    "tagId": "204670250",
+    "service": "WINDOWS"
+  },
+  "meta": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+**Available transforms:** `boolean.yesNo`, `boolean.trueFalse`, `phone.e164`, `string.titleCase`, `string.uppercase`
+
 <!-- END_PROJECT_NOTES -->
 
 ---
