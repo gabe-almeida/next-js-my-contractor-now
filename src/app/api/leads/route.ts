@@ -209,15 +209,15 @@ export async function POST(request: NextRequest) {
       complianceData,
     };
     console.log('[API /api/leads] DEBUG - Data being validated:', {
-      firstName: dataToValidate.firstName,
-      lastName: dataToValidate.lastName,
-      email: dataToValidate.email,
-      phone: dataToValidate.phone,
+      firstName: (dataToValidate as any).firstName,
+      lastName: (dataToValidate as any).lastName,
+      email: (dataToValidate as any).email,
+      phone: (dataToValidate as any).phone,
       zipCode: dataToValidate.zipCode,
       ownsHome: dataToValidate.ownsHome,
       timeframe: dataToValidate.timeframe,
-      'typeof firstName': typeof dataToValidate.firstName,
-      'typeof lastName': typeof dataToValidate.lastName,
+      'typeof firstName': typeof (dataToValidate as any).firstName,
+      'typeof lastName': typeof (dataToValidate as any).lastName,
     });
 
     // Validate complete form data against service-specific schema (using sanitized data)
