@@ -393,8 +393,15 @@ export function generatePayloadPreview(
     }
   }
 
-  // Add static fields to POST
-  for (const [key, value] of Object.entries(config.staticFields)) {
+  // Add static fields to payloads
+  // Support new pingStaticFields/postStaticFields structure with fallback to legacy staticFields
+  const pingStaticFields = config.pingStaticFields || config.staticFields || {};
+  const postStaticFields = config.postStaticFields || config.staticFields || {};
+
+  for (const [key, value] of Object.entries(pingStaticFields)) {
+    setNestedValue(pingPayload, key, value);
+  }
+  for (const [key, value] of Object.entries(postStaticFields)) {
     setNestedValue(postPayload, key, value);
   }
 
@@ -412,7 +419,7 @@ export function generatePayloadPreview(
     stats: {
       pingFieldCount: Object.keys(pingPayload).length,
       postFieldCount: Object.keys(postPayload).length,
-      staticFieldCount: Object.keys(config.staticFields).length,
+      staticFieldCount: Object.keys(pingStaticFields).length + Object.keys(postStaticFields).length,
       complianceFieldCount: complianceFields.length,
     },
   };
@@ -487,9 +494,16 @@ export function applyFieldMappings(
     }
   }
 
-  // Add static fields (POST only)
-  if (payloadType === "post") {
-    for (const [key, value] of Object.entries(config.staticFields)) {
+  // Add static fields based on payload type
+  // Support new pingStaticFields/postStaticFields structure with fallback to legacy staticFields
+  if (payloadType === "ping") {
+    const pingStatic = config.pingStaticFields || config.staticFields || {};
+    for (const [key, value] of Object.entries(pingStatic)) {
+      setNestedValue(payload, key, value);
+    }
+  } else {
+    const postStatic = config.postStaticFields || config.staticFields || {};
+    for (const [key, value] of Object.entries(postStatic)) {
       setNestedValue(payload, key, value);
     }
   }

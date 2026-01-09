@@ -162,7 +162,7 @@ export function PayloadPreview({
 
       {/* Stats */}
       <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
-        <div className="flex items-center gap-6 text-xs text-gray-600">
+        <div className="flex items-center gap-4 text-xs text-gray-600 flex-wrap">
           <span>
             <strong>{preview.stats.pingFieldCount}</strong> PING fields
           </span>
@@ -173,7 +173,7 @@ export function PayloadPreview({
             <strong>{preview.stats.staticFieldCount}</strong> static fields
           </span>
           <span>
-            <strong>{preview.stats.complianceFieldCount}</strong> compliance fields
+            <strong>{preview.stats.complianceFieldCount}</strong> compliance
           </span>
         </div>
       </div>

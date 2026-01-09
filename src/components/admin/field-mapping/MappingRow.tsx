@@ -243,6 +243,73 @@ export function MappingRow({
               className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             />
           </div>
+
+          {/* Value Mappings */}
+          <div className="border-t border-gray-200 pt-3 mt-3">
+            <label className="block text-xs font-medium text-gray-500 mb-2">
+              Value Mappings (Form Value → Buyer Value)
+            </label>
+            <p className="text-xs text-gray-400 mb-2">
+              Convert form values to buyer-expected values (applied before transforms)
+            </p>
+
+            <div className="space-y-2">
+              {Object.entries(mapping.valueMap || {}).map(([sourceVal, targetVal]) => (
+                <div key={sourceVal} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={sourceVal}
+                    readOnly
+                    className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 bg-gray-50 font-mono"
+                    placeholder="form_value"
+                  />
+                  <span className="text-gray-400 text-xs">→</span>
+                  <input
+                    type="text"
+                    value={String(targetVal)}
+                    onChange={(e) => {
+                      const newValueMap = { ...mapping.valueMap };
+                      newValueMap[sourceVal] = e.target.value;
+                      handleChange('valueMap', newValueMap);
+                    }}
+                    disabled={disabled}
+                    className="flex-1 text-xs border border-gray-300 rounded px-2 py-1 font-mono"
+                    placeholder="buyer_value"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newValueMap = { ...mapping.valueMap };
+                      delete newValueMap[sourceVal];
+                      handleChange('valueMap', Object.keys(newValueMap).length > 0 ? newValueMap : undefined);
+                    }}
+                    disabled={disabled}
+                    className="text-red-500 hover:text-red-700 p-1 text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const sourceVal = prompt('Enter form value (e.g., within_3_months):');
+                  if (sourceVal) {
+                    const targetVal = prompt('Enter buyer value (e.g., Immediately):');
+                    if (targetVal) {
+                      const newValueMap = { ...mapping.valueMap, [sourceVal]: targetVal };
+                      handleChange('valueMap', newValueMap);
+                    }
+                  }
+                }}
+                disabled={disabled}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                + Add value mapping
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

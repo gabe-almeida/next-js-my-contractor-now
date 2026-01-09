@@ -107,21 +107,39 @@ export function FieldMappingEditor({
     }));
   }, [config.mappings.length]);
 
-  // Static fields handler
-  const handleStaticFieldChange = useCallback(
+  // PING Static fields handlers
+  const handlePingStaticFieldChange = useCallback(
     (key: string, value: string | number | boolean) => {
       setConfig((prev) => ({
         ...prev,
-        staticFields: { ...prev.staticFields, [key]: value },
+        pingStaticFields: { ...prev.pingStaticFields, [key]: value },
       }));
     },
     []
   );
 
-  const handleStaticFieldDelete = useCallback((key: string) => {
+  const handlePingStaticFieldDelete = useCallback((key: string) => {
     setConfig((prev) => {
-      const { [key]: _, ...rest } = prev.staticFields;
-      return { ...prev, staticFields: rest };
+      const { [key]: _, ...rest } = prev.pingStaticFields || {};
+      return { ...prev, pingStaticFields: rest };
+    });
+  }, []);
+
+  // POST Static fields handlers
+  const handlePostStaticFieldChange = useCallback(
+    (key: string, value: string | number | boolean) => {
+      setConfig((prev) => ({
+        ...prev,
+        postStaticFields: { ...prev.postStaticFields, [key]: value },
+      }));
+    },
+    []
+  );
+
+  const handlePostStaticFieldDelete = useCallback((key: string) => {
+    setConfig((prev) => {
+      const { [key]: _, ...rest } = prev.postStaticFields || {};
+      return { ...prev, postStaticFields: rest };
     });
   }, []);
 
@@ -251,17 +269,17 @@ export function FieldMappingEditor({
             />
           </div>
 
-          {/* Static Fields */}
+          {/* PING Static Fields */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Static Fields
+              PING Static Fields
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Fields with fixed values always included in POST payloads
+              Fixed values included in PING requests (routing info)
             </p>
 
             <div className="space-y-2">
-              {Object.entries(config.staticFields).map(([key, value]) => (
+              {Object.entries(config.pingStaticFields || {}).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-2">
                   <input
                     type="text"
@@ -273,12 +291,12 @@ export function FieldMappingEditor({
                   <input
                     type="text"
                     value={String(value)}
-                    onChange={(e) => handleStaticFieldChange(key, e.target.value)}
+                    onChange={(e) => handlePingStaticFieldChange(key, e.target.value)}
                     className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
                   />
                   <button
                     type="button"
-                    onClick={() => handleStaticFieldDelete(key)}
+                    onClick={() => handlePingStaticFieldDelete(key)}
                     className="text-red-500 hover:text-red-700 p-1"
                   >
                     ×
@@ -289,12 +307,69 @@ export function FieldMappingEditor({
               <button
                 type="button"
                 onClick={() => {
-                  const key = prompt('Enter field name:');
-                  if (key) handleStaticFieldChange(key, '');
+                  const key = prompt('Enter PING field name:');
+                  if (key) handlePingStaticFieldChange(key, '');
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                + Add static field
+                + Add PING static field
+              </button>
+            </div>
+          </div>
+
+          {/* POST Static Fields */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              POST Static Fields
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Fixed values included in POST requests (full lead delivery)
+            </p>
+
+            <div className="space-y-2">
+              {Object.entries(config.postStaticFields || {}).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={key}
+                    readOnly
+                    className="flex-1 text-sm border border-gray-200 rounded px-2 py-1 bg-gray-50"
+                  />
+                  <span className="text-gray-400">=</span>
+                  {key === 'homePhoneConsentLanguage' ? (
+                    <textarea
+                      value={String(value)}
+                      onChange={(e) => handlePostStaticFieldChange(key, e.target.value)}
+                      className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 min-h-[60px]"
+                      rows={3}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={String(value)}
+                      onChange={(e) => handlePostStaticFieldChange(key, e.target.value)}
+                      className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handlePostStaticFieldDelete(key)}
+                    className="text-red-500 hover:text-red-700 p-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const key = prompt('Enter POST field name:');
+                  if (key) handlePostStaticFieldChange(key, '');
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                + Add POST static field
               </button>
             </div>
           </div>
@@ -338,9 +413,15 @@ export function FieldMappingEditor({
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Static Fields:</dt>
+                <dt className="text-gray-500">PING Static Fields:</dt>
                 <dd className="font-medium">
-                  {Object.keys(config.staticFields).length}
+                  {Object.keys(config.pingStaticFields || {}).length}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-500">POST Static Fields:</dt>
+                <dd className="font-medium">
+                  {Object.keys(config.postStaticFields || {}).length}
                 </dd>
               </div>
               <div className="flex justify-between">

@@ -86,11 +86,19 @@ function convertToFieldMappingConfig(
     );
   }
 
-  // Add static fields from POST template
+  // Add static fields from templates
+  // Use pingStaticFields for PING-only fields and postStaticFields for POST fields
+  if (pingTemplate?.additionalFields) {
+    for (const [key, value] of Object.entries(pingTemplate.additionalFields)) {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        config.pingStaticFields![key] = value;
+      }
+    }
+  }
   if (postTemplate?.additionalFields) {
     for (const [key, value] of Object.entries(postTemplate.additionalFields)) {
       if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        config.staticFields[key] = value;
+        config.postStaticFields![key] = value;
       }
     }
   }
