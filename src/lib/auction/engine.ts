@@ -105,7 +105,19 @@ export class AuctionEngine {
 
     try {
       // Get eligible buyers for this service type
+      logger.info('[AuctionEngine] Getting eligible buyers', {
+        leadId: lead.id,
+        serviceTypeId: lead.serviceTypeId,
+        zipCode: lead.zipCode,
+      });
+
       const eligibleBuyers = await this.getEligibleBuyers(lead, config);
+
+      logger.info('[AuctionEngine] Eligible buyers result', {
+        leadId: lead.id,
+        count: eligibleBuyers.length,
+        buyers: eligibleBuyers.map(b => ({ id: b.buyer.id, name: b.buyer.name })),
+      });
 
       // Task 4.2: Split by buyer type (NETWORK vs CONTRACTOR)
       // Check if any buyers are contractors by querying the database
