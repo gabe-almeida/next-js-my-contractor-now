@@ -663,6 +663,42 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
     setComplianceStatus(prev => ({ ...prev, jornaya: status }));
   }, []);
 
+  // Re-inject TrustedForm script when form mounts (handles SPA navigation)
+  // TrustedForm SDK only scans for forms on initial load, so we need to re-trigger it
+  useEffect(() => {
+    // Check if TrustedForm is already initialized for this form
+    const existingInput = document.querySelector('input[name="xxTrustedFormCertUrl"]');
+    if (existingInput && (existingInput as HTMLInputElement).value) {
+      console.log('[DynamicForm] TrustedForm already initialized');
+      return;
+    }
+
+    console.log('[DynamicForm] Re-injecting TrustedForm script for SPA navigation...');
+
+    // Remove any existing TrustedForm script to force re-initialization
+    const existingScript = document.querySelector('script[src*="trustedform.js"]');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    // Inject fresh TrustedForm script
+    const tf = document.createElement('script');
+    tf.type = 'text/javascript';
+    tf.async = true;
+    tf.src = (document.location.protocol === 'https:' ? 'https' : 'http') +
+      '://api.trustedform.com/trustedform.js?field=xxTrustedFormCertUrl&use_tagged_consent=true&l=' +
+      new Date().getTime() + Math.random();
+
+    const firstScript = document.getElementsByTagName('script')[0];
+    if (firstScript && firstScript.parentNode) {
+      firstScript.parentNode.insertBefore(tf, firstScript);
+    } else {
+      document.head.appendChild(tf);
+    }
+
+    console.log('[DynamicForm] TrustedForm script re-injected');
+  }, []);
+
   // TrustedForm configuration - always enabled for lead gen forms
   const trustedFormConfig = {
     enabled: true,
