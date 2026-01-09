@@ -285,19 +285,27 @@ export const createServiceTypeSchema = z.object({
       label: z.string(),
       placeholder: z.string().optional(),
       required: z.boolean(),
-      options: z.array(z.string()).optional(),
+      // Options can be string[] or {value, label}[] - aligned with flow-builder.ts
+      options: z.array(
+        z.union([
+          z.string(),
+          z.object({ value: z.string(), label: z.string() })
+        ])
+      ).optional(),
       validation: z.object({
         min: z.number().optional(),
         max: z.number().optional(),
+        minLength: z.number().optional(),
+        maxLength: z.number().optional(),
         pattern: z.string().optional(),
-        custom: z.string().optional(),
         message: z.string().optional(),
       }).optional(),
-      conditional: z.object({
+      // Conditions array (AND logic) - aligned with flow-builder.ts and questions.ts
+      conditions: z.array(z.object({
         field: z.string(),
-        operator: z.enum(['equals', 'not_equals', 'contains']),
-        value: z.any(),
-      }).optional(),
+        operator: z.enum(['equals', 'not_equals', 'in', 'not_in']),
+        value: z.union([z.string(), z.array(z.string())]),
+      })).optional(),
     })),
     complianceRequired: z.object({
       trustedForm: z.boolean(),

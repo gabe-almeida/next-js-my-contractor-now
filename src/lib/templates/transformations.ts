@@ -1,28 +1,52 @@
 /**
  * Data Transformation Functions
- * Pure functions for transforming lead data to buyer-specific formats
+ *
+ * WHY: Transform lead data to buyer-specific formats for PING/POST
+ * WHEN: Called by TemplateEngine during payload generation
+ * HOW: Delegates common transforms to @/lib/transforms/shared.ts (SINGLE SOURCE OF TRUTH)
+ *      and provides EXTRA transforms not in shared module
+ *
+ * ARCHITECTURE:
+ * - Common transforms (boolean, string, phone, date, number) → shared.ts
+ * - Extra transforms (email, address, array, service, compliance, conditional) → here
+ *
+ * This ensures preview and auction engine produce IDENTICAL results.
  */
 
 import { TransformFunction, TransformContext, ValidationError } from './types';
 
+// Import shared transforms - SINGLE SOURCE OF TRUTH
+import { executeTransform as sharedExecuteTransform, toBoolean } from '@/lib/transforms/shared';
+
+// ============================================================================
+// SHARED TRANSFORM IDs
+// These are handled by @/lib/transforms/shared.ts - DO NOT duplicate here!
+// ============================================================================
+const SHARED_TRANSFORMS = new Set([
+  // Boolean
+  'boolean.yesNo', 'boolean.yesNoLower', 'boolean.YN', 'boolean.oneZero', 'boolean.truefalse',
+  // String
+  'string.uppercase', 'string.lowercase', 'string.titlecase', 'string.trim',
+  'string.truncate50', 'string.truncate100', 'string.truncate255',
+  // Phone
+  'phone.digitsOnly', 'phone.e164', 'phone.dashed', 'phone.dotted', 'phone.parentheses',
+  // Date
+  'date.isoDate', 'date.usDate', 'date.usDateShort', 'date.timestamp', 'date.timestampMs', 'date.iso8601',
+  // Number
+  'number.integer', 'number.round', 'number.twoDecimals', 'number.currency', 'number.percentage'
+]);
+
 /**
- * Built-in transformation functions library
- * Each function is pure and handles type conversion, formatting, and validation
+ * Transformation functions library
+ *
+ * NOTE: Common transforms delegate to shared.ts for DRY code.
+ * This class only contains EXTRA transforms not in the shared module.
  */
 export class Transformations {
-  // String transformations
+  // ============================================================================
+  // EXTRA STRING TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly string = {
-    uppercase: (value: any): string => String(value).toUpperCase(),
-    lowercase: (value: any): string => String(value).toLowerCase(),
-    capitalize: (value: any): string => {
-      const str = String(value);
-      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-    },
-    trim: (value: any): string => String(value).trim(),
-    truncate: (maxLength: number) => (value: any): string => {
-      const str = String(value);
-      return str.length > maxLength ? str.slice(0, maxLength) + '...' : str;
-    },
     slugify: (value: any): string => {
       return String(value)
         .toLowerCase()
@@ -36,71 +60,25 @@ export class Transformations {
     }
   };
 
-  // Number transformations
+  // ============================================================================
+  // EXTRA NUMBER TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly number = {
-    integer: (value: any): number => {
-      const num = parseInt(String(value), 10);
-      if (isNaN(num)) throw new ValidationError('number', 'Invalid integer format');
-      return num;
-    },
     float: (value: any): number => {
       const num = parseFloat(String(value));
       if (isNaN(num)) throw new ValidationError('number', 'Invalid float format');
       return num;
-    },
-    currency: (value: any): string => {
-      const num = parseFloat(String(value));
-      if (isNaN(num)) throw new ValidationError('currency', 'Invalid currency format');
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(num);
-    },
-    percentage: (value: any): string => {
-      const num = parseFloat(String(value));
-      if (isNaN(num)) throw new ValidationError('percentage', 'Invalid percentage format');
-      return `${(num * 100).toFixed(2)}%`;
-    },
-    round: (decimals: number = 0) => (value: any): number => {
-      const num = parseFloat(String(value));
-      if (isNaN(num)) throw new ValidationError('number', 'Invalid number format');
-      return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
     }
   };
 
-  // Boolean transformations
-  static readonly boolean = {
-    yesNo: (value: any): string => {
-      return this.parseBoolean(value) ? 'Yes' : 'No';
-    },
-    trueFalse: (value: any): string => {
-      return this.parseBoolean(value) ? 'true' : 'false';
-    },
-    oneZero: (value: any): string => {
-      return this.parseBoolean(value) ? '1' : '0';
-    },
-    checkboxValue: (value: any): string => {
-      return this.parseBoolean(value) ? 'checked' : 'unchecked';
-    }
-  };
-
-  // Date transformations
+  // ============================================================================
+  // EXTRA DATE TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly date = {
-    iso: (value: any): string => {
-      const date = new Date(value);
-      if (isNaN(date.getTime())) throw new ValidationError('date', 'Invalid date format');
-      return date.toISOString();
-    },
-    timestamp: (value: any): number => {
-      const date = new Date(value);
-      if (isNaN(date.getTime())) throw new ValidationError('date', 'Invalid date format');
-      return date.getTime();
-    },
     format: (format: string) => (value: any): string => {
       const date = new Date(value);
       if (isNaN(date.getTime())) throw new ValidationError('date', 'Invalid date format');
-      
-      // Simple format replacements
+
       return format
         .replace('YYYY', date.getFullYear().toString())
         .replace('MM', String(date.getMonth() + 1).padStart(2, '0'))
@@ -114,7 +92,7 @@ export class Transformations {
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) return 'Today';
       if (diffDays === 1) return 'Yesterday';
       if (diffDays < 7) return `${diffDays} days ago`;
@@ -123,56 +101,31 @@ export class Transformations {
     }
   };
 
-  // Phone number transformations
+  // ============================================================================
+  // EXTRA PHONE TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly phone = {
-    /**
-     * Strip all non-digit characters from phone number
-     *
-     * WHY: Many APIs (like Modernize) require phone numbers as digits only
-     * WHEN: Use when target API expects raw digits without formatting
-     * HOW: Removes all non-numeric characters using regex
-     *
-     * @example "(555) 123-4567" → "5551234567"
-     * @example "+1-555-123-4567" → "15551234567"
-     */
-    digitsOnly: (value: any): string => {
-      return String(value).replace(/\D/g, '');
-    },
     normalize: (value: any): string => {
       const digits = String(value).replace(/\D/g, '');
-      if (digits.length === 10) {
-        return `+1${digits}`;
-      } else if (digits.length === 11 && digits.startsWith('1')) {
-        return `+${digits}`;
-      }
+      if (digits.length === 10) return `+1${digits}`;
+      if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
       return digits;
     },
     format: (pattern: string = '(XXX) XXX-XXXX') => (value: any): string => {
       const digits = String(value).replace(/\D/g, '');
       let formatted = pattern;
-      
       for (let i = 0; i < digits.length && formatted.includes('X'); i++) {
         formatted = formatted.replace('X', digits[i]);
       }
-      
       return formatted.replace(/X/g, '');
-    },
-    e164: (value: any): string => {
-      const digits = String(value).replace(/\D/g, '');
-      if (digits.length === 10) {
-        return `+1${digits}`;
-      } else if (digits.length === 11 && digits.startsWith('1')) {
-        return `+${digits}`;
-      }
-      throw new ValidationError('phone', 'Invalid phone number format');
     }
   };
 
-  // Email transformations
+  // ============================================================================
+  // EMAIL TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly email = {
-    normalize: (value: any): string => {
-      return String(value).toLowerCase().trim();
-    },
+    normalize: (value: any): string => String(value).toLowerCase().trim(),
     domain: (value: any): string => {
       const email = String(value);
       const atIndex = email.lastIndexOf('@');
@@ -187,7 +140,9 @@ export class Transformations {
     }
   };
 
-  // Address transformations
+  // ============================================================================
+  // ADDRESS TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly address = {
     zipCode: (value: any): string => {
       const zip = String(value).replace(/\D/g, '');
@@ -195,75 +150,59 @@ export class Transformations {
       if (zip.length === 9) return `${zip.slice(0, 5)}-${zip.slice(5)}`;
       throw new ValidationError('zipCode', 'Invalid ZIP code format');
     },
-    state: (value: any): string => {
-      const state = String(value).toUpperCase().trim();
-      // Add state code validation if needed
-      return state;
-    },
+    state: (value: any): string => String(value).toUpperCase().trim(),
     fullAddress: (parts: string[]) => (): string => {
       return parts.filter(part => part && part.trim()).join(', ');
     }
   };
 
-  // Array transformations
+  // ============================================================================
+  // ARRAY TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly array = {
     join: (separator: string = ',') => (value: any): string => {
       if (!Array.isArray(value)) return String(value);
       return value.join(separator);
     },
-    first: (value: any): any => {
-      if (!Array.isArray(value)) return value;
-      return value[0];
-    },
-    last: (value: any): any => {
-      if (!Array.isArray(value)) return value;
-      return value[value.length - 1];
-    },
-    count: (value: any): number => {
-      if (!Array.isArray(value)) return 0;
-      return value.length;
-    }
+    first: (value: any): any => Array.isArray(value) ? value[0] : value,
+    last: (value: any): any => Array.isArray(value) ? value[value.length - 1] : value,
+    count: (value: any): number => Array.isArray(value) ? value.length : 0
   };
 
-  // Service-specific transformations
+  // ============================================================================
+  // SERVICE-SPECIFIC TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly service = {
     windowsCount: (value: any): string => {
       const count = parseInt(String(value), 10);
       if (isNaN(count)) return 'Unknown';
-      
       if (count === 1) return '1 window';
       if (count <= 5) return '2-5 windows';
       if (count <= 10) return '6-10 windows';
       if (count <= 20) return '11-20 windows';
       return '20+ windows';
     },
-    
     bathroomCount: (value: any): string => {
       const count = parseInt(String(value), 10);
       if (isNaN(count)) return 'Unknown';
-      
       if (count === 1) return '1 bathroom';
       if (count <= 2) return '2 bathrooms';
       if (count <= 3) return '3 bathrooms';
       return '4+ bathrooms';
     },
-    
     roofingSquareFootage: (value: any): string => {
       const sqft = parseInt(String(value), 10);
       if (isNaN(sqft)) return 'Unknown';
-      
       if (sqft < 1000) return 'Small (under 1,000 sq ft)';
       if (sqft < 2000) return 'Medium (1,000-2,000 sq ft)';
       if (sqft < 3000) return 'Large (2,000-3,000 sq ft)';
       return 'Very Large (3,000+ sq ft)';
     },
-    
     projectTimeframe: (value: any): string => {
       const timeframe = String(value).toLowerCase();
-      
-      const timeframeMap: Record<string, string> = {
+      const map: Record<string, string> = {
         'asap': 'ASAP',
-        'immediately': 'ASAP', 
+        'immediately': 'ASAP',
         'within_week': 'Within 1 week',
         'within_month': 'Within 1 month',
         'within_3_months': 'Within 3 months',
@@ -271,99 +210,75 @@ export class Transformations {
         'no_rush': 'No rush',
         'planning': 'Just planning'
       };
-      
-      return timeframeMap[timeframe] || timeframe;
+      return map[timeframe] || timeframe;
     },
-    
-    homeOwnership: (value: any): string => {
-      const owns = this.parseBoolean(value);
-      return owns ? 'Own' : 'Rent';
-    }
+    homeOwnership: (value: any): string => toBoolean(value) ? 'Own' : 'Rent'
   };
 
-  // Compliance transformations
+  // ============================================================================
+  // COMPLIANCE TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly compliance = {
-    tcpaConsent: (value: any): string => {
-      return this.parseBoolean(value) ? 'Yes' : 'No';
-    },
-    
-    privacyConsent: (value: any): string => {
-      return this.parseBoolean(value) ? 'Accepted' : 'Declined';
-    },
-    
-    leadSource: (context?: TransformContext): string => {
-      return context?.metadata?.source || 'web_form';
-    },
-    
-    userAgent: (context?: TransformContext): string => {
-      return context?.lead?.complianceData?.userAgent || 'Unknown';
-    },
-    
-    ipAddress: (context?: TransformContext): string => {
-      return context?.lead?.complianceData?.ipAddress || 'Unknown';
-    }
+    tcpaConsent: (value: any): string => toBoolean(value) ? 'Yes' : 'No',
+    privacyConsent: (value: any): string => toBoolean(value) ? 'Accepted' : 'Declined',
+    leadSource: (context?: TransformContext): string => context?.metadata?.source || 'web_form',
+    userAgent: (context?: TransformContext): string => context?.lead?.complianceData?.userAgent || 'Unknown',
+    ipAddress: (context?: TransformContext): string => context?.lead?.complianceData?.ipAddress || 'Unknown'
   };
 
-  // Conditional transformations
+  // ============================================================================
+  // CONDITIONAL TRANSFORMS (not in shared module)
+  // ============================================================================
   static readonly conditional = {
-    ifElse: (condition: any, trueValue: any, falseValue: any) => (value: any): any => {
-      return this.parseBoolean(condition) ? trueValue : falseValue;
+    ifElse: (condition: any, trueValue: any, falseValue: any) => (): any => {
+      return toBoolean(condition) ? trueValue : falseValue;
     },
-    
     switch: (cases: Record<string, any>, defaultValue: any = null) => (value: any): any => {
       const stringValue = String(value);
       return cases[stringValue] !== undefined ? cases[stringValue] : defaultValue;
     },
-    
-    range: (ranges: Array<{min?: number, max?: number, value: any}>) => (value: any): any => {
+    range: (ranges: Array<{ min?: number; max?: number; value: any }>) => (value: any): any => {
       const numValue = parseFloat(String(value));
       if (isNaN(numValue)) return null;
-      
       for (const range of ranges) {
         const minCheck = range.min === undefined || numValue >= range.min;
         const maxCheck = range.max === undefined || numValue <= range.max;
-        
-        if (minCheck && maxCheck) {
-          return range.value;
-        }
+        if (minCheck && maxCheck) return range.value;
       }
-      
       return null;
     }
   };
 
-  // Utility functions
-  private static parseBoolean(value: any): boolean {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value !== 0;
-    
-    const stringValue = String(value).toLowerCase().trim();
-    return ['true', 'yes', 'y', '1', 'on', 'checked'].includes(stringValue);
-  }
-
   /**
-   * Get transformation function by name
+   * Get transformation function by name (for extra transforms only)
    */
   static getTransform(transformName: string): TransformFunction {
     const parts = transformName.split('.');
     let current: any = Transformations;
-    
+
     for (const part of parts) {
       if (current[part] === undefined) {
         throw new Error(`Unknown transformation: ${transformName}`);
       }
       current = current[part];
     }
-    
+
     if (typeof current !== 'function') {
       throw new Error(`Invalid transformation: ${transformName} is not a function`);
     }
-    
+
     return current as TransformFunction;
   }
 
   /**
    * Apply transformation with error handling
+   *
+   * WHY: Single entry point for all transforms in auction engine
+   * WHEN: Called by TemplateEngine.applyTransformation()
+   * HOW: Delegates to shared module first, falls back to class for extras
+   *
+   * CRITICAL: Common transforms use sharedExecuteTransform to ensure
+   * preview and auction produce IDENTICAL results.
    */
   static applyTransform(
     value: any,
@@ -372,6 +287,12 @@ export class Transformations {
   ): any {
     try {
       if (typeof transform === 'string') {
+        // Check if it's a shared transform (SINGLE SOURCE OF TRUTH)
+        if (SHARED_TRANSFORMS.has(transform)) {
+          return sharedExecuteTransform(transform, value);
+        }
+
+        // Fall back to class-based transforms for extras
         const transformFn = this.getTransform(transform);
         return transformFn(value, context);
       } else {
@@ -389,25 +310,13 @@ export class Transformations {
     }
   }
 
-  /**
-   * Create custom transformation function
-   */
-  static createCustomTransform(
-    name: string,
-    fn: TransformFunction
-  ): void {
-    // Store custom transformations in a registry
-    if (!this.customTransforms) {
-      this.customTransforms = new Map();
-    }
+  private static customTransforms?: Map<string, TransformFunction>;
+
+  static createCustomTransform(name: string, fn: TransformFunction): void {
+    if (!this.customTransforms) this.customTransforms = new Map();
     this.customTransforms.set(name, fn);
   }
 
-  private static customTransforms?: Map<string, TransformFunction>;
-
-  /**
-   * Get custom transformation function
-   */
   static getCustomTransform(name: string): TransformFunction | undefined {
     return this.customTransforms?.get(name);
   }
@@ -440,6 +349,5 @@ export class TransformRegistry {
   }
 }
 
-// Default transformation exports for convenience
 export const transforms = Transformations;
 export default Transformations;

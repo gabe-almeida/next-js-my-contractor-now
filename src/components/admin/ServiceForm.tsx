@@ -8,18 +8,38 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ServiceType, FormField } from '@/types';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { ConditionBuilder, OptionsEditor } from './form-builder';
 
+/**
+ * Form Field Schema - Aligned with flow-builder.ts and questions.ts runtime
+ *
+ * WHY: Admin form builder must produce JSON that matches what runtime expects
+ * WHEN: Creating/editing service type form schemas in admin UI
+ * HOW: Validates field structure before saving to database formSchema
+ */
 const formFieldOptionSchema = z.object({
   value: z.string(),
   label: z.string(),
 });
 
+const formFieldConditionSchema = z.object({
+  field: z.string(),
+  operator: z.enum(['equals', 'not_equals', 'in', 'not_in']),
+  value: z.union([z.string(), z.array(z.string())]),
+});
+
 const formFieldSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(['text', 'number', 'select', 'checkbox', 'textarea', 'radio', 'date', 'email', 'phone', 'multiselect', 'tel']),
+  // All types supported by runtime (flow-builder.ts + questions.ts)
+  type: z.enum([
+    'text', 'number', 'select', 'checkbox', 'textarea', 'radio',
+    'date', 'email', 'phone', 'multiselect', 'tel',
+    'address', 'contact', 'name_fields', 'contact_fields'
+  ]),
   label: z.string().min(1, 'Label is required'),
   name: z.string().min(1, 'Name is required'),
   required: z.boolean(),
+  // Options as {value, label}[] - matches flow-builder.ts
   options: z.array(formFieldOptionSchema).optional(),
   placeholder: z.string().optional(),
   validation: z.object({
@@ -30,6 +50,8 @@ const formFieldSchema = z.object({
     pattern: z.string().optional(),
     message: z.string().optional(),
   }).optional(),
+  // Conditions array (AND logic) - matches flow-builder.ts
+  conditions: z.array(formFieldConditionSchema).optional(),
 });
 
 const serviceSchema = z.object({
@@ -100,10 +122,18 @@ export function ServiceForm({
   const fieldTypes = [
     { value: 'text', label: 'Text Input' },
     { value: 'number', label: 'Number Input' },
+    { value: 'email', label: 'Email' },
+    { value: 'phone', label: 'Phone Number' },
+    { value: 'tel', label: 'Telephone' },
     { value: 'select', label: 'Dropdown' },
+    { value: 'multiselect', label: 'Multi-Select' },
     { value: 'checkbox', label: 'Checkbox' },
     { value: 'textarea', label: 'Text Area' },
     { value: 'radio', label: 'Radio Buttons' },
+    { value: 'date', label: 'Date Picker' },
+    { value: 'address', label: 'Address Block' },
+    { value: 'name_fields', label: 'Name Fields' },
+    { value: 'contact_fields', label: 'Contact Fields' },
   ];
 
   const handleDragStart = (index: number) => {
@@ -259,16 +289,15 @@ export function ServiceForm({
                       </div>
                     </div>
 
-                    {/* Options for select/radio */}
-                    {(watch(`formFields.${index}.type`) === 'select' || 
-                      watch(`formFields.${index}.type`) === 'radio') && (
+                    {/* Options for select/radio/multiselect */}
+                    {(watch(`formFields.${index}.type`) === 'select' ||
+                      watch(`formFields.${index}.type`) === 'radio' ||
+                      watch(`formFields.${index}.type`) === 'multiselect') && (
                       <div className="form-group md:col-span-2">
-                        <label className="form-label">Options (one per line)</label>
-                        <textarea
-                          className="form-input"
-                          rows={3}
-                          placeholder="Option 1&#10;Option 2&#10;Option 3"
-                          {...register(`formFields.${index}.options`)}
+                        <OptionsEditor
+                          fieldIndex={index}
+                          control={control}
+                          register={register}
                         />
                       </div>
                     )}
@@ -312,6 +341,16 @@ export function ServiceForm({
                           {...register(`formFields.${index}.validation.message`)}
                         />
                       </div>
+                    </div>
+
+                    {/* Conditional Visibility */}
+                    <div className="md:col-span-2">
+                      <ConditionBuilder
+                        fieldIndex={index}
+                        allFields={watch('formFields') || []}
+                        control={control}
+                        register={register}
+                      />
                     </div>
                   </div>
 

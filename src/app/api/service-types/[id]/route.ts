@@ -1,411 +1,215 @@
-import { NextResponse } from 'next/server';
-import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
+/**
+ * Service Type API - Individual Resource
+ *
+ * WHY: CRUD operations for individual service types
+ * WHEN: Admin UI needs to read/update/delete a specific service
+ * HOW: Uses Prisma to interact with database
+ *
+ * ENDPOINTS:
+ *   GET    /api/service-types/[id] - Get single service type
+ *   PUT    /api/service-types/[id] - Update service type
+ *   DELETE /api/service-types/[id] - Delete service type
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { handleApiError } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
-import { logger } from '@/lib/logger';
-import { successResponse, errorResponse } from '@/lib/utils';
-import { ServiceType, FormFieldOption } from '@/types';
 
-// Helper to convert string array to FormFieldOption array
-const toOptions = (strings: string[]): FormFieldOption[] =>
-  strings.map(s => ({ value: s.toLowerCase().replace(/[^a-z0-9]+/g, '_'), label: s }));
+/**
+ * Invalidate service flow cache when service is updated
+ * Clears both name-based and id-based cache keys
+ */
+async function invalidateServiceFlowCache(serviceName: string, serviceId: string) {
+  await Promise.all([
+    RedisCache.delete(`service-flow:${serviceName.toLowerCase()}`),
+    RedisCache.delete(`service-flow:${serviceId}`),
+  ]);
+}
 
-// Mock data - same as parent route for consistency
-const defaultServiceTypes: ServiceType[] = [
-  {
-    id: '550e8400-e29b-41d4-a716-446655440001',
-    name: 'Windows',
-    displayName: 'Window Services',
-    description: 'Window replacement, repair, and installation services',
-    formSchema: {
-      title: 'Window Services Intake Form',
-      fields: [
-        {
-          id: 'numberOfWindows',
-          name: 'numberOfWindows',
-          type: 'number',
-          label: 'How many windows need work?',
-          placeholder: 'Enter number of windows',
-          required: true,
-          validation: { min: 1, max: 50 }
-        },
-        {
-          id: 'windowTypes',
-          name: 'windowTypes',
-          type: 'checkbox',
-          label: 'What types of windows?',
-          required: true,
-          options: toOptions(['Single-hung', 'Double-hung', 'Casement', 'Sliding', 'Bay', 'Bow'])
-        },
-        {
-          id: 'projectScope',
-          name: 'projectScope',
-          type: 'radio',
-          label: 'What type of project is this?',
-          required: true,
-          options: toOptions(['Replacement', 'New Installation', 'Repair'])
-        },
-        {
-          id: 'currentWindowAge',
-          name: 'currentWindowAge',
-          type: 'select',
-          label: 'How old are your current windows?',
-          required: false,
-          options: toOptions(['0-5 years', '5-10 years', '10-20 years', '20+ years'])
-        },
-        {
-          id: 'budget',
-          name: 'budget',
-          type: 'select',
-          label: 'What is your estimated budget?',
-          required: false,
-          options: toOptions(['Under $5,000', '$5,000-$15,000', '$15,000-$30,000', '$30,000+'])
-        }
-      ],
-      validationRules: [
-        {
-          field: 'numberOfWindows',
-          rule: 'required|integer|min:1|max:50',
-          message: 'Number of windows must be between 1 and 50'
-        },
-        {
-          field: 'windowTypes',
-          rule: 'required|array|min:1',
-          message: 'At least one window type must be selected'
-        }
-      ]
-    },
-    active: true,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440002',
-    name: 'Bathrooms',
-    displayName: 'Bathroom Services',
-    description: 'Bathroom remodeling, renovation, and fixture installation',
-    formSchema: {
-      title: 'Bathroom Services Intake Form',
-      fields: [
-        {
-          id: 'numberOfBathrooms',
-          name: 'numberOfBathrooms',
-          type: 'number',
-          label: 'How many bathrooms need work?',
-          placeholder: 'Enter number of bathrooms',
-          required: true,
-          validation: { min: 1, max: 10 }
-        },
-        {
-          id: 'bathroomType',
-          name: 'bathroomType',
-          type: 'select',
-          label: 'What type of bathroom?',
-          required: true,
-          options: toOptions(['Full bathroom', 'Half bathroom', 'Master bathroom', 'Guest bathroom'])
-        },
-        {
-          id: 'projectScope',
-          name: 'projectScope',
-          type: 'radio',
-          label: 'What type of project is this?',
-          required: true,
-          options: toOptions(['Full remodel', 'Partial remodel', 'Fixtures only', 'Vanity only'])
-        },
-        {
-          id: 'fixturesNeeded',
-          name: 'fixturesNeeded',
-          type: 'checkbox',
-          label: 'Which fixtures need work?',
-          required: true,
-          options: toOptions(['Toilet', 'Sink', 'Shower', 'Bathtub', 'Vanity', 'Tiles', 'Lighting'])
-        },
-        {
-          id: 'currentCondition',
-          name: 'currentCondition',
-          type: 'select',
-          label: 'Current condition of the bathroom?',
-          required: false,
-          options: toOptions(['Excellent', 'Good', 'Fair', 'Poor'])
-        },
-        {
-          id: 'budget',
-          name: 'budget',
-          type: 'select',
-          label: 'What is your estimated budget?',
-          required: false,
-          options: toOptions(['Under $10,000', '$10,000-$25,000', '$25,000-$50,000', '$50,000+'])
-        }
-      ],
-      validationRules: [
-        {
-          field: 'numberOfBathrooms',
-          rule: 'required|integer|min:1|max:10',
-          message: 'Number of bathrooms must be between 1 and 10'
-        },
-        {
-          field: 'fixturesNeeded',
-          rule: 'required|array|min:1',
-          message: 'At least one fixture must be selected'
-        }
-      ]
-    },
-    active: true,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440003',
-    name: 'Roofing',
-    displayName: 'Roofing Services',
-    description: 'Roof replacement, repair, and installation services',
-    formSchema: {
-      title: 'Roofing Services Intake Form',
-      fields: [
-        {
-          id: 'squareFootage',
-          name: 'squareFootage',
-          type: 'number',
-          label: 'What is the square footage of your roof?',
-          placeholder: 'Enter square footage',
-          required: true,
-          validation: { min: 500, max: 10000 }
-        },
-        {
-          id: 'roofType',
-          name: 'roofType',
-          type: 'select',
-          label: 'What type of roof do you have?',
-          required: true,
-          options: toOptions(['Asphalt Shingles', 'Metal', 'Tile', 'Slate', 'Wood', 'Flat'])
-        },
-        {
-          id: 'projectType',
-          name: 'projectType',
-          type: 'radio',
-          label: 'What type of project is this?',
-          required: true,
-          options: toOptions(['Replacement', 'Repair', 'New Installation'])
-        },
-        {
-          id: 'hasLeaks',
-          name: 'hasLeaks',
-          type: 'radio',
-          label: 'Does your roof currently have leaks?',
-          required: true,
-          options: toOptions(['Yes', 'No', 'Not sure'])
-        },
-        {
-          id: 'hasMissingShingles',
-          name: 'hasMissingShingles',
-          type: 'radio',
-          label: 'Are there missing or damaged shingles?',
-          required: true,
-          options: toOptions(['Yes', 'No', 'Not sure'])
-        },
-        {
-          id: 'ageOfRoof',
-          name: 'ageOfRoof',
-          type: 'select',
-          label: 'How old is your current roof?',
-          required: true,
-          options: toOptions(['0-5 years', '5-10 years', '10-20 years', '20+ years'])
-        },
-        {
-          id: 'urgency',
-          name: 'urgency',
-          type: 'select',
-          label: 'How urgent is this project?',
-          required: false,
-          options: toOptions(['Emergency', 'Urgent', 'Planned'])
-        },
-        {
-          id: 'budget',
-          name: 'budget',
-          type: 'select',
-          label: 'What is your estimated budget?',
-          required: false,
-          options: toOptions(['Under $15,000', '$15,000-$30,000', '$30,000-$60,000', '$60,000+'])
-        }
-      ],
-      validationRules: [
-        {
-          field: 'squareFootage',
-          rule: 'required|integer|min:500|max:10000',
-          message: 'Square footage must be between 500 and 10,000'
-        },
-        {
-          field: 'roofType',
-          rule: 'required',
-          message: 'Roof type is required'
-        }
-      ]
-    },
-    active: true,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-];
-
-// Get specific service type with full form schema
-async function handleGetServiceType(
-  req: EnhancedRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
-  const { requestId } = req.context;
-  const { id } = params;
-  
+/**
+ * GET /api/service-types/[id]
+ * Fetch a single service type by ID
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
-      const response = errorResponse(
-        'INVALID_ID',
-        'Invalid service type ID format',
-        { id },
-        'id',
-        requestId
-      );
-      return NextResponse.json(response, { status: 400 });
-    }
-    
-    // Try to get from cache first
-    const cacheKey = `service-type:${id}`;
-    let serviceType = await RedisCache.get<ServiceType>(cacheKey);
-    
-    if (!serviceType) {
-      // Find in default data
-      serviceType = defaultServiceTypes.find(st => st.id === id) ?? null;
-      
-      if (!serviceType) {
-        const response = errorResponse(
-          'SERVICE_TYPE_NOT_FOUND',
-          'Service type not found',
-          { id },
-          'id',
-          requestId
-        );
-        return NextResponse.json(response, { status: 404 });
-      }
-      
-      // Cache for 1 hour
-      await RedisCache.set(cacheKey, serviceType, 3600);
-    }
-    
-    // Check if service type is active
-    if (!serviceType.active) {
-      const response = errorResponse(
-        'SERVICE_TYPE_INACTIVE',
-        'Service type is not currently available',
-        { id },
-        'id',
-        requestId
-      );
-      return NextResponse.json(response, { status: 403 });
-    }
-    
-    // Add required base fields to form schema
-    const baseFields = [
-      {
-        id: 'zipCode',
-        name: 'zipCode',
-        type: 'text' as const,
-        label: 'What is your ZIP code?',
-        placeholder: 'Enter your ZIP code',
-        required: true,
-        validation: { pattern: '^\\d{5}(-\\d{4})?$', minLength: 5, maxLength: 10 }
-      },
-      {
-        id: 'homeOwnership',
-        name: 'homeOwnership',
-        type: 'radio' as const,
-        label: 'Do you own or rent your home?',
-        required: true,
-        options: toOptions(['Own', 'Rent'])
-      },
-      {
-        id: 'timeframe',
-        name: 'timeframe',
-        type: 'select' as const,
-        label: 'When do you want to start this project?',
-        required: true,
-        options: toOptions(['Immediately', 'Within 1-3 months', 'Within 3-6 months', '6+ months'])
-      },
-      {
-        id: 'firstName',
-        name: 'firstName',
-        type: 'text' as const,
-        label: 'First Name',
-        placeholder: 'Enter your first name',
-        required: true,
-        validation: { minLength: 2, maxLength: 50 }
-      },
-      {
-        id: 'lastName',
-        name: 'lastName',
-        type: 'text' as const,
-        label: 'Last Name',
-        placeholder: 'Enter your last name',
-        required: true,
-        validation: { minLength: 2, maxLength: 50 }
-      },
-      {
-        id: 'email',
-        name: 'email',
-        type: 'email' as const,
-        label: 'Email Address',
-        placeholder: 'Enter your email address',
-        required: true,
-        validation: { pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$', maxLength: 255 }
-      },
-      {
-        id: 'phone',
-        name: 'phone',
-        type: 'phone' as const,
-        label: 'Phone Number',
-        placeholder: 'Enter your phone number',
-        required: true,
-        validation: { minLength: 10, maxLength: 15 }
-      }
-    ];
-    
-    // Combine base fields with service-specific fields
-    const completeFormSchema = {
-      ...serviceType.formSchema,
-      fields: [...baseFields, ...serviceType.formSchema.fields]
-    };
-    
-    const response = successResponse({
-      ...serviceType,
-      formSchema: completeFormSchema
-    }, requestId);
-    
-    return NextResponse.json(response);
-    
-  } catch (error) {
-    logger.error('Service type fetch error', {
-      error: (error as Error).message,
-      requestId,
-      serviceTypeId: id
+    const { id } = await params;
+
+    const serviceType = await prisma.serviceType.findUnique({
+      where: { id },
     });
-    
-    const response = errorResponse(
-      'FETCH_ERROR',
-      'Failed to fetch service type',
-      undefined,
-      undefined,
-      requestId
-    );
-    
-    return NextResponse.json(response, { status: 500 });
+
+    if (!serviceType) {
+      return NextResponse.json({
+        success: false,
+        error: 'Service type not found',
+        timestamp: new Date().toISOString(),
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: serviceType,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Get service type error:', error);
+    const { message, statusCode } = handleApiError(error);
+
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to retrieve service type',
+      message,
+      timestamp: new Date().toISOString(),
+    }, { status: statusCode });
   }
 }
 
-// Export GET handler with middleware
-export const GET = withMiddleware(
-  handleGetServiceType,
-  {
-    rateLimiter: 'serviceTypes',
-    enableLogging: true,
-    enableCors: true
+/**
+ * PUT /api/service-types/[id]
+ * Update a service type (name, displayName, formSchema, active)
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    // Check if service type exists
+    const existing = await prisma.serviceType.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({
+        success: false,
+        error: 'Service type not found',
+        timestamp: new Date().toISOString(),
+      }, { status: 404 });
+    }
+
+    // Build update data - only include fields that were provided
+    const updateData: any = {};
+
+    if (body.name !== undefined) {
+      updateData.name = body.name;
+    }
+
+    if (body.displayName !== undefined) {
+      updateData.displayName = body.displayName;
+    }
+
+    if (body.active !== undefined) {
+      updateData.active = body.active;
+    }
+
+    if (body.formSchema !== undefined) {
+      // formSchema should be stored as JSON string
+      updateData.formSchema = typeof body.formSchema === 'string'
+        ? body.formSchema
+        : JSON.stringify(body.formSchema);
+    }
+
+    // Perform the update
+    const serviceType = await prisma.serviceType.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // Invalidate cache so new flow is served
+    await invalidateServiceFlowCache(serviceType.name, serviceType.id);
+
+    return NextResponse.json({
+      success: true,
+      data: serviceType,
+      message: 'Service type updated successfully',
+      cacheInvalidated: true,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Update service type error:', error);
+    const { message, statusCode } = handleApiError(error);
+
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to update service type',
+      message,
+      timestamp: new Date().toISOString(),
+    }, { status: statusCode });
   }
-);
+}
+
+/**
+ * DELETE /api/service-types/[id]
+ * Delete a service type (soft delete by setting active = false, or hard delete)
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Check if service type exists
+    const existing = await prisma.serviceType.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({
+        success: false,
+        error: 'Service type not found',
+        timestamp: new Date().toISOString(),
+      }, { status: 404 });
+    }
+
+    // Check if any leads reference this service type
+    const leadCount = await prisma.lead.count({
+      where: { serviceTypeId: id },
+    });
+
+    if (leadCount > 0) {
+      // Soft delete - just deactivate if there are associated leads
+      await prisma.serviceType.update({
+        where: { id },
+        data: { active: false },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Service type deactivated (${leadCount} leads reference this service)`,
+        softDelete: true,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Hard delete - no associated leads
+    await prisma.serviceType.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Service type deleted successfully',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Delete service type error:', error);
+    const { message, statusCode } = handleApiError(error);
+
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to delete service type',
+      message,
+      timestamp: new Date().toISOString(),
+    }, { status: statusCode });
+  }
+}

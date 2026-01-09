@@ -4,6 +4,9 @@
  * WHY: Lead buyers require data in specific formats (yes/no vs true/false, etc.)
  * WHEN: Applied during PING/POST payload generation
  * HOW: Registry of transform definitions + execution functions
+ *
+ * IMPORTANT: This file uses shared transforms from @/lib/transforms/shared.ts
+ * to ensure preview and auction engine use IDENTICAL transform logic.
  */
 
 import {
@@ -11,6 +14,12 @@ import {
   TransformCategory,
   SourceFieldType,
 } from "@/types/field-mapping";
+
+// Import shared transforms - SINGLE SOURCE OF TRUTH
+import {
+  executeTransform as sharedExecuteTransform,
+  toBoolean as sharedToBoolean,
+} from "@/lib/transforms/shared";
 
 /**
  * All available transform functions
@@ -383,90 +392,19 @@ export function executeTransform(
   }
 
   try {
+    // Service-specific transforms (not in shared module)
     switch (transformId) {
-      // Boolean transforms
-      case "boolean.yesNo":
-        return toBoolean(value) ? "Yes" : "No";
-      case "boolean.yesNoLower":
-        return toBoolean(value) ? "yes" : "no";
-      case "boolean.YN":
-        return toBoolean(value) ? "Y" : "N";
-      case "boolean.oneZero":
-        return toBoolean(value) ? 1 : 0;
-      case "boolean.truefalse":
-        return toBoolean(value) ? "true" : "false";
-
-      // String transforms
-      case "string.uppercase":
-        return String(value).toUpperCase();
-      case "string.lowercase":
-        return String(value).toLowerCase();
-      case "string.titlecase":
-        return toTitleCase(String(value));
-      case "string.trim":
-        return String(value).trim();
-      case "string.truncate50":
-        return truncate(String(value), 50);
-      case "string.truncate100":
-        return truncate(String(value), 100);
-      case "string.truncate255":
-        return truncate(String(value), 255);
-
-      // Phone transforms
-      case "phone.digitsOnly":
-        return String(value).replace(/\D/g, "");
-      case "phone.e164":
-        return toE164(String(value));
-      case "phone.dashed":
-        return formatPhoneDashed(String(value));
-      case "phone.dotted":
-        return formatPhoneDotted(String(value));
-      case "phone.parentheses":
-        return formatPhoneParentheses(String(value));
-
-      // Date transforms
-      case "date.isoDate":
-        return toISODate(value);
-      case "date.usDate":
-        return toUSDate(value);
-      case "date.usDateShort":
-        return toUSDateShort(value);
-      case "date.timestamp":
-        return toUnixTimestamp(value);
-      case "date.timestampMs":
-        return toUnixTimestampMs(value);
-      case "date.iso8601":
-        return toISO8601(value);
-
-      // Number transforms
-      case "number.integer":
-        return Math.trunc(Number(value));
-      case "number.round":
-        return Math.round(Number(value));
-      case "number.twoDecimals":
-        return Number(value).toFixed(2);
-      case "number.currency":
-        return formatCurrency(Number(value));
-      case "number.percentage":
-        return `${Math.round(Number(value) * 100)}%`;
-
-      // Service-specific transforms
       case "service.windowTypeCode":
         return mapWindowTypeToCode(String(value));
       case "service.roofTypeCode":
         return mapRoofTypeToCode(String(value));
       case "service.timeframeCode":
         return mapTimeframeToCode(String(value));
-
-      // NOTE: Buyer-specific value mappings (modernize.buyTimeframe, etc.)
-      // are now handled via database-driven valueMap in FieldMapping configs.
-      // No hardcoded case statements needed - the admin can configure
-      // value mappings per buyer in the Admin UI!
-
-      default:
-        console.warn(`Unknown transform: ${transformId}`);
-        return value;
     }
+
+    // Use shared transforms for everything else
+    // This ensures preview and auction use IDENTICAL logic
+    return sharedExecuteTransform(transformId, value);
   } catch (error) {
     console.error(`Transform error (${transformId}):`, error);
     return value;
@@ -474,163 +412,11 @@ export function executeTransform(
 }
 
 // ============================================================================
-// Helper Functions
+// Service-Specific Helper Functions
 // ============================================================================
-
-/**
- * Convert various values to boolean
- */
-function toBoolean(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const lower = value.toLowerCase().trim();
-    return lower === "true" || lower === "yes" || lower === "1" || lower === "y";
-  }
-  if (typeof value === "number") return value !== 0;
-  return Boolean(value);
-}
-
-/**
- * Convert string to title case
- */
-function toTitleCase(str: string): string {
-  return str
-    .toLowerCase()
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-/**
- * Truncate string to max length
- */
-function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength);
-}
-
-/**
- * Convert phone to E.164 format
- */
-function toE164(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10) {
-    return `+1${digits}`;
-  }
-  if (digits.length === 11 && digits.startsWith("1")) {
-    return `+${digits}`;
-  }
-  return `+${digits}`;
-}
-
-/**
- * Format phone as XXX-XXX-XXXX
- */
-function formatPhoneDashed(phone: string): string {
-  const digits = phone.replace(/\D/g, "").slice(-10);
-  if (digits.length !== 10) return phone;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
-/**
- * Format phone as XXX.XXX.XXXX
- */
-function formatPhoneDotted(phone: string): string {
-  const digits = phone.replace(/\D/g, "").slice(-10);
-  if (digits.length !== 10) return phone;
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-}
-
-/**
- * Format phone as (XXX) XXX-XXXX
- */
-function formatPhoneParentheses(phone: string): string {
-  const digits = phone.replace(/\D/g, "").slice(-10);
-  if (digits.length !== 10) return phone;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
-/**
- * Parse date value to Date object
- */
-function parseDate(value: unknown): Date | null {
-  if (value instanceof Date) return value;
-  if (typeof value === "string" || typeof value === "number") {
-    const date = new Date(value);
-    if (!isNaN(date.getTime())) return date;
-  }
-  return null;
-}
-
-/**
- * Convert to ISO date (YYYY-MM-DD)
- */
-function toISODate(value: unknown): string | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  return date.toISOString().split("T")[0];
-}
-
-/**
- * Convert to US date (MM/DD/YYYY)
- */
-function toUSDate(value: unknown): string | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${month}/${day}/${year}`;
-}
-
-/**
- * Convert to short US date (M/D/YY)
- */
-function toUSDateShort(value: unknown): string | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const year = String(date.getFullYear()).slice(-2);
-  return `${month}/${day}/${year}`;
-}
-
-/**
- * Convert to Unix timestamp (seconds)
- */
-function toUnixTimestamp(value: unknown): number | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  return Math.floor(date.getTime() / 1000);
-}
-
-/**
- * Convert to Unix timestamp (milliseconds)
- */
-function toUnixTimestampMs(value: unknown): number | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  return date.getTime();
-}
-
-/**
- * Convert to full ISO 8601 format
- */
-function toISO8601(value: unknown): string | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  return date.toISOString();
-}
-
-/**
- * Format number as currency
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
-}
+// NOTE: Common transforms (boolean, string, phone, date, number) are delegated
+// to @/lib/transforms/shared.ts via executeTransform() above.
+// Only service-specific helpers remain here.
 
 /**
  * Map window type to industry code

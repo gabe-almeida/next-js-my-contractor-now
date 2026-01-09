@@ -1,26 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+/**
+ * Homepage - Main entry point for lead generation
+ *
+ * WHY: Users select their project type to start the quote flow
+ * WHEN: User visits the homepage
+ * HOW: Fetches active services from database, renders dropdown
+ */
+
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PortalDropdown from '@/components/ui/PortalDropdown';
 
-// Static service types - no API call needed for homepage
-const serviceTypes = [
-  { id: 'windows', name: 'Windows' },
-  { id: 'roofing', name: 'Roofing' },
-  { id: 'bathrooms', name: 'Bathrooms' }
-];
-
 export default function HomePage() {
   const [selectedService, setSelectedService] = useState('');
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch active services from database
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const response = await fetch('/api/service-types');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          // Map to dropdown format, only active services
+          const services = result.data
+            .filter((s: any) => s.active)
+            .map((s: any) => ({
+              id: s.name.toLowerCase(),
+              name: s.displayName || s.name,
+            }));
+          setServiceTypes(services);
+        }
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+        // Fallback to default services if API fails
+        setServiceTypes([
+          { id: 'windows', name: 'Windows' },
+          { id: 'roofing', name: 'Roofing' },
+          { id: 'bathrooms', name: 'Bathrooms' },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchServices();
+  }, []);
 
   const handleServiceSelect = (serviceId: string, serviceName: string) => {
     setSelectedService(serviceName);
-    // Navigate to the specific service form
+    // Navigate to the specific service form at /services/[slug]
     if (serviceId !== 'other') {
-      window.location.href = `/${serviceId}`;
+      window.location.href = `/services/${serviceId}`;
     }
   };
 

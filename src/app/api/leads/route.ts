@@ -7,7 +7,7 @@
  * WHY:  Persist lead data and trigger async processing for buyer matching
  * WHEN: Called by DynamicForm.onSubmit() after user submits the form
  *
- * PREVIOUS STEP: src/components/forms/dynamic/DynamicForm.tsx
+ * PREVIOUS STEP: src/components/DynamicForm.tsx
  *
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │                        LEAD FLOW OVERVIEW                                │
@@ -57,12 +57,6 @@ import { RadarService } from '@/lib/external/radar';
 import { TrustedFormService } from '@/lib/external/trustedform';
 import { createLeadSchema } from '@/lib/validations/lead';
 import { generateZodSchema } from '@/lib/validations/dynamic-schema';
-// Legacy schemas kept for fallback (feature flag: USE_DYNAMIC_VALIDATION)
-import {
-  windowsFormSchema,
-  bathroomFormSchema,
-  roofingFormSchema
-} from '@/lib/validations/lead';
 import { sanitizeFormData } from '@/lib/security/sanitize';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 import { recordConversion } from '@/lib/services/affiliate-link-service';
@@ -177,40 +171,28 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate formData against service-specific schema
-    // Feature flag: USE_DYNAMIC_VALIDATION (default: true)
-    // Set to 'false' to use legacy hardcoded schemas
-    const useDynamicValidation = process.env.USE_DYNAMIC_VALIDATION !== 'false';
-
-    let serviceSchema: ReturnType<typeof generateZodSchema> | null = null;
-
-    if (useDynamicValidation && serviceType.formSchema) {
-      // Dynamic validation: Generate schema from database formSchema
-      try {
-        serviceSchema = generateZodSchema(serviceType.formSchema);
-      } catch (error) {
-        console.warn('Dynamic schema generation failed, falling back to legacy:', error);
-      }
+    // Validate formData against service-specific schema from database
+    // Schema is generated dynamically from ServiceType.formSchema
+    if (!serviceType.formSchema) {
+      return NextResponse.json({
+        success: false,
+        error: 'Service configuration missing',
+        message: `Service type '${serviceType.name}' does not have a form schema configured. Add it via Admin UI.`,
+        timestamp: new Date().toISOString(),
+      }, { status: 400 });
     }
 
-    // Fallback to legacy hardcoded schemas if dynamic fails or is disabled
-    if (!serviceSchema) {
-      const legacySchemaMap: Record<string, any> = {
-        'windows': windowsFormSchema,
-        'bathrooms': bathroomFormSchema,
-        'roofing': roofingFormSchema,
-      };
-
-      serviceSchema = legacySchemaMap[serviceType.name];
-
-      if (!serviceSchema) {
-        return NextResponse.json({
-          success: false,
-          error: 'Unsupported service type',
-          message: `Service type '${serviceType.name}' does not have a validation schema. Add it via Admin UI or contact support.`,
-          timestamp: new Date().toISOString(),
-        }, { status: 400 });
-      }
+    let serviceSchema: ReturnType<typeof generateZodSchema>;
+    try {
+      serviceSchema = generateZodSchema(serviceType.formSchema);
+    } catch (error) {
+      console.error('Dynamic schema generation failed:', error);
+      return NextResponse.json({
+        success: false,
+        error: 'Schema generation failed',
+        message: `Failed to generate validation schema for '${serviceType.name}'. Check formSchema in Admin UI.`,
+        timestamp: new Date().toISOString(),
+      }, { status: 500 });
     }
 
     // DEBUG: Log data being validated against service schema

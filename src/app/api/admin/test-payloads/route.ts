@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { TemplateEngine } from '@/lib/templates/TemplateEngine';
+import {
+  loadFieldMappingConfig,
+  generatePayloadPreview,
+} from '@/lib/field-mapping/configuration-service';
+import { FieldMapping } from '@/types/field-mapping';
 
 /**
  * Test endpoint to preview payload transformations for each buyer
  * WITHOUT actually sending PING/POST requests
+ *
+ * WHY: Admin needs to verify field mappings produce correct output
+ * WHEN: Testing buyer configuration before going live
+ * HOW: Uses the same generatePayloadPreview() as admin UI
+ *
+ * This ensures test preview matches admin UI preview matches actual auction output.
  */
 export async function POST(request: NextRequest) {
   try {
     const { leadData, serviceTypeId } = await request.json();
 
-    // Get service type with active buyers and their configurations
+    // Get service type with active buyers
     const serviceType = await prisma.serviceType.findUnique({
       where: { id: serviceTypeId },
       include: {
         buyerServiceConfigs: {
           where: { active: true },
-          include: { 
-            buyer: true
+          include: {
+            buyer: true,
           },
         },
       },
@@ -32,62 +42,28 @@ export async function POST(request: NextRequest) {
     // Process each buyer configuration
     for (const config of serviceType.buyerServiceConfigs) {
       try {
-        // Prepare complete lead data (same as in AuctionEngine)
-        const completeLeadData = {
-          ...leadData,
-          zipCode: leadData.address || '00000',
-          ownsHome: leadData.isHomeowner === 'yes',
-          timeframe: leadData.timeline,
-        };
+        // Load field mapping config from database
+        const fieldMappingConfig = await loadFieldMappingConfig(
+          config.buyerId,
+          config.serviceTypeId
+        );
 
-        // Add mock compliance data for testing
-        const complianceData = {
-          trustedFormCert: config.requiresTrustedForm ? 'mock-tf-cert-url' : undefined,
-          trustedFormCertId: config.requiresTrustedForm ? 'mock-tf-cert-id' : undefined,
-          jornayaLeadId: config.requiresJornaya ? 'mock-jornaya-lead-id' : undefined,
-          ipAddress: '192.168.1.100',
-          userAgent: 'Mozilla/5.0 (Test Browser)',
-          tcpaConsent: true,
-          tcpaTimestamp: new Date().toISOString(),
-        };
-
-        const fullData = { ...completeLeadData, ...complianceData };
-
-        // Test PING transformation
-        let pingResult = null;
-        let pingErrors: string[] = [];
-        let pingWarnings: string[] = [];
-        let pingTemplate = null;
-
-        try {
-          pingTemplate = config.pingTemplate ? JSON.parse(config.pingTemplate) : null;
-          if (pingTemplate && pingTemplate.mappings) {
-            const pingPreview = TemplateEngine.preview(fullData, pingTemplate.mappings);
-            pingResult = pingPreview.result;
-            pingErrors = pingPreview.errors;
-            pingWarnings = pingPreview.warnings;
-          }
-        } catch (error) {
-          pingErrors.push('Invalid ping template JSON: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        if (!fieldMappingConfig) {
+          results.push({
+            buyerId: config.buyerId,
+            buyerName: config.buyer.name,
+            buyerApiUrl: config.buyer.apiUrl,
+            active: config.active,
+            error: 'No field mapping configuration found',
+            ping: { payload: {}, mappingCount: 0 },
+            post: { payload: {}, mappingCount: 0 },
+          });
+          continue;
         }
 
-        // Test POST transformation
-        let postResult = null;
-        let postErrors: string[] = [];
-        let postWarnings: string[] = [];
-        let postTemplate = null;
-
-        try {
-          postTemplate = config.postTemplate ? JSON.parse(config.postTemplate) : null;
-          if (postTemplate && postTemplate.mappings) {
-            const postPreview = TemplateEngine.preview(fullData, postTemplate.mappings);
-            postResult = postPreview.result;
-            postErrors = postPreview.errors;
-            postWarnings = postPreview.warnings;
-          }
-        } catch (error) {
-          postErrors.push('Invalid post template JSON: ' + (error instanceof Error ? error.message : 'Unknown error'));
-        }
+        // Generate preview using the SAME function as admin UI
+        // This ensures test = preview = production
+        const preview = generatePayloadPreview(fieldMappingConfig, leadData);
 
         results.push({
           buyerId: config.buyerId,
@@ -97,28 +73,19 @@ export async function POST(request: NextRequest) {
           requiresTrustedForm: config.requiresTrustedForm,
           requiresJornaya: config.requiresJornaya,
           ping: {
-            templateId: pingTemplate?.id || null,
-            hasTemplate: !!pingTemplate,
-            payload: pingResult,
-            errors: pingErrors,
-            warnings: pingWarnings,
-            mappingCount: pingTemplate?.mappings?.length || 0,
+            payload: preview.pingPayload,
+            errors: preview.errors,
+            mappingCount: fieldMappingConfig.mappings.filter((m: FieldMapping) => m.includeInPing).length,
           },
           post: {
-            templateId: postTemplate?.id || null,
-            hasTemplate: !!postTemplate,
-            payload: postResult,
-            errors: postErrors,
-            warnings: postWarnings,
-            mappingCount: postTemplate?.mappings?.length || 0,
+            payload: preview.postPayload,
+            errors: preview.errors,
+            mappingCount: fieldMappingConfig.mappings.filter((m: FieldMapping) => m.includeInPost).length,
           },
           sourceData: {
             original: leadData,
-            enriched: completeLeadData,
-            withCompliance: fullData,
-          }
+          },
         });
-
       } catch (error) {
         results.push({
           buyerId: config.buyerId,
@@ -138,9 +105,8 @@ export async function POST(request: NextRequest) {
       testData: {
         leadData,
         serviceTypeId,
-      }
+      },
     });
-
   } catch (error) {
     console.error('Payload test error:', error);
     return NextResponse.json(
@@ -162,55 +128,71 @@ export async function GET() {
         _count: {
           select: {
             buyerServiceConfigs: {
-              where: { active: true }
-            }
-          }
-        }
-      }
+              where: { active: true },
+            },
+          },
+        },
+      },
     });
 
     // Sample lead data for each service type
-    const sampleData = {
+    const sampleData: Record<string, Record<string, any>> = {
       windows: {
         projectScope: 'install',
         numberOfWindows: '4-6',
-        address: '12345',
-        timeline: 'within_3_months',
-        isHomeowner: 'yes',
-        nameInfo: { firstName: 'John', lastName: 'Doe' },
-        contactInfo: { email: 'john.doe@example.com', phone: '555-123-4567' }
+        zipCode: '12345',
+        timeframe: 'within_3_months',
+        ownsHome: true,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '555-123-4567',
       },
       roofing: {
         projectScope: 'full_replacement',
         roofType: 'asphalt_shingles',
         roofSize: 'medium',
-        address: '12345',
-        timeline: 'within_3_months',
-        isHomeowner: 'yes',
-        nameInfo: { firstName: 'Jane', lastName: 'Smith' },
-        contactInfo: { email: 'jane.smith@example.com', phone: '555-987-6543' }
+        zipCode: '12345',
+        timeframe: 'within_3_months',
+        ownsHome: true,
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane.smith@example.com',
+        phone: '555-987-6543',
       },
       bathrooms: {
         projectScope: 'full_renovation',
         bathroomType: 'master_bath',
         projectSize: 'medium',
-        address: '12345',
-        timeline: 'within_3_months',
-        isHomeowner: 'yes',
-        nameInfo: { firstName: 'Bob', lastName: 'Johnson' },
-        contactInfo: { email: 'bob.johnson@example.com', phone: '555-456-7890' }
-      }
+        zipCode: '12345',
+        timeframe: 'within_3_months',
+        ownsHome: true,
+        firstName: 'Bob',
+        lastName: 'Johnson',
+        email: 'bob.johnson@example.com',
+        phone: '555-456-7890',
+      },
+      hvac: {
+        systemType: 'central_ac',
+        serviceType: 'installation',
+        zipCode: '12345',
+        timeframe: 'within_3_months',
+        ownsHome: true,
+        firstName: 'Alice',
+        lastName: 'Williams',
+        email: 'alice.williams@example.com',
+        phone: '555-789-0123',
+      },
     };
 
     return NextResponse.json({
       success: true,
-      serviceTypes: serviceTypes.map(st => ({
+      serviceTypes: serviceTypes.map((st) => ({
         ...st,
         activeBuyers: st._count.buyerServiceConfigs,
-        sampleData: sampleData[st.name.toLowerCase() as keyof typeof sampleData] || {}
-      }))
+        sampleData: sampleData[st.name.toLowerCase()] || {},
+      })),
     });
-
   } catch (error) {
     console.error('Service types fetch error:', error);
     return NextResponse.json(

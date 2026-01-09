@@ -8,6 +8,7 @@
  *
  * HOW: Looks up ServiceType by slug, builds QuestionFlow from formSchema,
  *      validates and returns the flow for DynamicForm component.
+ *      Uses Redis caching for performance (cache invalidated on service update).
  *
  * ENDPOINT: GET /api/services/[slug]/flow
  *
@@ -15,11 +16,19 @@
  *   - 200: { flow: QuestionFlow }
  *   - 404: { error: 'Service not found' }
  *   - 500: { error: 'Failed to build flow' }
+ *
+ * CACHING:
+ *   - Cached for 1 hour in Redis
+ *   - Cache key: service-flow:{slug}
+ *   - Invalidated by /api/service-types/[id] PUT
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { buildQuestionFlow, buildFallbackFlow, validateQuestionFlow } from '@/lib/questions/flow-builder';
+import { RedisCache } from '@/config/redis';
+
+const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export async function GET(
   request: NextRequest,
@@ -27,6 +36,21 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const cacheKey = `service-flow:${slug.toLowerCase()}`;
+
+    // Check cache first
+    const cached = await RedisCache.get<{
+      flow: any;
+      service: { id: string; name: string; displayName: string | null };
+    }>(cacheKey);
+
+    if (cached) {
+      return NextResponse.json({
+        ...cached,
+        cached: true,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // Look up service by slug (name) or ID
     const serviceType = await prisma.serviceType.findFirst({
@@ -80,13 +104,21 @@ export async function GET(
       flow = buildFallbackFlow(serviceType.name);
     }
 
-    return NextResponse.json({
+    const responseData = {
       flow,
       service: {
         id: serviceType.id,
         name: serviceType.name,
         displayName: serviceType.displayName,
       },
+    };
+
+    // Cache the result
+    await RedisCache.set(cacheKey, responseData, CACHE_TTL_SECONDS);
+
+    return NextResponse.json({
+      ...responseData,
+      cached: false,
       timestamp: new Date().toISOString(),
     });
 

@@ -26,10 +26,14 @@ async function main() {
   // ==========================================
   console.log('👤 Creating admin users...')
 
+  // Default password hash for 'ChangeMe123!' - CHANGE IN PRODUCTION
+  const defaultPasswordHash = '$2b$12$Nwvum8Hvx5/JjJWiUbxSgeBsrx0MBVylvZwAzbVf.RFkHyZZXlXgi';
+
   const superAdmin = await prisma.adminUser.create({
     data: {
-      email: 'admin@mycontractornow.com',
-      name: 'Super Admin',
+      email: 'gabe@mycontractornow.com',
+      passwordHash: defaultPasswordHash,
+      name: 'Gabe',
       role: 'SUPER_ADMIN',
       active: true
     }
@@ -38,6 +42,7 @@ async function main() {
   const adminUser = await prisma.adminUser.create({
     data: {
       email: 'sarah@mycontractornow.com',
+      passwordHash: defaultPasswordHash,
       name: 'Sarah',
       role: 'ADMIN',
       active: true
@@ -47,6 +52,7 @@ async function main() {
   const supportUser = await prisma.adminUser.create({
     data: {
       email: 'mike@mycontractornow.com',
+      passwordHash: defaultPasswordHash,
       name: 'Mike',
       role: 'SUPPORT',
       active: true

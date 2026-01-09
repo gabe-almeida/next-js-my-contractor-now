@@ -235,13 +235,15 @@ model ZipCodeMetadata {
 // ============================================
 
 model AdminUser {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  role      String   @default("ADMIN") // SUPER_ADMIN, ADMIN, SUPPORT
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  role         String    @default("ADMIN") // SUPER_ADMIN, ADMIN, SUPPORT
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   statusChanges LeadStatusHistory[]
 

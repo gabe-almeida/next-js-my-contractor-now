@@ -224,23 +224,30 @@ export interface FormFieldOption {
   disabled?: boolean;
 }
 
-export interface FormFieldConditional {
-  field: string;
-  operator: 'equals' | 'notEquals' | 'includes' | 'greaterThan' | 'lessThan';
-  value: any;
+/**
+ * Form Field Condition - Aligned with runtime flow-builder.ts
+ *
+ * WHY: Controls conditional visibility of form questions
+ * WHEN: Used when a question should only show based on previous answers
+ * HOW: shouldShowQuestion() in questions.ts evaluates these conditions
+ */
+export interface FormFieldCondition {
+  field: string;  // Field name to check (e.g., "isHomeowner")
+  operator: 'equals' | 'not_equals' | 'in' | 'not_in';
+  value: string | string[];  // Value(s) to match against
 }
 
 export interface FormField {
   id: string;
   name: string;
-  type: 'text' | 'email' | 'phone' | 'number' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'date' | 'multiselect' | 'tel';
+  type: 'text' | 'email' | 'phone' | 'number' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'date' | 'multiselect' | 'tel' | 'address' | 'contact' | 'name_fields' | 'contact_fields';
   label: string;
   placeholder?: string;
   description?: string;
   required: boolean;
   options?: FormFieldOption[];
   validation?: FormFieldValidation;
-  conditional?: FormFieldConditional;
+  conditions?: FormFieldCondition[];  // Array of conditions (AND logic) - aligned with flow-builder.ts
   gridColumn?: string;
   className?: string;
 }
