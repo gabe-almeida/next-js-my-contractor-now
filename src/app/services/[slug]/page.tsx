@@ -176,9 +176,10 @@ export default function DynamicServicePage() {
             // Marketing attribution data (UTM params, click IDs)
             attribution: answers.attribution,
             // TrustedForm and Jornaya compliance tokens from DynamicForm providers
-            trustedFormCertUrl: answers.trustedFormCertUrl || null,
-            trustedFormCertId: answers.trustedFormCertId || null,
-            jornayaLeadId: answers.jornayaLeadId || null,
+            // Use undefined (not null) for missing values - Zod's .optional() accepts undefined but not null
+            trustedFormCertUrl: answers.trustedFormCertUrl || undefined,
+            trustedFormCertId: answers.trustedFormCertId || undefined,
+            jornayaLeadId: answers.jornayaLeadId || undefined,
           }
         })
       });
