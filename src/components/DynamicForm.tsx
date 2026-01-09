@@ -663,23 +663,36 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
     setComplianceStatus(prev => ({ ...prev, jornaya: status }));
   }, []);
 
-  // Re-inject TrustedForm script when form mounts (handles SPA navigation)
-  // TrustedForm SDK only scans for forms on initial load, so we need to re-trigger it
+  // Handle TrustedForm for SPA navigation
+  // TrustedForm SDK scans for forms on load - we need to trigger rescan on navigation
   useEffect(() => {
-    // Check if TrustedForm is already initialized for this form
+    // Check if TrustedForm is already fully initialized with a certificate
     const existingInput = document.querySelector('input[name="xxTrustedFormCertUrl"]');
     if (existingInput && (existingInput as HTMLInputElement).value) {
-      console.log('[DynamicForm] TrustedForm already initialized');
+      console.log('[DynamicForm] TrustedForm already has certificate');
       return;
     }
 
-    console.log('[DynamicForm] Re-injecting TrustedForm script for SPA navigation...');
+    // Check if TrustedForm global object exists (SDK already loaded)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tfGlobal = (window as any).TrustedForm || (window as any).tf;
+    if (tfGlobal) {
+      console.log('[DynamicForm] TrustedForm SDK present, triggering rescan...');
+      // TrustedForm SDK is loaded - just trigger a form rescan if method available
+      if (typeof tfGlobal.scan === 'function') {
+        tfGlobal.scan();
+      }
+      return;
+    }
 
-    // Remove any existing TrustedForm script to force re-initialization
+    // Only inject if no TrustedForm script exists at all
     const existingScript = document.querySelector('script[src*="trustedform.js"]');
     if (existingScript) {
-      existingScript.remove();
+      console.log('[DynamicForm] TrustedForm script already present, skipping injection');
+      return;
     }
+
+    console.log('[DynamicForm] Injecting TrustedForm script...');
 
     // Inject fresh TrustedForm script
     const tf = document.createElement('script');
@@ -696,7 +709,7 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
       document.head.appendChild(tf);
     }
 
-    console.log('[DynamicForm] TrustedForm script re-injected');
+    console.log('[DynamicForm] TrustedForm script injected');
   }, []);
 
   // TrustedForm configuration - always enabled for lead gen forms

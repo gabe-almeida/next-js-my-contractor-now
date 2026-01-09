@@ -27,27 +27,62 @@ export class TrustedFormService {
     `;
   }
 
+  /**
+   * Validate/claim a TrustedForm certificate
+   *
+   * WHY: Verify lead consent was captured and claim the certificate
+   * WHEN: Called during lead submission to validate compliance
+   * HOW: POST to cert URL with Basic Auth (API key as username)
+   */
   static async validateCertificate(certUrl: string): Promise<TrustedFormCertificate | null> {
     if (!this.apiKey) {
       throw new AppError('TrustedForm API key not configured', 'TRUSTEDFORM_NOT_CONFIGURED');
     }
 
+    // Validate cert URL format
+    if (!this.isValidCertificateUrl(certUrl)) {
+      console.warn('Invalid TrustedForm certificate URL format:', certUrl);
+      return null;
+    }
+
     try {
-      const response = await fetch(`${this.baseUrl}/api/v1/certificate`, {
+      // TrustedForm API: POST directly to the certificate URL with Basic Auth
+      // API key is the username, password is empty
+      const basicAuth = Buffer.from(`${this.apiKey}:`).toString('base64');
+
+      const response = await fetch(certUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Basic ${basicAuth}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Api-Version': '4.0',
         },
         body: JSON.stringify({
-          cert_url: certUrl,
+          // Retain the certificate with reference
+          retain: {
+            reference: this.domain || 'mycontractornow.com',
+          },
         }),
       });
 
       if (!response.ok) {
         if (response.status === 404) {
-          return null; // Certificate not found
+          console.warn('TrustedForm certificate not found (404):', certUrl);
+          return null;
         }
+        if (response.status === 401) {
+          console.error('TrustedForm authentication failed - check API key');
+          return null;
+        }
+        if (response.status === 410) {
+          // Certificate already claimed or expired
+          console.warn('TrustedForm certificate already claimed or expired:', certUrl);
+          return null;
+        }
+
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`TrustedForm API error: ${response.status} - ${errorText}`);
         throw new AppError(
           `TrustedForm API error: ${response.status} ${response.statusText}`,
           `TRUSTEDFORM_API_ERROR_${response.status}`
@@ -55,24 +90,25 @@ export class TrustedFormService {
       }
 
       const data = await response.json();
-      
+
       return {
-        certUrl: data.cert_url,
-        certId: data.cert_id,
-        formUrl: data.form_url,
+        certUrl: data.cert || certUrl,
+        certId: this.extractCertificateFromUrl(certUrl) || data.id,
+        formUrl: data.page_url || data.location,
         timestamp: data.created_at,
         ipAddress: data.ip,
         userAgent: data.user_agent,
-        pageTitle: data.page_title,
-        referrer: data.referrer,
+        pageTitle: data.page_title || data.title,
+        referrer: data.referrer || data.parent_location,
       };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
-      
+
       console.error('TrustedForm validation error:', error);
-      throw new AppError('Failed to validate TrustedForm certificate', 'TRUSTEDFORM_VALIDATION_FAILED');
+      // Don't throw - allow lead to proceed even if TrustedForm validation fails
+      return null;
     }
   }
 
