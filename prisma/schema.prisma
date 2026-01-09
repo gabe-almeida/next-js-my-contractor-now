@@ -83,6 +83,8 @@ model BuyerServiceConfig {
   maxBid              Decimal     @default(999.99) @map("max_bid")
   active              Boolean     @default(true)
   createdAt           DateTime    @default(now()) @map("created_at")
+  lastZipCodeUpdate   DateTime?   @map("last_zip_code_update")
+  zipCodeSource       String?     @map("zip_code_source") // Original filename for audit trail
   buyer               Buyer       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   serviceType         ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
 
