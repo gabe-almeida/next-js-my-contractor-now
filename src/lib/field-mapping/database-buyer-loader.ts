@@ -333,11 +333,23 @@ export async function loadServiceConfig(
   }
 
   // Parse field mappings
+  // Handles both new format (with mappings array) and legacy format (simple key-value)
   let fieldMappingConfig: FieldMappingConfig;
   try {
-    fieldMappingConfig = serviceConfig.fieldMappings
-      ? JSON.parse(serviceConfig.fieldMappings)
-      : createEmptyFieldMappingConfig();
+    if (serviceConfig.fieldMappings) {
+      const parsed = JSON.parse(serviceConfig.fieldMappings);
+      // Check if it's the new format with mappings array
+      if (parsed.mappings && Array.isArray(parsed.mappings)) {
+        fieldMappingConfig = parsed;
+      } else {
+        // Legacy format - simple key-value pairs without mappings array
+        // Use empty config (legacy buyers need to be migrated to new format)
+        console.warn(`Buyer ${serviceConfig.buyerId} has legacy field_mappings format - needs migration to new format`);
+        fieldMappingConfig = createEmptyFieldMappingConfig();
+      }
+    } else {
+      fieldMappingConfig = createEmptyFieldMappingConfig();
+    }
   } catch {
     fieldMappingConfig = createEmptyFieldMappingConfig();
   }
