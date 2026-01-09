@@ -1,7 +1,58 @@
+-- ============================================================================
+-- DATABASE CONFIGURATION - STEP 4a OF 6: FIELD MAPPING CONFIGURATION
+-- ============================================================================
+--
 -- Migration: Update Modernize field_mappings to new FieldMappingConfig format with valueMap
 -- Date: 2026-01-08
--- Description: Converts simple key-value mappings to full FieldMappingConfig structure
---              with admin-editable valueMap for each buyer/service combination
+-- API Docs: https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api
+--
+-- ┌─────────────────────────────────────────────────────────────────────────┐
+-- │                        LEAD FLOW OVERVIEW                                │
+-- │                                                                          │
+-- │  [STEP 1] DynamicForm.tsx          → User fills form                    │
+-- │      ↓ FormSubmission with RAW values                                   │
+-- │  [STEP 2] /api/leads/route.ts      → Creates Lead in DB                 │
+-- │      ↓ Lead added to processing queue                                   │
+-- │  [STEP 3] auction/engine.ts        → Finds eligible buyers              │
+-- │      ↓ Loads buyer configs from database                                │
+-- │  [STEP 4a] THIS FILE               ← CONFIGURES FIELD MAPPINGS          │
+-- │      ↓ FieldMappingConfig stored in buyer_service_configs.field_mappings │
+-- │  [STEP 4b] database-buyer-loader.ts → Converts to TemplateMapping       │
+-- │      ↓ Copies valueMap from database to TemplateEngine format           │
+-- │  [STEP 5] templates/engine.ts      → Applies valueMap + transforms      │
+-- │      ↓ valueMap FIRST: "within_3_months" → "1-6 months"                 │
+-- │      ↓ transform SECOND: boolean → "Yes/No"                             │
+-- │  [STEP 6] auction/engine.ts        → Sends PING → Selects winner → POST │
+-- └─────────────────────────────────────────────────────────────────────────┘
+--
+-- KEY FIELDS FOR MODERNIZE WINDOWS:
+-- ─────────────────────────────────
+-- PING FIELDS (routing):
+--   - postalCode (from zipCode)
+--   - buyTimeframe (from timeframe, valueMap: "within_3_months" → "1-6 months")
+--   - ownHome (from ownsHome, transform: boolean.yesNo → "Yes"/"No")
+--   - service (static: "WINDOWS")
+--   - tagId (static: "204670250")
+--
+-- POST-ONLY FIELDS (full lead data):
+--   - NumberOfWindows (from numberOfWindows, valueMap: "9+" → "6-9")
+--   - WindowsProjectScope (from projectScope, valueMap: "install" → "Install")
+--   - firstName, lastName, phone, email, address, city, state
+--   - trustedFormToken, leadIDToken
+--   - homePhoneConsentLanguage (static)
+--
+-- SOURCE FIELD NOTES:
+-- ───────────────────
+-- TemplateEngine.prepareSourceData() FLATTENS formData to top level!
+-- So use "numberOfWindows", NOT "formData.numberOfWindows"
+--
+-- VALID MODERNIZE VALUES (from API docs):
+-- ───────────────────────────────────────
+-- buyTimeframe: "Immediately", "1-6 months", "Don't know"
+-- ownHome: "Yes", "No"
+-- NumberOfWindows: "1", "2", "3-5", "6-9"
+-- WindowsProjectScope: "Install", "Repair"
+-- ============================================================================
 
 -- Note: Run this against your production database
 -- For PostgreSQL, the JSON syntax is the same. For other databases, adjust accordingly.
@@ -52,13 +103,13 @@ SET field_mappings = '{
     },
     {
       "id": "m-numberOfWindows",
-      "sourceField": "formData.numberOfWindows",
+      "sourceField": "numberOfWindows",
       "targetField": "NumberOfWindows",
       "required": true,
       "order": 4,
       "includeInPing": false,
       "includeInPost": true,
-      "description": "Number of windows - POST only",
+      "description": "Number of windows - POST only per Modernize API docs",
       "valueMap": {
         "1": "1",
         "2": "2",
@@ -69,13 +120,13 @@ SET field_mappings = '{
     },
     {
       "id": "m-projectScope",
-      "sourceField": "formData.projectScope",
+      "sourceField": "projectScope",
       "targetField": "WindowsProjectScope",
       "required": true,
       "order": 5,
       "includeInPing": false,
       "includeInPost": true,
-      "description": "Project type - Install/Repair - POST only",
+      "description": "Project type - Install/Repair - POST only per Modernize API docs",
       "valueMap": {
         "repair": "Repair",
         "install": "Install"
@@ -83,7 +134,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-firstName",
-      "sourceField": "formData.firstName",
+      "sourceField": "firstName",
       "targetField": "firstName",
       "required": true,
       "order": 10,
@@ -93,7 +144,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-lastName",
-      "sourceField": "formData.lastName",
+      "sourceField": "lastName",
       "targetField": "lastName",
       "required": true,
       "order": 11,
@@ -103,7 +154,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-phone",
-      "sourceField": "formData.phone",
+      "sourceField": "phone",
       "targetField": "phone",
       "transform": "phone.digitsOnly",
       "required": true,
@@ -114,7 +165,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-email",
-      "sourceField": "formData.email",
+      "sourceField": "email",
       "targetField": "email",
       "required": true,
       "order": 13,
@@ -124,7 +175,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-address",
-      "sourceField": "formData.address",
+      "sourceField": "address",
       "targetField": "address",
       "required": true,
       "order": 14,
@@ -134,7 +185,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-city",
-      "sourceField": "formData.city",
+      "sourceField": "city",
       "targetField": "city",
       "required": true,
       "order": 15,
@@ -144,7 +195,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-state",
-      "sourceField": "formData.state",
+      "sourceField": "state",
       "targetField": "state",
       "required": true,
       "order": 16,
@@ -244,13 +295,13 @@ SET field_mappings = '{
     },
     {
       "id": "m-optIn1",
-      "sourceField": "formData.projectScope",
+      "sourceField": "projectScope",
       "targetField": "OptIn1",
       "required": false,
       "order": 4,
       "includeInPing": false,
       "includeInPost": true,
-      "description": "Removing/adding walls? Mapped from project scope",
+      "description": "Removing/adding walls? POST only per Modernize API docs",
       "valueMap": {
         "full_renovation": "Yes",
         "partial_remodel": "No",
@@ -260,7 +311,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-firstName",
-      "sourceField": "formData.firstName",
+      "sourceField": "firstName",
       "targetField": "firstName",
       "required": true,
       "order": 10,
@@ -270,7 +321,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-lastName",
-      "sourceField": "formData.lastName",
+      "sourceField": "lastName",
       "targetField": "lastName",
       "required": true,
       "order": 11,
@@ -280,7 +331,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-phone",
-      "sourceField": "formData.phone",
+      "sourceField": "phone",
       "targetField": "phone",
       "transform": "phone.digitsOnly",
       "required": true,
@@ -291,7 +342,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-email",
-      "sourceField": "formData.email",
+      "sourceField": "email",
       "targetField": "email",
       "required": true,
       "order": 13,
@@ -301,7 +352,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-address",
-      "sourceField": "formData.address",
+      "sourceField": "address",
       "targetField": "address",
       "required": true,
       "order": 14,
@@ -311,7 +362,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-city",
-      "sourceField": "formData.city",
+      "sourceField": "city",
       "targetField": "city",
       "required": true,
       "order": 15,
@@ -321,7 +372,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-state",
-      "sourceField": "formData.state",
+      "sourceField": "state",
       "targetField": "state",
       "required": true,
       "order": 16,
@@ -421,13 +472,13 @@ SET field_mappings = '{
     },
     {
       "id": "m-hvacInterest",
-      "sourceField": "formData.projectScope",
+      "sourceField": "projectScope",
       "targetField": "HVACInterest",
       "required": true,
       "order": 4,
       "includeInPing": false,
       "includeInPost": true,
-      "description": "HVAC project type - POST only",
+      "description": "HVAC project type - POST only per Modernize API docs",
       "valueMap": {
         "install_ac": "Install Central AC",
         "repair_ac": "Repair Central AC",
@@ -439,7 +490,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-firstName",
-      "sourceField": "formData.firstName",
+      "sourceField": "firstName",
       "targetField": "firstName",
       "required": true,
       "order": 10,
@@ -449,7 +500,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-lastName",
-      "sourceField": "formData.lastName",
+      "sourceField": "lastName",
       "targetField": "lastName",
       "required": true,
       "order": 11,
@@ -459,7 +510,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-phone",
-      "sourceField": "formData.phone",
+      "sourceField": "phone",
       "targetField": "phone",
       "transform": "phone.digitsOnly",
       "required": true,
@@ -470,7 +521,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-email",
-      "sourceField": "formData.email",
+      "sourceField": "email",
       "targetField": "email",
       "required": true,
       "order": 13,
@@ -480,7 +531,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-address",
-      "sourceField": "formData.address",
+      "sourceField": "address",
       "targetField": "address",
       "required": true,
       "order": 14,
@@ -490,7 +541,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-city",
-      "sourceField": "formData.city",
+      "sourceField": "city",
       "targetField": "city",
       "required": true,
       "order": 15,
@@ -500,7 +551,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-state",
-      "sourceField": "formData.state",
+      "sourceField": "state",
       "targetField": "state",
       "required": true,
       "order": 16,
@@ -600,13 +651,13 @@ SET field_mappings = '{
     },
     {
       "id": "m-roofingPlan",
-      "sourceField": "formData.projectScope",
+      "sourceField": "projectScope",
       "targetField": "RoofingPlan",
       "required": true,
       "order": 4,
       "includeInPing": false,
       "includeInPost": true,
-      "description": "Roofing project type - POST only",
+      "description": "Roofing project type - POST only per Modernize API docs",
       "valueMap": {
         "repair": "Repair existing roof",
         "replacement": "Completely replace roof",
@@ -615,7 +666,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-firstName",
-      "sourceField": "formData.firstName",
+      "sourceField": "firstName",
       "targetField": "firstName",
       "required": true,
       "order": 10,
@@ -625,7 +676,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-lastName",
-      "sourceField": "formData.lastName",
+      "sourceField": "lastName",
       "targetField": "lastName",
       "required": true,
       "order": 11,
@@ -635,7 +686,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-phone",
-      "sourceField": "formData.phone",
+      "sourceField": "phone",
       "targetField": "phone",
       "transform": "phone.digitsOnly",
       "required": true,
@@ -646,7 +697,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-email",
-      "sourceField": "formData.email",
+      "sourceField": "email",
       "targetField": "email",
       "required": true,
       "order": 13,
@@ -656,7 +707,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-address",
-      "sourceField": "formData.address",
+      "sourceField": "address",
       "targetField": "address",
       "required": true,
       "order": 14,
@@ -666,7 +717,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-city",
-      "sourceField": "formData.city",
+      "sourceField": "city",
       "targetField": "city",
       "required": true,
       "order": 15,
@@ -676,7 +727,7 @@ SET field_mappings = '{
     },
     {
       "id": "m-state",
-      "sourceField": "formData.state",
+      "sourceField": "state",
       "targetField": "state",
       "required": true,
       "order": 16,
