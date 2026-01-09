@@ -310,9 +310,11 @@ export class AuctionEngine {
     this.activeAuctions.set(auctionId, auctionState);
 
     // Send parallel PINGs to all eligible buyers
-    const bidPromises = eligibleBuyers.map(buyer =>
-      this.sendPingToBuyer(lead, buyer, config.timeoutMs)
-    );
+    // Use buyer-specific ping timeout (already in ms), fallback to global config timeout
+    const bidPromises = eligibleBuyers.map(buyer => {
+      const buyerTimeout = buyer.serviceConfig.webhookConfig?.timeouts?.ping || config.timeoutMs;
+      return this.sendPingToBuyer(lead, buyer, buyerTimeout);
+    });
 
     // Wait for all bids with timeout
     const bidResults = await Promise.allSettled(bidPromises);
