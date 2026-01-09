@@ -57,6 +57,14 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 
   const handleAnswer = (questionId: string, value: any) => {
     const newAnswers = { ...answers, [questionId]: value };
+
+    // DEBUG: Log every answer being stored
+    console.log('[handleAnswer] DEBUG - Storing answer:', {
+      questionId,
+      value,
+      allAnswersAfterUpdate: newAnswers
+    });
+
     setAnswers(newAnswers);
 
     // Auto-advance to next step
@@ -119,6 +127,16 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
   };
 
   const handleComplete = async (allAnswers: { [key: string]: any }) => {
+    // DEBUG: Log what handleComplete receives
+    console.log('[handleComplete] DEBUG - Received allAnswers:', {
+      firstName: allAnswers.firstName,
+      lastName: allAnswers.lastName,
+      email: allAnswers.email,
+      phone: allAnswers.phone,
+      nameInfo: allAnswers.nameInfo,
+      allKeys: Object.keys(allAnswers)
+    });
+
     setIsSubmitting(true);
     try {
       // Get fresh compliance tokens at submission time
@@ -145,6 +163,15 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
         trustedFormCertId: trustedFormToken,
         jornayaLeadId,
       };
+
+      // DEBUG: Log final data being sent to page handler
+      console.log('[handleComplete] DEBUG - Final data to onComplete:', {
+        firstName: answersWithCompliance.firstName,
+        lastName: answersWithCompliance.lastName,
+        email: answersWithCompliance.email,
+        phone: answersWithCompliance.phone,
+      });
+
       await onComplete(answersWithCompliance);
     } catch (error) {
       console.error('Error submitting form:', error);
