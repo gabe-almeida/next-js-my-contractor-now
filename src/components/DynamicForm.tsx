@@ -166,10 +166,10 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 
       // DEBUG: Log final data being sent to page handler
       console.log('[handleComplete] DEBUG - Final data to onComplete:', {
-        firstName: answersWithCompliance.firstName,
-        lastName: answersWithCompliance.lastName,
-        email: answersWithCompliance.email,
-        phone: answersWithCompliance.phone,
+        firstName: (answersWithCompliance as any).firstName,
+        lastName: (answersWithCompliance as any).lastName,
+        email: (answersWithCompliance as any).email,
+        phone: (answersWithCompliance as any).phone,
       });
 
       await onComplete(answersWithCompliance);
