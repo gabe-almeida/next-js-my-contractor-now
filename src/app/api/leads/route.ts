@@ -66,6 +66,8 @@ import {
 import { sanitizeFormData } from '@/lib/security/sanitize';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 import { recordConversion } from '@/lib/services/affiliate-link-service';
+import { AuctionEngine } from '@/lib/auction/engine';
+import { LeadData } from '@/lib/templates/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -398,14 +400,65 @@ export async function POST(request: NextRequest) {
     // Only add to queue after database transaction succeeds
     // This prevents orphaned queue jobs if database fails
     let jobId: string | null = null;
+    let auctionResult: any = null;
+
     try {
       jobId = await addToQueue('lead-processing', {
         leadId: result.id,
         priority: leadQualityScore >= 80 ? 'high' : 'normal',
       });
+      console.log('[API /api/leads] Lead added to Redis queue:', { leadId: result.id, jobId });
     } catch (queueError) {
-      // Redis not configured or unavailable - lead is still saved, just skip queue
-      console.warn('Failed to add lead to processing queue (Redis unavailable):', queueError);
+      // Redis not configured or unavailable - process inline instead!
+      console.warn('[API /api/leads] Redis unavailable, processing lead inline:', queueError);
+
+      // Process lead inline using AuctionEngine
+      try {
+        // Prepare lead data for auction
+        const leadDataForAuction: LeadData = {
+          id: result.id,
+          serviceTypeId: serviceType.id,
+          zipCode,
+          formData: sanitizedFormData,
+          ownsHome,
+          timeframe,
+          trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
+          trustedFormCertId: complianceData?.trustedFormCertId || undefined,
+          jornayaLeadId: complianceData?.jornayaLeadId || undefined,
+          complianceData: leadComplianceData || undefined,
+        };
+
+        console.log('[API /api/leads] Starting inline auction for lead:', result.id);
+        auctionResult = await AuctionEngine.runAuction(leadDataForAuction);
+        console.log('[API /api/leads] Inline auction completed:', {
+          leadId: result.id,
+          status: auctionResult.status,
+          winningBuyerId: auctionResult.winningBuyerId,
+          winningBidAmount: auctionResult.winningBidAmount,
+        });
+
+        // Update lead status based on auction result
+        const newStatus = auctionResult.status === 'completed' && auctionResult.postResult?.success
+          ? LeadStatus.SOLD
+          : auctionResult.participantCount > 0
+            ? LeadStatus.PROCESSING
+            : LeadStatus.PENDING;
+
+        await prisma.lead.update({
+          where: { id: result.id },
+          data: {
+            status: newStatus,
+            winningBuyerId: auctionResult.winningBuyerId || null,
+            soldAmount: auctionResult.winningBidAmount ? auctionResult.winningBidAmount.toString() : null,
+            processedAt: new Date(),
+          },
+        });
+
+        console.log('[API /api/leads] Lead status updated:', { leadId: result.id, newStatus });
+      } catch (auctionError) {
+        // Auction failed but lead is still saved - log error
+        console.error('[API /api/leads] Inline auction failed:', auctionError);
+      }
     }
 
     // Record affiliate conversion if attribution exists
