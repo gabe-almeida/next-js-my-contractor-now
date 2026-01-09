@@ -92,7 +92,8 @@ function buildFieldValidator(field: FormSchemaField): z.ZodTypeAny {
       break;
 
     case 'checkbox':
-      // Checkboxes can be boolean or string "true"/"false"
+    case 'boolean':
+      // Booleans/checkboxes can be boolean or string "true"/"false"/"yes"/"no"
       validator = z.union([
         z.boolean(),
         z.enum(['true', 'false', 'yes', 'no', 'Yes', 'No']).transform(v =>
