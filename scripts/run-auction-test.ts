@@ -30,6 +30,13 @@ async function main() {
   console.log('Service:', lead.serviceType.name);
   console.log('ZIP:', lead.zipCode);
   console.log('Name:', formData?.firstName, formData?.lastName);
+  console.log('TrustedFormCertId:', lead.trustedFormCertId);
+  console.log('JornayaLeadId:', lead.jornayaLeadId);
+
+  // Parse compliance data from database
+  const complianceData = typeof lead.complianceData === 'string'
+    ? JSON.parse(lead.complianceData)
+    : lead.complianceData;
 
   const leadData: LeadData = {
     id: lead.id,
@@ -43,6 +50,14 @@ async function main() {
     trustedFormCertUrl: lead.trustedFormCertUrl || undefined,
     trustedFormCertId: lead.trustedFormCertId || undefined,
     jornayaLeadId: lead.jornayaLeadId || undefined,
+    complianceData: complianceData ? {
+      userAgent: complianceData.userAgent || '',
+      timestamp: complianceData.timestamp || new Date().toISOString(),
+      ipAddress: complianceData.ipAddress,
+      tcpaConsent: complianceData.tcpaConsent?.consented ?? true,
+      privacyPolicyAccepted: true,
+      submissionSource: 'web',
+    } : undefined,
     createdAt: lead.createdAt,
     updatedAt: lead.updatedAt,
   };

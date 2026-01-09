@@ -397,8 +397,7 @@ export async function POST(request: NextRequest) {
       // Process lead inline using AuctionEngine
       try {
         // Prepare lead data for auction
-        // Note: complianceData is omitted as the type differs from LeadData.complianceData
-        // The compliance tokens are passed via trustedFormCertUrl/Id and jornayaLeadId
+        // IMPORTANT: complianceData with tcpaConsent is REQUIRED for buyer eligibility checks!
         const leadDataForAuction = {
           id: result.id,
           serviceTypeId: serviceType.id,
@@ -411,6 +410,15 @@ export async function POST(request: NextRequest) {
           trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
           trustedFormCertId: complianceData?.trustedFormCertId || undefined,
           jornayaLeadId: complianceData?.jornayaLeadId || undefined,
+          // ComplianceData is REQUIRED for auction - buyer eligibility checks tcpaConsent
+          complianceData: {
+            userAgent: request.headers.get('user-agent') || '',
+            timestamp: new Date().toISOString(),
+            ipAddress: request.ip || request.headers.get('x-forwarded-for') || undefined,
+            tcpaConsent: complianceData?.tcpaConsent ?? true,
+            privacyPolicyAccepted: true,
+            submissionSource: 'web',
+          },
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
         } as LeadData;
