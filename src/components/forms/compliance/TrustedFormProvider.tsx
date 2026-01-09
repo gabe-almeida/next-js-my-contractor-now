@@ -139,20 +139,30 @@ export function TrustedFormProvider({
 export function useTrustedForm() {
   const getCertUrl = useCallback(() => {
     try {
+      console.log('[useTrustedForm.getCertUrl] Checking for TrustedForm cert...');
+
       // Method 1: Check for tf_getCertUrl function (some SDK versions)
       if (window.tf_getCertUrl) {
-        return window.tf_getCertUrl();
+        const url = window.tf_getCertUrl();
+        console.log('[useTrustedForm.getCertUrl] Method 1 (tf_getCertUrl):', url);
+        if (url) return url;
       }
+
       // Method 2: Check for xxTrustedForm global object
       if (window.xxTrustedForm?.certUrl) {
+        console.log('[useTrustedForm.getCertUrl] Method 2 (xxTrustedForm.certUrl):', window.xxTrustedForm.certUrl);
         return window.xxTrustedForm.certUrl;
       }
+
       // Method 3: Check for hidden input field created by SDK
       // TrustedForm SDK creates: <input type="hidden" name="xxTrustedFormCertUrl" value="https://cert.trustedform.com/...">
       const hiddenInput = document.querySelector('input[name="xxTrustedFormCertUrl"]') as HTMLInputElement;
+      console.log('[useTrustedForm.getCertUrl] Method 3 (hidden input):', hiddenInput?.value || 'NOT FOUND');
       if (hiddenInput?.value) {
         return hiddenInput.value;
       }
+
+      console.log('[useTrustedForm.getCertUrl] No TrustedForm cert found via any method');
       return null;
     } catch (error) {
       console.error('Error getting TrustedForm cert URL:', error);

@@ -139,6 +139,18 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 
     setIsSubmitting(true);
     try {
+      // DEBUG: Log what global objects exist for compliance scripts
+      console.log('[handleComplete] DEBUG - Global compliance objects:', {
+        'window.tf_getCertUrl': typeof (window as any).tf_getCertUrl,
+        'window.tf_getToken': typeof (window as any).tf_getToken,
+        'window.xxTrustedForm': (window as any).xxTrustedForm,
+        'window.LeadId': (window as any).LeadId,
+        'window.LeadiD': (window as any).LeadiD,
+        'window.leadid_token': (window as any).leadid_token,
+        'hidden input xxTrustedFormCertUrl': document.querySelector('input[name="xxTrustedFormCertUrl"]'),
+        'hidden input leadid_token': document.querySelector('input[name="leadid_token"]'),
+      });
+
       // Get fresh compliance tokens at submission time
       // These are captured by the TrustedForm and Jornaya scripts loaded on the page
       const trustedFormCertUrl = getTrustedFormCertUrl();

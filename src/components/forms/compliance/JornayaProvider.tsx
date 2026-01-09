@@ -128,28 +128,42 @@ export function JornayaProvider({
 export function useJornaya() {
   const getLeadId = useCallback(() => {
     try {
+      console.log('[useJornaya.getLeadId] Checking for Jornaya LeadID...');
+
       // Method 1: Check for LeadId object (older SDK)
       if (window.LeadId?.getToken) {
-        return window.LeadId.getToken();
+        const token = window.LeadId.getToken();
+        console.log('[useJornaya.getLeadId] Method 1 (LeadId.getToken):', token);
+        if (token) return token;
       }
+
       // Method 2: Check for LeadiD object (newer SDK - note capital D)
       if ((window as any).LeadiD?.token) {
+        console.log('[useJornaya.getLeadId] Method 2 (LeadiD.token):', (window as any).LeadiD.token);
         return (window as any).LeadiD.token;
       }
+
       // Method 3: Check for leadid_token global variable
       if (window.leadid_token) {
+        console.log('[useJornaya.getLeadId] Method 3 (window.leadid_token):', window.leadid_token);
         return window.leadid_token;
       }
+
       // Method 4: Check for hidden input field (some implementations)
       const hiddenInput = document.querySelector('input[name="leadid_token"]') as HTMLInputElement;
+      console.log('[useJornaya.getLeadId] Method 4 (hidden input leadid_token):', hiddenInput?.value || 'NOT FOUND');
       if (hiddenInput?.value) {
         return hiddenInput.value;
       }
+
       // Method 5: Check for universal_leadid input
       const universalInput = document.querySelector('input[name="universal_leadid"]') as HTMLInputElement;
+      console.log('[useJornaya.getLeadId] Method 5 (universal_leadid):', universalInput?.value || 'NOT FOUND');
       if (universalInput?.value) {
         return universalInput.value;
       }
+
+      console.log('[useJornaya.getLeadId] No Jornaya LeadID found via any method');
       return null;
     } catch (error) {
       console.error('Error getting Jornaya LeadId:', error);
