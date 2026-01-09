@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: my-contractor-now
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: |
+      corepack enable &&
+      corepack prepare pnpm@latest --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm run build
+    startCommand: node .next/standalone/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SKIP_RADAR_VALIDATION
+        value: "true"
+    buildFilter:
+      paths:
+        - src/**
+        - package.json
+        - pnpm-lock.yaml
+        - prisma/**
+        - next.config.js
