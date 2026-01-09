@@ -397,10 +397,16 @@ export async function POST(request: NextRequest) {
 
     // Only add to queue after database transaction succeeds
     // This prevents orphaned queue jobs if database fails
-    const jobId = await addToQueue('lead-processing', {
-      leadId: result.id,
-      priority: leadQualityScore >= 80 ? 'high' : 'normal',
-    });
+    let jobId: string | null = null;
+    try {
+      jobId = await addToQueue('lead-processing', {
+        leadId: result.id,
+        priority: leadQualityScore >= 80 ? 'high' : 'normal',
+      });
+    } catch (queueError) {
+      // Redis not configured or unavailable - lead is still saved, just skip queue
+      console.warn('Failed to add lead to processing queue (Redis unavailable):', queueError);
+    }
 
     // Record affiliate conversion if attribution exists
     // This increments the link's conversion counter for affiliate tracking
