@@ -75,7 +75,7 @@ async function main() {
 
   console.log('\n=== STATUS HISTORY ===');
   for (const sh of lead.statusHistory) {
-    console.log(`[${sh.createdAt.toISOString()}] ${sh.previousStatus} -> ${sh.newStatus}: ${sh.reason || 'N/A'}`);
+    console.log(`[${sh.createdAt.toISOString()}] ${sh.oldStatus} -> ${sh.newStatus}: ${sh.reason || 'N/A'}`);
   }
 }
 
