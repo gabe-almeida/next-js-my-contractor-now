@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
@@ -24,12 +24,6 @@ export const metadata: Metadata = {
     apple: '/assets/favicon.png',
   },
   manifest: '/site.webmanifest',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  },
-  themeColor: '#1d4ed8',
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -52,6 +46,13 @@ export const metadata: Metadata = {
     description: 'Connect with top-rated contractors in your area. Get instant quotes for roofing, windows, HVAC, and more home improvement projects.',
     images: ['/assets/My-Contractor-Now-Logo-Orange-Black.png'],
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#1d4ed8',
 }
 
 export default function RootLayout({

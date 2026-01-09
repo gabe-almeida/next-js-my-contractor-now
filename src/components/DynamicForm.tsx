@@ -6,7 +6,7 @@ import { Question, QuestionFlow, getNextStep, shouldShowQuestion } from '@/lib/q
 import { useFormValidation, ContactFormData } from '@/hooks/useFormValidation';
 import { getTCPAConfig, createTCPAConsent, TCPAConsent } from '@/config/tcpa';
 import TCPACheckbox from '@/components/forms/compliance/TCPACheckbox';
-import AddressAutocomplete from '@/components/forms/inputs/AddressAutocomplete';
+import AddressAutocomplete, { AddressSelectData } from '@/components/forms/inputs/AddressAutocomplete';
 import Header from '@/components/layout/Header';
 import { getAttributionData, AttributionData } from '@/utils/attribution';
 import { TrustedFormProvider, useTrustedForm } from '@/components/forms/compliance/TrustedFormProvider';
@@ -173,21 +173,26 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
             <div className="space-y-4">
               <AddressAutocomplete
                 value={
-                  answers[currentQuestion.id] 
-                    ? (typeof answers[currentQuestion.id] === 'string' 
-                        ? answers[currentQuestion.id] 
-                        : answers[currentQuestion.id].address || ''
+                  answers[currentQuestion.id]
+                    ? (typeof answers[currentQuestion.id] === 'string'
+                        ? answers[currentQuestion.id]
+                        : answers[currentQuestion.id].formattedAddress || answers[currentQuestion.id].address || ''
                       )
                     : ''
                 }
                 placeholder="Enter your address or ZIP code"
-                onAddressSelect={(address, zipCode) => {
-                  // Store both the full address and extracted ZIP code
-                  const addressData = {
-                    address: address,
-                    zipCode: zipCode
+                onAddressSelect={(addressData: AddressSelectData) => {
+                  // Store all address components for flexible field mapping
+                  // 'address' field stores street for backwards compatibility
+                  const storedData = {
+                    address: addressData.street,       // Street address (backwards compat)
+                    street: addressData.street,        // Explicit street field
+                    city: addressData.city,            // City name
+                    state: addressData.state,          // State code
+                    zipCode: addressData.zipCode,      // ZIP code
+                    formattedAddress: addressData.formattedAddress  // Full display
                   };
-                  handleAnswer(currentQuestion.id, addressData);
+                  handleAnswer(currentQuestion.id, storedData);
                 }}
                 onInputChange={(value) => {
                   // Update the display value without triggering submission

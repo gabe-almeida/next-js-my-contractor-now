@@ -70,7 +70,7 @@ import { recordConversion } from '@/lib/services/affiliate-link-service';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate the request body
     const validationResult = createLeadSchema.safeParse(body);
     if (!validationResult.success) {
@@ -401,11 +401,11 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
     const offset = (page - 1) * limit;
-    
+
     const status = searchParams.get('status');
     const serviceTypeId = searchParams.get('serviceTypeId');
     const zipCode = searchParams.get('zipCode');
@@ -416,11 +416,11 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {};
-    
+
     if (status) where.status = status;
     if (serviceTypeId) where.serviceTypeId = serviceTypeId;
     if (zipCode) where.zipCode = zipCode;
-    
+
     if (fromDate || toDate) {
       where.createdAt = {};
       if (fromDate) where.createdAt.gte = new Date(fromDate);

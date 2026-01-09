@@ -1,19 +1,29 @@
 /**
  * Input Sanitization Utilities
  *
- * Prevents XSS attacks by sanitizing user input
+ * WHY: Prevents XSS attacks by sanitizing user input
+ * WHEN: Used when processing any user-submitted form data
+ * HOW: Uses a server-safe approach that escapes HTML entities
  */
 
-import DOMPurify from 'isomorphic-dompurify';
+/**
+ * Escape HTML entities to prevent XSS
+ * This is a server-safe implementation that doesn't rely on DOM
+ */
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 /**
  * Sanitize HTML content to prevent XSS
  */
 export function sanitizeHtml(dirty: string): string {
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [], // Strip all HTML tags
-    KEEP_CONTENT: true, // Keep text content
-  });
+  return escapeHtml(dirty);
 }
 
 /**

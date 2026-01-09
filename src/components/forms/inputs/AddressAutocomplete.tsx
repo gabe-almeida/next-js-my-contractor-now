@@ -6,10 +6,23 @@ import { RadarAddress, RadarAutocompleteResult } from '@/types/address';
 import { useRadar } from '@/hooks/useRadar';
 import { parseAddress, validateAddressInput, FallbackAddress } from '@/lib/external/radar-fallback';
 
+/**
+ * WHY: Address data structure for form storage
+ * WHEN: Returned by onAddressSelect callback when user selects an address
+ * HOW: Contains all parsed address components for flexible field mapping
+ */
+export interface AddressSelectData {
+  formattedAddress: string;  // Full display address: "456 Wilshire Blvd, Beverly Hills, CA 90212"
+  street: string;            // Street address only: "456 Wilshire Blvd"
+  city: string;              // City name: "Beverly Hills"
+  state: string;             // State code: "CA"
+  zipCode: string;           // ZIP code: "90212"
+}
+
 interface AddressAutocompleteProps {
   value?: string;
   placeholder?: string;
-  onAddressSelect: (address: string, zipCode?: string) => void;
+  onAddressSelect: (addressData: AddressSelectData) => void;
   onInputChange?: (value: string) => void;
   disabled?: boolean;
   className?: string;
@@ -115,16 +128,54 @@ export default function AddressAutocomplete({
     onInputChange?.(newValue);
   };
 
+  /**
+   * WHY: Extract all address components for flexible field mapping
+   * WHEN: User selects an address from autocomplete dropdown
+   * HOW: Parse Radar response to get street, city, state, zip separately
+   */
   const handleAddressSelect = (address: RadarAutocompleteResult) => {
-    const formattedAddress = address.address?.formattedAddress || address.address?.addressLabel || 'Selected Address';
-    const zipCode = address.address?.postalCode;
-    
+    const radarAddr = address.address;
+    const formattedAddress = radarAddr?.formattedAddress || radarAddr?.addressLabel || 'Selected Address';
+
+    // Extract street address (addressLabel is typically just the street)
+    // If not available, try to parse from formattedAddress
+    let street = radarAddr?.addressLabel || '';
+    if (!street && formattedAddress) {
+      // Parse street from "123 Main St, City, ST 12345" format
+      const parts = formattedAddress.split(',');
+      street = parts[0]?.trim() || formattedAddress;
+    }
+
+    const addressData: AddressSelectData = {
+      formattedAddress,
+      street,
+      city: radarAddr?.city || '',
+      state: radarAddr?.state || '',
+      zipCode: radarAddr?.postalCode || ''
+    };
+
     setInputValue(formattedAddress);
     setIsOpen(false);
     setSuggestions([]);
     setSelectedIndex(-1);
-    
-    onAddressSelect(formattedAddress, zipCode);
+
+    onAddressSelect(addressData);
+  };
+
+  /**
+   * WHY: Build AddressSelectData from manual/fallback entry
+   * WHEN: User types address manually without selecting from dropdown
+   * HOW: Parse input string to extract address components
+   */
+  const buildAddressDataFromInput = (input: string): AddressSelectData => {
+    const parsed = parseAddress(input);
+    return {
+      formattedAddress: input.trim(),
+      street: parsed?.street || input.trim(),
+      city: parsed?.city || '',
+      state: parsed?.state || '',
+      zipCode: parsed?.postalCode || ''
+    };
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -134,8 +185,7 @@ export default function AddressAutocomplete({
         e.preventDefault();
         const validation = validateAddressInput(inputValue);
         if (validation.isValid) {
-          const parsed = parseAddress(inputValue);
-          onAddressSelect(inputValue.trim(), parsed?.postalCode);
+          onAddressSelect(buildAddressDataFromInput(inputValue));
           setIsOpen(false);
         }
       }
@@ -145,7 +195,7 @@ export default function AddressAutocomplete({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => 
+        setSelectedIndex(prev =>
           prev < suggestions.length - 1 ? prev + 1 : prev
         );
         break;
@@ -161,8 +211,7 @@ export default function AddressAutocomplete({
           // Manual entry
           const validation = validateAddressInput(inputValue);
           if (validation.isValid) {
-            const parsed = parseAddress(inputValue);
-            onAddressSelect(inputValue.trim(), parsed?.postalCode);
+            onAddressSelect(buildAddressDataFromInput(inputValue));
             setIsOpen(false);
           }
         }

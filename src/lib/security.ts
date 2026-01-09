@@ -1,13 +1,15 @@
-import DOMPurify from 'isomorphic-dompurify';
 import jwt from 'jsonwebtoken';
 import { timingSafeEqual } from 'crypto';
 import { NextRequest } from 'next/server';
 
 /**
  * Comprehensive Security Utilities Module
- * 
+ *
  * This module provides production-ready security functions to address
  * critical vulnerabilities identified in the security audit.
+ *
+ * Uses server-safe HTML escaping instead of isomorphic-dompurify
+ * to prevent Next.js server-side initialization issues.
  */
 
 // =====================================
@@ -15,8 +17,23 @@ import { NextRequest } from 'next/server';
 // =====================================
 
 /**
- * Comprehensive HTML/XSS sanitization using DOMPurify
- * Replaces the basic sanitization that only removed < > characters
+ * Server-safe HTML entity escaping
+ * Prevents XSS by escaping dangerous characters
+ */
+function escapeHtmlEntities(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/`/g, '&#x60;')
+    .replace(/\//g, '&#x2F;');
+}
+
+/**
+ * Server-safe HTML/XSS sanitization
+ * Uses HTML entity escaping instead of DOM-based DOMPurify
  */
 export const sanitizeHtml = (input: string, options?: {
   allowedTags?: string[];
@@ -24,20 +41,10 @@ export const sanitizeHtml = (input: string, options?: {
   stripAll?: boolean;
 }): string => {
   if (!input || typeof input !== 'string') return '';
-  
-  const defaultConfig = {
-    ALLOWED_TAGS: options?.allowedTags || [],
-    ALLOWED_ATTR: options?.allowedAttributes || [],
-    KEEP_CONTENT: !options?.stripAll,
-    RETURN_DOM: false,
-    RETURN_DOM_FRAGMENT: false,
-    SANITIZE_DOM: true,
-    FORBID_SCRIPT: true,
-    FORBID_TAGS: ['script', 'object', 'embed', 'link', 'style', 'img', 'video', 'audio'],
-    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'href', 'src']
-  };
-  
-  return DOMPurify.sanitize(input.trim(), defaultConfig);
+
+  // For server-side, we escape all HTML entities
+  // This is safer than trying to parse HTML on the server
+  return escapeHtmlEntities(input.trim());
 };
 
 /**

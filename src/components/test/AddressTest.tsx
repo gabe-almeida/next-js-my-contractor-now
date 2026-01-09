@@ -1,17 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import AddressAutocomplete from '@/components/forms/inputs/AddressAutocomplete';
+import AddressAutocomplete, { AddressSelectData } from '@/components/forms/inputs/AddressAutocomplete';
 
 export default function AddressTest() {
-  const [selectedAddress, setSelectedAddress] = useState<string>('');
-  const [zipCode, setZipCode] = useState<string>('');
+  const [addressData, setAddressData] = useState<AddressSelectData | null>(null);
   const [inputValue, setInputValue] = useState<string>('');
 
-  const handleAddressSelect = (address: string, zip?: string) => {
-    setSelectedAddress(address);
-    setZipCode(zip || '');
-    console.log('Address selected:', { address, zip });
+  const handleAddressSelect = (data: AddressSelectData) => {
+    setAddressData(data);
+    console.log('Address selected:', data);
   };
 
   const handleInputChange = (value: string) => {
@@ -41,21 +39,36 @@ export default function AddressTest() {
         {/* Results Display */}
         <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold text-gray-800 mb-3">Results:</h3>
-          
+
           <div className="space-y-2">
             <div>
               <span className="font-medium text-gray-600">Current Input:</span>
               <span className="ml-2 text-gray-800">{inputValue || 'None'}</span>
             </div>
-            
+
             <div>
-              <span className="font-medium text-gray-600">Selected Address:</span>
-              <span className="ml-2 text-gray-800">{selectedAddress || 'None'}</span>
+              <span className="font-medium text-gray-600">Full Address:</span>
+              <span className="ml-2 text-gray-800">{addressData?.formattedAddress || 'None'}</span>
             </div>
-            
+
+            <div>
+              <span className="font-medium text-gray-600">Street:</span>
+              <span className="ml-2 text-gray-800">{addressData?.street || 'None'}</span>
+            </div>
+
+            <div>
+              <span className="font-medium text-gray-600">City:</span>
+              <span className="ml-2 text-gray-800">{addressData?.city || 'None'}</span>
+            </div>
+
+            <div>
+              <span className="font-medium text-gray-600">State:</span>
+              <span className="ml-2 text-gray-800">{addressData?.state || 'None'}</span>
+            </div>
+
             <div>
               <span className="font-medium text-gray-600">ZIP Code:</span>
-              <span className="ml-2 text-gray-800">{zipCode || 'None'}</span>
+              <span className="ml-2 text-gray-800">{addressData?.zipCode || 'None'}</span>
             </div>
           </div>
         </div>
