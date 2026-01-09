@@ -103,6 +103,18 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
       ...nameData,  // Override formData with actual name values from nameInfo step
       tcpaConsent
     };
+
+    // DEBUG: Log submission data
+    console.log('[handleContactSubmit] DEBUG - Submission Data:', {
+      'answers.nameInfo': answers.nameInfo,
+      'formData.firstName': formData.firstName,
+      'formData.lastName': formData.lastName,
+      'extracted nameData': nameData,
+      'final allAnswers': allAnswers,
+      'firstName in allAnswers': allAnswers.firstName,
+      'lastName in allAnswers': allAnswers.lastName,
+    });
+
     await handleComplete(allAnswers);
   };
 

@@ -82,32 +82,43 @@ import { windowsFlow } from '@/lib/questions';
 export default function WindowsPage() {
   const handleFormComplete = async (answers: { [key: string]: any }) => {
     try {
+      const payload = {
+        serviceTypeId: 'windows',
+        formData: answers,
+        // Extract ZIP from address object (address can be string or {address, zipCode} object)
+        zipCode: typeof answers.address === 'object'
+          ? answers.address?.zipCode
+          : answers.zipCode || answers.address,
+        ownsHome: answers.isHomeowner === 'yes',
+        timeframe: answers.timeline,
+        complianceData: {
+          // Use actual TCPA consent from form - NEVER hardcode compliance data
+          tcpaConsent: answers.tcpaConsent?.consented ?? false,
+          tcpaTimestamp: answers.tcpaConsent?.timestamp || new Date().toISOString(),
+          tcpaConsentText: answers.tcpaConsent?.text || 'TCPA consent not properly captured',
+          attribution: answers.attribution, // Marketing attribution data (utm params, click IDs, etc)
+          // TrustedForm and Jornaya compliance tokens - captured by DynamicForm providers
+          trustedFormCertUrl: answers.trustedFormCertUrl || null,
+          trustedFormCertId: answers.trustedFormCertId || null,
+          jornayaLeadId: answers.jornayaLeadId || null,
+        }
+      };
+
+      // DEBUG: Log the payload being sent to API
+      console.log('[WindowsPage] DEBUG - API Payload:', {
+        'formData.firstName': payload.formData.firstName,
+        'formData.lastName': payload.formData.lastName,
+        'formData.email': payload.formData.email,
+        'formData.phone': payload.formData.phone,
+        'full payload': payload
+      });
+
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          serviceTypeId: 'windows',
-          formData: answers,
-          // Extract ZIP from address object (address can be string or {address, zipCode} object)
-          zipCode: typeof answers.address === 'object'
-            ? answers.address?.zipCode
-            : answers.zipCode || answers.address,
-          ownsHome: answers.isHomeowner === 'yes',
-          timeframe: answers.timeline,
-          complianceData: {
-            // Use actual TCPA consent from form - NEVER hardcode compliance data
-            tcpaConsent: answers.tcpaConsent?.consented ?? false,
-            tcpaTimestamp: answers.tcpaConsent?.timestamp || new Date().toISOString(),
-            tcpaConsentText: answers.tcpaConsent?.text || 'TCPA consent not properly captured',
-            attribution: answers.attribution, // Marketing attribution data (utm params, click IDs, etc)
-            // TrustedForm and Jornaya compliance tokens - captured by DynamicForm providers
-            trustedFormCertUrl: answers.trustedFormCertUrl || null,
-            trustedFormCertId: answers.trustedFormCertId || null,
-            jornayaLeadId: answers.jornayaLeadId || null,
-          }
-        })
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
