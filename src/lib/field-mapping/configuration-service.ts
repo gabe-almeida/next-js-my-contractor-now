@@ -573,8 +573,27 @@ function setNestedValue(
  * HOW: Return mock data that matches typical lead structure
  */
 export function getSampleLeadData(): Record<string, unknown> {
+  // Service-specific form data that would come from the dynamic form
+  const formData = {
+    numberOfWindows: 8,
+    windowsProjectScope: "partial_replacement",
+    windowsStyle: "double_hung",
+    windowsMaterial: "vinyl",
+    additionalNotes: "Sample project description",
+    windowType: "double_hung",  // Matches actual form fields
+    projectType: "replacement",
+  };
+
   return {
+    // Basic lead fields
     id: "lead-sample-123",
+    serviceTypeId: "svc-windows-123",
+    serviceTypeName: "Windows",
+    status: "PENDING",
+    leadQualityScore: 85,
+    createdAt: new Date().toISOString(),
+
+    // Standard contact fields (flattened from formData in real leads)
     firstName: "John",
     lastName: "Smith",
     email: "john.smith@example.com",
@@ -582,9 +601,16 @@ export function getSampleLeadData(): Record<string, unknown> {
     zipCode: "90210",
     ownsHome: true,
     timeframe: "1-3 months",
-    status: "PENDING",
-    leadQualityScore: 85,
-    createdAt: new Date().toISOString(),
+    state: "California",
+
+    // Form data - both flattened AND nested for flexibility
+    // Matches prepareSourceData() in TemplateEngine
+    // Flattened allows paths like "firstName" (standard fields)
+    ...formData,
+    // Nested allows paths like "formData.windowType" (service-specific fields)
+    formData,
+
+    // Compliance data
     trustedFormCertUrl: "https://cert.trustedform.com/abc123",
     trustedFormCertId: "abc123def456",
     jornayaLeadId: "jrn-789xyz",
@@ -593,13 +619,6 @@ export function getSampleLeadData(): Record<string, unknown> {
       ipAddress: "192.168.1.100",
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
       timestamp: new Date().toISOString(),
-    },
-    formData: {
-      numberOfWindows: 8,
-      windowsProjectScope: "partial_replacement",
-      windowsStyle: "double_hung",
-      windowsMaterial: "vinyl",
-      additionalNotes: "Sample project description",
     },
   };
 }

@@ -43,11 +43,11 @@ export function MappingRow({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+    <div className="border-2 border-orange-200 rounded-lg bg-white overflow-hidden hover:border-orange-300 transition-colors">
       {/* Main Row */}
       <div className="flex items-center gap-3 p-3">
         {/* Drag Handle */}
-        <div className="cursor-grab text-gray-400 hover:text-gray-600">
+        <div className="cursor-grab text-orange-400 hover:text-orange-600 hover:bg-orange-50 rounded p-1 transition-colors">
           <GripVertical className="h-5 w-5" />
         </div>
 
@@ -60,7 +60,7 @@ export function MappingRow({
             value={mapping.sourceField}
             onChange={(e) => handleChange('sourceField', e.target.value)}
             disabled={disabled}
-            className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className="w-full text-sm border-2 border-orange-200 rounded-md hover:border-orange-300 px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400 disabled:bg-gray-100"
           >
             <option value="">Select source field...</option>
             {sourceFields.map((field) => (
@@ -90,7 +90,7 @@ export function MappingRow({
             onChange={(e) => handleChange('targetField', e.target.value)}
             placeholder="buyer_field_name"
             disabled={disabled}
-            className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className="w-full text-sm border-2 border-orange-200 rounded-md hover:border-orange-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400 disabled:bg-gray-100"
           />
         </div>
 
@@ -103,7 +103,7 @@ export function MappingRow({
             value={mapping.transform || ''}
             onChange={(e) => handleChange('transform', e.target.value || undefined)}
             disabled={disabled}
-            className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className="w-full text-sm border-2 border-orange-200 rounded-md hover:border-orange-300 px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400 disabled:bg-gray-100"
           >
             <option value="">None</option>
             {transforms.map((t) => (
@@ -166,7 +166,7 @@ export function MappingRow({
                   checked={mapping.required}
                   onChange={(e) => handleChange('required', e.target.checked)}
                   disabled={disabled}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="form-checkbox"
                 />
                 <span className="text-gray-700">Required</span>
               </label>
@@ -183,7 +183,7 @@ export function MappingRow({
                   checked={mapping.includeInPing}
                   onChange={(e) => handleChange('includeInPing', e.target.checked)}
                   disabled={disabled}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="form-checkbox"
                 />
                 <span className="text-gray-700">Include in PING</span>
               </label>
@@ -200,7 +200,7 @@ export function MappingRow({
                   checked={mapping.includeInPost}
                   onChange={(e) => handleChange('includeInPost', e.target.checked)}
                   disabled={disabled}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="form-checkbox"
                 />
                 <span className="text-gray-700">Include in POST</span>
               </label>
@@ -223,7 +223,7 @@ export function MappingRow({
               }
               placeholder="Leave empty for no default"
               disabled={disabled}
-              className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full text-sm border-2 border-orange-200 rounded-md hover:border-orange-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400 disabled:bg-gray-100"
             />
           </div>
 
@@ -240,7 +240,7 @@ export function MappingRow({
               }
               placeholder="Optional notes about this mapping"
               disabled={disabled}
-              className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full text-sm border-2 border-orange-200 rounded-md hover:border-orange-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400 disabled:bg-gray-100"
             />
           </div>
 
@@ -304,7 +304,7 @@ export function MappingRow({
                   }
                 }}
                 disabled={disabled}
-                className="text-xs text-blue-600 hover:text-blue-800"
+                className="text-xs text-orange-600 hover:text-orange-800"
               >
                 + Add value mapping
               </button>

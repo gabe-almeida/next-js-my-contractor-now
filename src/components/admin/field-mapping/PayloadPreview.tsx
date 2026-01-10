@@ -73,7 +73,7 @@ export function PayloadPreview({
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Eye className="h-5 w-5 text-blue-600" />
+            <Eye className="h-5 w-5 text-orange-600" />
             <h3 className="font-semibold text-gray-900">
               Payload Preview
             </h3>
@@ -116,7 +116,7 @@ export function PayloadPreview({
             onClick={() => setActiveTab('ping')}
             className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'ping'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -127,7 +127,7 @@ export function PayloadPreview({
             onClick={() => setActiveTab('post')}
             className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'post'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -179,8 +179,8 @@ export function PayloadPreview({
       </div>
 
       {/* Sample Data Info */}
-      <div className="bg-blue-50 border-t border-blue-100 px-4 py-2">
-        <p className="text-xs text-blue-700">
+      <div className="bg-orange-50 border-t border-orange-200 px-4 py-2">
+        <p className="text-xs text-orange-700">
           <strong>Note:</strong> This preview uses sample lead data. Actual payloads
           will contain real lead information.
         </p>

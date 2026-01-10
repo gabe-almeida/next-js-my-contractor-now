@@ -203,7 +203,7 @@ export function FieldMappingEditor({
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <Settings className="h-6 w-6 text-blue-600" />
+            <Settings className="h-6 w-6 text-orange-600" />
             <h1 className="text-xl font-semibold text-gray-900">
               Field Mapping Configuration
             </h1>
@@ -292,7 +292,7 @@ export function FieldMappingEditor({
                     type="text"
                     value={String(value)}
                     onChange={(e) => handlePingStaticFieldChange(key, e.target.value)}
-                    className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+                    className="flex-1 text-sm border-2 border-orange-200 rounded px-2 py-1 focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 transition-colors"
                   />
                   <button
                     type="button"
@@ -310,7 +310,7 @@ export function FieldMappingEditor({
                   const key = prompt('Enter PING field name:');
                   if (key) handlePingStaticFieldChange(key, '');
                 }}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-orange-600 hover:text-orange-800"
               >
                 + Add PING static field
               </button>
@@ -340,7 +340,7 @@ export function FieldMappingEditor({
                     <textarea
                       value={String(value)}
                       onChange={(e) => handlePostStaticFieldChange(key, e.target.value)}
-                      className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 min-h-[60px]"
+                      className="flex-1 text-sm border-2 border-orange-200 rounded px-2 py-1 focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 transition-colors min-h-[60px]"
                       rows={3}
                     />
                   ) : (
@@ -348,7 +348,7 @@ export function FieldMappingEditor({
                       type="text"
                       value={String(value)}
                       onChange={(e) => handlePostStaticFieldChange(key, e.target.value)}
-                      className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+                      className="flex-1 text-sm border-2 border-orange-200 rounded px-2 py-1 focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 transition-colors"
                     />
                   )}
                   <button
@@ -367,7 +367,7 @@ export function FieldMappingEditor({
                   const key = prompt('Enter POST field name:');
                   if (key) handlePostStaticFieldChange(key, '');
                 }}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-orange-600 hover:text-orange-800"
               >
                 + Add POST static field
               </button>

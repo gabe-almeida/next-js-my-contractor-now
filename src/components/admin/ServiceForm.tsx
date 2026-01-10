@@ -190,7 +190,7 @@ export function ServiceForm({
             <input
               type="checkbox"
               id="active"
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="form-checkbox"
               {...register('active')}
             />
             <label htmlFor="active" className="text-sm font-medium text-gray-700">
@@ -219,15 +219,15 @@ export function ServiceForm({
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="p-4 border border-gray-200 rounded-lg bg-gray-50"
+                className="p-4 border-2 border-orange-200 rounded-lg bg-orange-50/30 hover:border-orange-300 transition-colors"
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, index)}
               >
                 <div className="flex items-start space-x-4">
-                  <div className="cursor-move mt-2">
-                    <GripVertical className="h-4 w-4 text-gray-400" />
+                  <div className="cursor-move mt-2 hover:bg-orange-100 rounded p-1 transition-colors">
+                    <GripVertical className="h-4 w-4 text-orange-400" />
                   </div>
                   
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -280,7 +280,7 @@ export function ServiceForm({
                         <input
                           type="checkbox"
                           id={`required-${index}`}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="form-checkbox"
                           {...register(`formFields.${index}.required`)}
                         />
                         <label htmlFor={`required-${index}`} className="text-sm text-gray-700">

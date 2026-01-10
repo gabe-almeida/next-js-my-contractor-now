@@ -1062,34 +1062,87 @@ async function main() {
   const sampleLeads = []
   const now = new Date()
 
+  // Helper: Generate service-specific form data for realistic test leads
+  const getServiceFormData = (serviceName: string, index: number) => {
+    const baseData = {
+      firstName: `John${index}`,
+      lastName: `Doe${index}`,
+      email: `john${index}@example.com`,
+      phone: `555-010-${1000 + index}`,
+      address: {
+        street: `${100 + index} Main St`,
+        city: 'Beverly Hills',
+        state: 'CA',
+        zipCode: '90210',
+        formattedAddress: `${100 + index} Main St, Beverly Hills, CA 90210`
+      }
+    };
+
+    switch (serviceName) {
+      case 'windows':
+        return {
+          ...baseData,
+          projectScope: ['repair', 'install'][index % 2],
+          numberOfWindows: ['1', '2', '3-5', '6-9', '9+'][index % 5],
+          windowType: ['double_hung', 'casement', 'sliding'][index % 3]
+        };
+      case 'bathrooms':
+        return {
+          ...baseData,
+          projectScope: ['full_renovation', 'partial_renovation', 'tub_shower_only'][index % 3],
+          bathroomCount: ['1', '2', '3+'][index % 3],
+          bathroomType: ['master', 'guest', 'hall'][index % 3]
+        };
+      case 'roofing':
+        return {
+          ...baseData,
+          projectScope: ['repair', 'full_replacement', 'inspection'][index % 3],
+          roofType: ['asphalt_shingles', 'metal', 'tile'][index % 3],
+          roofSize: ['small', 'medium', 'large'][index % 3]
+        };
+      case 'hvac':
+        return {
+          ...baseData,
+          projectScope: ['repair', 'replace', 'maintenance'][index % 3],
+          systemType: ['central_ac', 'heat_pump', 'furnace'][index % 3],
+          systemAge: ['under_5', '5_10', 'over_10'][index % 3]
+        };
+      default:
+        return baseData;
+    }
+  };
+
   // SOLD leads (10)
   for (let i = 0; i < 10; i++) {
     const services = [windows, bathrooms, roofing, hvac]
     const service = services[i % 4]
     const zips = ['90210', '10001', '75201', '33101', '60601', '94102', '10002', '77001', '19101', '30301']
     const buyers = [homeadvisor, modernize, abcRoofing, xyzWindows, angi]
-    
+
     sampleLeads.push({
       serviceTypeId: service.id,
-      formData: JSON.stringify({
-        zipCode: zips[i],
-        ownsHome: 'Yes',
-        timeframe: 'Immediately',
-        firstName: `John${i}`,
-        lastName: `Doe${i}`,
-        email: `john${i}@example.com`,
-        phone: `555-010-${1000 + i}`
-      }),
+      formData: JSON.stringify(getServiceFormData(service.name, i)),
       zipCode: zips[i],
       ownsHome: true,
-      timeframe: 'Immediately',
+      timeframe: 'within_3_months',
       status: 'SOLD',
       winningBuyerId: buyers[i % 5].id,
       winningBid: 25.00 + (i * 5),
       trustedFormCertUrl: `https://cert.trustedform.com/cert-${i}`,
       trustedFormCertId: `tf-${i}-cert-id`,
       jornayaLeadId: `jrnaya-${i}-lead-id`,
-      complianceData: JSON.stringify({ tcpa: true, verified: true }),
+      complianceData: JSON.stringify({
+        tcpaConsent: {
+          consented: true,
+          timestamp: new Date().toISOString(),
+          text: 'By submitting this form, I consent to receive calls and texts from contractors regarding my project.'
+        },
+        attribution: {
+          ref: `campaign-${i}`,
+          affiliate_id: `aff-${i}`
+        },
+        verified: true
+      }),
       leadQualityScore: 85 + Math.floor(Math.random() * 16), // 85-100
       createdAt: new Date(now.getTime() - (i * 24 * 60 * 60 * 1000)) // Spread over last 10 days
     })
@@ -1100,26 +1153,26 @@ async function main() {
     const services = [windows, bathrooms, roofing, hvac]
     const service = services[i % 4]
     const zips = ['92101', '80201', '89101', '97201', '48201']
-    
+
     sampleLeads.push({
       serviceTypeId: service.id,
-      formData: JSON.stringify({
-        zipCode: zips[i - 10],
-        ownsHome: 'Yes',
-        timeframe: '1-3 months',
-        firstName: `Jane${i}`,
-        lastName: `Smith${i}`,
-        email: `jane${i}@example.com`,
-        phone: `555-020-${1000 + i}`
-      }),
+      formData: JSON.stringify(getServiceFormData(service.name, i)),
       zipCode: zips[i - 10],
       ownsHome: true,
-      timeframe: '1-3 months',
+      timeframe: '3_plus_months',
       status: 'PROCESSING',
       trustedFormCertUrl: `https://cert.trustedform.com/cert-${i}`,
       trustedFormCertId: `tf-${i}-cert-id`,
       jornayaLeadId: `jrnaya-${i}-lead-id`,
-      complianceData: JSON.stringify({ tcpa: true, verified: true }),
+      complianceData: JSON.stringify({
+        tcpaConsent: {
+          consented: true,
+          timestamp: new Date().toISOString(),
+          text: 'By submitting this form, I consent to receive calls and texts from contractors regarding my project.'
+        },
+        attribution: { ref: `campaign-${i}` },
+        verified: true
+      }),
       leadQualityScore: 70 + Math.floor(Math.random() * 21), // 70-90
       createdAt: new Date(now.getTime() - (60 * 1000)) // 1 minute ago
     })
@@ -1130,26 +1183,26 @@ async function main() {
     const services = [windows, bathrooms, roofing, hvac]
     const service = services[i % 4]
     const zips = ['28201', '37201', '43201', '78701', '32801']
-    
+
     sampleLeads.push({
       serviceTypeId: service.id,
-      formData: JSON.stringify({
-        zipCode: zips[i - 15],
-        ownsHome: 'Yes',
-        timeframe: '3-6 months',
-        firstName: `Bob${i}`,
-        lastName: `Johnson${i}`,
-        email: `bob${i}@example.com`,
-        phone: `555-030-${1000 + i}`
-      }),
+      formData: JSON.stringify(getServiceFormData(service.name, i)),
       zipCode: zips[i - 15],
       ownsHome: true,
-      timeframe: '3-6 months',
+      timeframe: 'not_sure',
       status: 'PENDING',
       trustedFormCertUrl: `https://cert.trustedform.com/cert-${i}`,
       trustedFormCertId: `tf-${i}-cert-id`,
       jornayaLeadId: `jrnaya-${i}-lead-id`,
-      complianceData: JSON.stringify({ tcpa: true, verified: false }),
+      complianceData: JSON.stringify({
+        tcpaConsent: {
+          consented: true,
+          timestamp: new Date().toISOString(),
+          text: 'By submitting this form, I consent to receive calls and texts from contractors regarding my project.'
+        },
+        attribution: { ref: `campaign-${i}` },
+        verified: false
+      }),
       leadQualityScore: 60 + Math.floor(Math.random() * 21), // 60-80
       createdAt: new Date(now.getTime() - (30 * 1000)) // 30 seconds ago
     })

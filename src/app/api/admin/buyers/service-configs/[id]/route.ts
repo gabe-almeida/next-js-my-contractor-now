@@ -3,6 +3,7 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
+import { invalidateServiceConfigCache } from '@/lib/field-mapping/database-buyer-loader';
 
 // GET /api/admin/buyers/service-configs/[id] - Get single service config
 async function handleGetServiceConfig(req: EnhancedRequest, { params }: { params: { id: string } }) {
@@ -140,8 +141,11 @@ async function handleUpdateServiceConfig(req: EnhancedRequest, { params }: { par
       }
     });
 
-    // Clear cache
+    // Clear Redis cache (for admin UI)
     await RedisCache.deletePattern('admin:service-config*');
+
+    // Clear in-memory cache (for auction engine) - ensures changes take effect immediately
+    invalidateServiceConfigCache(config.buyer.id, config.serviceType.id);
 
     const response = successResponse({
       success: true,

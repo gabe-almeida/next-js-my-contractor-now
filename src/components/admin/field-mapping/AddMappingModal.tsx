@@ -155,7 +155,7 @@ export function AddMappingModal({
                             onClick={() => handleSourceSelect(field.path)}
                             className={`w-full text-left px-3 py-2 rounded-md text-sm ${
                               selectedSource === field.path
-                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                ? 'bg-orange-100 text-orange-800 border border-orange-300'
                                 : 'hover:bg-gray-100 text-gray-700'
                             }`}
                           >
@@ -191,7 +191,7 @@ export function AddMappingModal({
               value={targetField}
               onChange={(e) => setTargetField(e.target.value)}
               placeholder="e.g., customer_first_name, zip_code"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400"
             />
 
             <p className="text-xs text-gray-500 mt-1">

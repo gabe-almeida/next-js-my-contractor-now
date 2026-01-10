@@ -330,8 +330,11 @@ export class TemplateEngine {
       createdAt: lead.createdAt,
       updatedAt: lead.updatedAt,
 
-      // Form data (flattened)
+      // Form data - both flattened AND nested for flexibility
+      // Flattened allows paths like "firstName" (standard fields)
       ...lead.formData,
+      // Nested allows paths like "formData.windowType" (service-specific fields)
+      formData: lead.formData,
 
       // Compliance data
       trustedFormCertUrl: lead.trustedFormCertUrl,
