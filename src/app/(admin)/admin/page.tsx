@@ -24,52 +24,102 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API calls - replace with real endpoints
     const fetchDashboardData = async () => {
       try {
-        // Mock data - replace with actual API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setMetrics({
-          totalLeads: 1247,
-          leadsToday: 89,
-          successfulPosts: 1089,
-          totalRevenue: 45678.90,
-          averageBid: 36.70,
-          conversionRate: 87.3,
-          trustedFormCoverage: 94.2,
-          jornayaCoverage: 91.8,
-          fullComplianceRate: 89.5
+        // Fetch real analytics from API
+        const [analyticsResponse, allTimeResponse] = await Promise.all([
+          fetch('/api/admin/leads?analytics=true&period=7d', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          }),
+          fetch('/api/admin/leads?analytics=true&period=30d', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          })
+        ]);
+
+        if (!analyticsResponse.ok || !allTimeResponse.ok) {
+          throw new Error('Failed to fetch analytics');
+        }
+
+        const analyticsData = await analyticsResponse.json();
+        const allTimeData = await allTimeResponse.json();
+
+        const weeklyStats = analyticsData.data.summary;
+        const allTimeStats = allTimeData.data.summary;
+        const byStatus = analyticsData.data.byStatus || {};
+        const byServiceType = analyticsData.data.byServiceType || {};
+        const timeline = analyticsData.data.timeline || [];
+
+        // Fetch today's leads count
+        const today = new Date().toISOString().split('T')[0];
+        const todayLeads = timeline.find((t: any) => t.date === today)?.leads || 0;
+
+        // Calculate compliance metrics from all leads
+        const allLeadsResponse = await fetch('/api/admin/leads?limit=1000', {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
         });
 
-        setLeadsData([
-          { label: 'Mon', value: 45 },
-          { label: 'Tue', value: 52 },
-          { label: 'Wed', value: 38 },
-          { label: 'Thu', value: 61 },
-          { label: 'Fri', value: 73 },
-          { label: 'Sat', value: 67 },
-          { label: 'Sun', value: 59 }
-        ]);
+        let trustedFormCoverage = 0;
+        let jornayaCoverage = 0;
+        let fullComplianceRate = 0;
 
-        setRevenueData([
-          { label: 'Mon', revenue: 1820, leads: 45 },
-          { label: 'Tue', revenue: 2140, leads: 52 },
-          { label: 'Wed', revenue: 1560, leads: 38 },
-          { label: 'Thu', revenue: 2501, leads: 61 },
-          { label: 'Fri', revenue: 2993, leads: 73 },
-          { label: 'Sat', revenue: 2745, leads: 67 },
-          { label: 'Sun', revenue: 2421, leads: 59 }
-        ]);
+        if (allLeadsResponse.ok) {
+          const allLeadsData = await allLeadsResponse.json();
+          const leads = allLeadsData.data?.leads || [];
+          if (leads.length > 0) {
+            const withTF = leads.filter((l: any) => l.trustedFormCertUrl).length;
+            const withJornaya = leads.filter((l: any) => l.jornayaLeadId).length;
+            const withBoth = leads.filter((l: any) => l.trustedFormCertUrl && l.jornayaLeadId).length;
 
-        setServiceData([
-          { label: 'Windows', value: 342, category: 'Home Improvement' },
-          { label: 'Bathrooms', value: 289, category: 'Home Improvement' },
-          { label: 'Roofing', value: 234, category: 'Exterior' },
-          { label: 'Kitchens', value: 198, category: 'Home Improvement' },
-          { label: 'HVAC', value: 184, category: 'Systems' }
-        ]);
+            trustedFormCoverage = (withTF / leads.length) * 100;
+            jornayaCoverage = (withJornaya / leads.length) * 100;
+            fullComplianceRate = (withBoth / leads.length) * 100;
+          }
+        }
 
+        setMetrics({
+          totalLeads: allTimeStats.totalLeads || 0,
+          leadsToday: todayLeads,
+          successfulPosts: byStatus.sold || 0,
+          totalRevenue: weeklyStats.totalRevenue || 0,
+          averageBid: allTimeStats.averageValue || 0,
+          conversionRate: parseFloat(weeklyStats.conversionRate) || 0,
+          trustedFormCoverage: Math.round(trustedFormCoverage * 10) / 10,
+          jornayaCoverage: Math.round(jornayaCoverage * 10) / 10,
+          fullComplianceRate: Math.round(fullComplianceRate * 10) / 10
+        });
+
+        // Transform timeline data for charts (last 7 days)
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const chartLeadsData = timeline.map((t: any) => ({
+          label: dayNames[new Date(t.date).getDay()],
+          value: t.leads
+        }));
+
+        const chartRevenueData = timeline.map((t: any) => ({
+          label: dayNames[new Date(t.date).getDay()],
+          revenue: Number(t.revenue),
+          leads: t.leads
+        }));
+
+        setLeadsData(chartLeadsData);
+        setRevenueData(chartRevenueData);
+
+        // Transform service type data
+        const serviceChartData = Object.entries(byServiceType)
+          .map(([label, value]) => ({
+            label,
+            value: value as number
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5); // Top 5 services
+
+        setServiceData(serviceChartData);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
