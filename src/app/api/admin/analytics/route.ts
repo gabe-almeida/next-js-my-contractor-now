@@ -43,8 +43,7 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
     const [
       leads,
       transactions,
-      buyers,
-      successfulTransactions
+      buyers
     ] = await Promise.all([
       // All leads in period
       prisma.lead.findMany({
@@ -97,18 +96,6 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
           name: true,
           displayName: true
         }
-      }),
-      // Successful transactions for revenue
-      prisma.transaction.findMany({
-        where: {
-          createdAt: { gte: startDate },
-          status: 'SUCCESS',
-          bidAmount: { not: null }
-        },
-        select: {
-          bidAmount: true,
-          createdAt: true
-        }
       })
     ]);
 
@@ -144,12 +131,13 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
       : 0;
 
     // Calculate total revenue from successful transactions
+    const successfulTransactions = transactions.filter(t => t.status === 'SUCCESS' && t.bidAmount);
     const totalRevenue = successfulTransactions.reduce((sum, t) => sum + Number(t.bidAmount || 0), 0);
 
     // Find top buyer by revenue
     const buyerRevenue = new Map<string, { name: string; displayName: string | null; revenue: number }>();
     successfulTransactions.forEach(t => {
-      const buyer = transactions.find(tx => tx.id === t.id)?.buyer;
+      const buyer = t.buyer;
       if (buyer) {
         const existing = buyerRevenue.get(buyer.name) || { name: buyer.name, displayName: buyer.displayName, revenue: 0 };
         existing.revenue += Number(t.bidAmount || 0);
