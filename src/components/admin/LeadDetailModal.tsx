@@ -426,7 +426,7 @@ export function LeadDetailModal({
                         {lead.winningBid && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Winning Bid</span>
-                            <span className="font-medium text-green-600">${lead.winningBid.toFixed(2)}</span>
+                            <span className="font-medium text-green-600">${Number(lead.winningBid).toFixed(2)}</span>
                           </div>
                         )}
                       </div>
@@ -441,7 +441,7 @@ export function LeadDetailModal({
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-blue-600">Amount</span>
-                            <span className="font-bold text-blue-800">${lead.creditAmount.toFixed(2)}</span>
+                            <span className="font-bold text-blue-800">${Number(lead.creditAmount).toFixed(2)}</span>
                           </div>
                           {lead.creditIssuedAt && (
                             <div className="flex justify-between">
@@ -758,7 +758,7 @@ export function LeadDetailModal({
                           <div>
                             <span className="text-gray-500 block">Winning Bid</span>
                             <span className="font-semibold text-green-600">
-                              ${lead.auctionResults.winningBid?.toFixed(2) || '-'}
+                              {lead.auctionResults.winningBid ? `$${Number(lead.auctionResults.winningBid).toFixed(2)}` : '-'}
                             </span>
                           </div>
                           <div>
@@ -832,7 +832,7 @@ export function LeadDetailModal({
                                 </span>
                               </td>
                               <td className="py-2 px-2 text-gray-900">
-                                {tx.bidAmount ? `$${tx.bidAmount.toFixed(2)}` : '-'}
+                                {tx.bidAmount ? `$${Number(tx.bidAmount).toFixed(2)}` : '-'}
                               </td>
                               <td className="py-2 px-2 text-gray-600">
                                 {tx.responseTime ? `${tx.responseTime}ms` : '-'}

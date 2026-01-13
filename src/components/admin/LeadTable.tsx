@@ -14,8 +14,25 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 
+// Extended lead type from API response with flattened formData
+interface AdminLead extends Omit<Lead, 'formData'> {
+  formData: {
+    firstName?: string;
+    lastName?: string;
+    zipCode?: string;
+    email?: string;
+    phone?: string;
+    projectScope?: string;
+    timeframe?: string;
+    budget?: string;
+    ownsHome?: boolean;
+  };
+  winningBuyer?: { id: string; name: string } | null;
+  pingCount?: number;
+}
+
 interface LeadTableProps {
-  leads: Lead[];
+  leads: Lead[] | AdminLead[];
   loading?: boolean;
   onViewDetails: (leadId: string) => void;
   onExport?: () => void;
@@ -38,10 +55,17 @@ export function LeadTable({
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
     let filtered = leads.filter(lead => {
+      // Cast to AdminLead for flattened formData access
+      const adminLead = lead as AdminLead;
+      const firstName = adminLead.formData?.firstName?.toLowerCase() || '';
+      const lastName = adminLead.formData?.lastName?.toLowerCase() || '';
+      const searchLower = searchQuery.toLowerCase();
+
       const matchesSearch = searchQuery === '' ||
         lead.zipCode.includes(searchQuery) ||
-        lead.serviceType?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.id.toLowerCase().includes(searchQuery.toLowerCase());
+        lead.serviceType?.name.toLowerCase().includes(searchLower) ||
+        firstName.includes(searchLower) ||
+        lastName.includes(searchLower);
 
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
       const matchesDisposition = dispositionFilter === 'ALL' ||
@@ -177,7 +201,7 @@ export function LeadTable({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search leads by ID, ZIP, or service..."
+              placeholder="Search by name, ZIP, or service..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -226,16 +250,7 @@ export function LeadTable({
         <table className="data-table">
           <thead>
             <tr>
-              <th 
-                className="cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('id')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Lead ID</span>
-                  <ArrowUpDown className="h-3 w-3" />
-                </div>
-              </th>
-              <th 
+              <th
                 className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('createdAt')}
               >
@@ -244,59 +259,76 @@ export function LeadTable({
                   <ArrowUpDown className="h-3 w-3" />
                 </div>
               </th>
+              <th>First Name</th>
+              <th>Last Name</th>
               <th>Service</th>
               <th>ZIP Code</th>
               <th>Status</th>
-              <th>Disposition</th>
-              <th>Compliance</th>
+              <th>Sold To</th>
+              <th>Buyers Pinged</th>
               <th>Winning Bid</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {paginatedLeads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50">
-                <td className="font-mono text-sm">
-                  {lead.id.slice(0, 8)}...
-                </td>
-                <td>
-                  {new Date(lead.createdAt).toLocaleDateString()}
-                  <div className="text-xs text-gray-500">
-                    {new Date(lead.createdAt).toLocaleTimeString()}
-                  </div>
-                </td>
-                <td>
-                  <div className="font-medium">{lead.serviceType?.name || 'Unknown'}</div>
-                  <div className="text-xs text-gray-500">
-                    {lead.ownsHome ? 'Homeowner' : 'Renter'}
-                  </div>
-                </td>
-                <td className="font-mono">{lead.zipCode}</td>
-                <td>{getStatusBadge(lead.status)}</td>
-                <td>{getDispositionBadge((lead as any).disposition)}</td>
-                <td>{getComplianceIndicator(lead)}</td>
-                <td>
-                  {lead.winningBid ? (
-                    <span className="font-medium text-green-600">
-                      ${lead.winningBid.toFixed(2)}
+            {paginatedLeads.map((lead) => {
+              // Cast to AdminLead to access flattened formData
+              const adminLead = lead as AdminLead;
+              const firstName = adminLead.formData?.firstName || '-';
+              const lastName = adminLead.formData?.lastName || '-';
+              const buyerName = adminLead.winningBuyer?.name || '-';
+              const pingCount = adminLead.pingCount ?? 0;
+
+              return (
+                <tr key={lead.id} className="hover:bg-gray-50">
+                  <td>
+                    {new Date(lead.createdAt).toLocaleDateString()}
+                    <div className="text-xs text-gray-500">
+                      {new Date(lead.createdAt).toLocaleTimeString()}
+                    </div>
+                  </td>
+                  <td className="font-medium">{firstName}</td>
+                  <td className="font-medium">{lastName}</td>
+                  <td>
+                    <div className="font-medium">{lead.serviceType?.name || 'Unknown'}</div>
+                  </td>
+                  <td className="font-mono">{lead.zipCode}</td>
+                  <td>{getStatusBadge(lead.status)}</td>
+                  <td>
+                    {buyerName !== '-' ? (
+                      <span className="font-medium text-blue-600">{buyerName}</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="text-center">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      {pingCount}
                     </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onViewDetails(lead.id)}
-                    className="flex items-center space-x-1"
-                  >
-                    <Eye className="h-3 w-3" />
-                    <span>View</span>
-                  </Button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>
+                    {lead.winningBid ? (
+                      <span className="font-medium text-green-600">
+                        ${Number(lead.winningBid).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewDetails(lead.id)}
+                      className="flex items-center space-x-1"
+                    >
+                      <Eye className="h-3 w-3" />
+                      <span>View</span>
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

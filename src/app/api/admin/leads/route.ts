@@ -100,6 +100,11 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
                 id: true,
                 name: true
               }
+            },
+            transactions: {
+              select: {
+                actionType: true
+              }
             }
           },
           orderBy,
@@ -122,6 +127,9 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
             logger.warn('Failed to parse lead formData', { leadId: lead.id });
           }
 
+          // Count ping transactions for this lead
+          const pingCount = lead.transactions?.filter(t => t.actionType === 'PING').length || 0;
+
           return {
             id: lead.id,
             serviceTypeId: lead.serviceTypeId,
@@ -142,6 +150,7 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
             },
             winningBuyer: lead.winningBuyer,
             winningBid: lead.winningBid,
+            pingCount, // Number of network buyers pinged
             creditAmount: lead.creditAmount,
             creditIssuedAt: lead.creditIssuedAt,
             leadQualityScore: lead.leadQualityScore,
