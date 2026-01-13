@@ -116,12 +116,12 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
           </button>
         </div>
 
-        <nav className="mt-6 px-3">
+        <nav className="mt-6 px-3 pb-24">
           <div className="space-y-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = isActivePath(item.href);
-              
+
               return (
                 <Link
                   key={item.name}
@@ -176,19 +176,13 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
       <div className="lg:pl-64">
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
-            <div className="flex items-center">
-              <button
-                className="lg:hidden mr-3"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="h-6 w-6 text-gray-400" />
-              </button>
-              
-              <h2 className="text-lg font-semibold text-gray-900">
-                {navigationItems.find(item => isActivePath(item.href))?.name || 'Admin'}
-              </h2>
-            </div>
+          <div className="flex items-center justify-end h-16 px-4 sm:px-6">
+            <button
+              className="lg:hidden absolute left-4"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-6 w-6 text-gray-400" />
+            </button>
 
             <div className="flex items-center space-x-4">
               {/* Notifications */}
