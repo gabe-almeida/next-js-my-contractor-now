@@ -935,8 +935,8 @@ async function main() {
         }),
         requiresTrustedForm: true,
         requiresJornaya: true,
-        minBid: 12.00,
-        maxBid: 55.00
+        minBid: 0.01,
+        maxBid: 99999.99
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1083,8 +1083,8 @@ async function main() {
         }),
         requiresTrustedForm: false,
         requiresJornaya: true,
-        minBid: 18.00,
-        maxBid: 70.00
+        minBid: 0.01,
+        maxBid: 99999.99
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1246,8 +1246,8 @@ async function main() {
         }),
         requiresTrustedForm: true,
         requiresJornaya: false,
-        minBid: 22.00,
-        maxBid: 90.00
+        minBid: 0.01,
+        maxBid: 99999.99
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1410,8 +1410,8 @@ async function main() {
         }),
         requiresTrustedForm: false,
         requiresJornaya: true,
-        minBid: 15.00,
-        maxBid: 65.00
+        minBid: 0.01,
+        maxBid: 99999.99
       }
     })
   )
