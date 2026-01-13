@@ -17,53 +17,54 @@ export default function BuyerZipCodesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock data - in production this would come from API calls
+  // Fetch real buyer and service data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Mock buyer data
-        const mockBuyer = {
-          id: buyerId,
-          name: 'HomeAdvisor',
-          displayName: 'HomeAdvisor LLC',
-          apiUrl: 'https://api.homeadvisor.com/leads',
-          active: true,
-          createdAt: new Date('2024-01-15')
-        };
+        // Fetch buyer details and services in parallel
+        const [buyerResponse, servicesResponse] = await Promise.all([
+          fetch(`/api/admin/buyers/${buyerId}`, {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          }),
+          fetch('/api/service-types?includeInactive=true', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          })
+        ]);
 
-        // Mock services data
-        const mockServices = [
-          {
-            id: 'service-1',
-            name: 'windows',
-            displayName: 'Windows Installation',
-          },
-          {
-            id: 'service-2',
-            name: 'bathrooms',
-            displayName: 'Bathroom Remodeling',
-          },
-          {
-            id: 'service-3',
-            name: 'roofing',
-            displayName: 'Roofing Services',
-          },
-          {
-            id: 'service-4',
-            name: 'hvac',
-            displayName: 'HVAC Services',
-          }
-        ];
+        if (!buyerResponse.ok) {
+          throw new Error('Failed to fetch buyer data');
+        }
 
-        setBuyer(mockBuyer);
-        setServices(mockServices);
-        
+        const buyerData = await buyerResponse.json();
+        const servicesData = servicesResponse.ok ? await servicesResponse.json() : { data: [] };
+
+        // Set buyer data
+        const buyerInfo = buyerData.data?.buyer || buyerData.data;
+        setBuyer({
+          id: buyerInfo.id,
+          name: buyerInfo.name,
+          displayName: buyerInfo.displayName || buyerInfo.name,
+          apiUrl: buyerInfo.apiUrl,
+          active: buyerInfo.active,
+          createdAt: new Date(buyerInfo.createdAt)
+        });
+
+        // Set services data
+        const serviceList = servicesData.data || [];
+        setServices(serviceList.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          displayName: s.displayName || s.name
+        })));
+
       } catch (err) {
+        console.error('Error fetching data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);

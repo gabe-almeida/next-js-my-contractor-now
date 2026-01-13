@@ -127,16 +127,18 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
                   key={item.name}
                   href={item.href}
                   className={`
-                    nav-link group
-                    ${isActive ? 'active' : ''}
+                    flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors group
+                    ${isActive
+                      ? 'bg-orange-50 text-orange-700 border-l-4 border-orange-500'
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
                   `}
                   onClick={() => setSidebarOpen(false)}
                 >
                   <Icon className={`
                     mr-3 h-5 w-5 flex-shrink-0
-                    ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}
+                    ${isActive ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-600'}
                   `} />
-                  {item.name}
+                  <span>{item.name}</span>
                 </Link>
               );
             })}

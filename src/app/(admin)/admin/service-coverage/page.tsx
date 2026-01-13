@@ -52,91 +52,70 @@ export default function ServiceCoveragePage() {
   const [selectedView, setSelectedView] = useState<'services' | 'buyers'>('services');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock data - in production this would come from API
+  // Fetch real coverage data from API
   useEffect(() => {
     const fetchCoverageData = async () => {
       try {
         setLoading(true);
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Mock service coverage data
-        const mockServiceData: ServiceCoverageData[] = [
-          {
-            serviceTypeId: 'service-1',
-            serviceName: 'Windows Installation',
-            totalZipCodes: 1247,
-            activeZipCodes: 1189,
-            totalBuyers: 8,
-            activeBuyers: 7,
-            topZipCodes: [
-              { zipCode: '90210', buyerCount: 5, avgPriority: 7.2 },
-              { zipCode: '10001', buyerCount: 4, avgPriority: 6.8 },
-              { zipCode: '60601', buyerCount: 6, avgPriority: 8.1 },
-            ]
-          },
-          {
-            serviceTypeId: 'service-2',
-            serviceName: 'Bathroom Remodeling',
-            totalZipCodes: 892,
-            activeZipCodes: 834,
-            totalBuyers: 6,
-            activeBuyers: 5,
-            topZipCodes: [
-              { zipCode: '90210', buyerCount: 3, avgPriority: 6.5 },
-              { zipCode: '77001', buyerCount: 4, avgPriority: 7.8 },
-              { zipCode: '30301', buyerCount: 2, avgPriority: 5.9 },
-            ]
-          },
-          {
-            serviceTypeId: 'service-3',
-            serviceName: 'Roofing Services',
-            totalZipCodes: 2156,
-            activeZipCodes: 2089,
-            totalBuyers: 12,
-            activeBuyers: 11,
-            topZipCodes: [
-              { zipCode: '33101', buyerCount: 8, avgPriority: 8.5 },
-              { zipCode: '85001', buyerCount: 7, avgPriority: 7.9 },
-              { zipCode: '98101', buyerCount: 6, avgPriority: 7.3 },
-            ]
-          }
-        ];
+        // Fetch service zones analytics from real API
+        const [analyticsResponse, buyersResponse, servicesResponse] = await Promise.all([
+          fetch('/api/admin/service-zones/analytics', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          }),
+          fetch('/api/admin/buyers?includeInactive=true', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          }),
+          fetch('/api/service-types?includeInactive=true', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          })
+        ]);
 
-        // Mock buyer coverage data
-        const mockBuyerData: BuyerCoverageData[] = [
-          {
-            buyerId: 'buyer-1',
-            buyerName: 'HomeAdvisor',
-            totalZipCodes: 2847,
-            activeZipCodes: 2698,
-            serviceCount: 3,
-            lastUpdated: new Date('2024-01-20')
-          },
-          {
-            buyerId: 'buyer-2',
-            buyerName: 'Modernize',
-            totalZipCodes: 1923,
-            activeZipCodes: 1845,
-            serviceCount: 2,
-            lastUpdated: new Date('2024-01-19')
-          },
-          {
-            buyerId: 'buyer-3',
-            buyerName: 'Angi',
-            totalZipCodes: 1456,
-            activeZipCodes: 1398,
-            serviceCount: 2,
-            lastUpdated: new Date('2024-01-18')
-          }
-        ];
+        // Process service types with zone data
+        const servicesData = servicesResponse.ok ? await servicesResponse.json() : { data: [] };
+        const buyersData = buyersResponse.ok ? await buyersResponse.json() : { data: { buyers: [] } };
+        const analyticsData = analyticsResponse.ok ? await analyticsResponse.json() : { data: null };
 
-        setServiceCoverageData(mockServiceData);
-        setBuyerCoverageData(mockBuyerData);
-        
+        // Build service coverage from service types
+        const serviceList = servicesData.data || [];
+        const serviceCoverage: ServiceCoverageData[] = serviceList.map((service: any) => ({
+          serviceTypeId: service.id,
+          serviceName: service.displayName || service.name,
+          totalZipCodes: analyticsData.data?.summary?.totalZipCodes || 0,
+          activeZipCodes: analyticsData.data?.summary?.activeZipCodes || 0,
+          totalBuyers: (buyersData.data?.buyers || []).length,
+          activeBuyers: (buyersData.data?.buyers || []).filter((b: any) => b.active).length,
+          topZipCodes: (analyticsData.data?.performance?.topZipCodes || []).slice(0, 3).map((z: any) => ({
+            zipCode: z.zipCode,
+            buyerCount: 1,
+            avgPriority: z.priority || 50
+          }))
+        }));
+
+        // Build buyer coverage data
+        const buyers = buyersData.data?.buyers || [];
+        const buyerCoverage: BuyerCoverageData[] = buyers.map((buyer: any) => ({
+          buyerId: buyer.id,
+          buyerName: buyer.displayName || buyer.name,
+          totalZipCodes: buyer.zipCodeCount || 0,
+          activeZipCodes: buyer.zipCodeCount || 0,
+          serviceCount: buyer.serviceConfigCount || 0,
+          lastUpdated: new Date(buyer.updatedAt || Date.now())
+        }));
+
+        setServiceCoverageData(serviceCoverage);
+        setBuyerCoverageData(buyerCoverage);
+
       } catch (error) {
         console.error('Error fetching coverage data:', error);
+        setServiceCoverageData([]);
+        setBuyerCoverageData([]);
       } finally {
         setLoading(false);
       }
