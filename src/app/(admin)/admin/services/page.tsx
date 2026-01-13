@@ -82,6 +82,9 @@ export default function ServicesPage() {
       try {
         const response = await fetch(`/api/service-types/${serviceId}`, {
           method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
         });
 
         if (!response.ok) {
@@ -105,7 +108,10 @@ export default function ServicesPage() {
     try {
       const response = await fetch(`/api/service-types/${serviceId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
         body: JSON.stringify({ active: !service.active }),
       });
 
@@ -142,14 +148,20 @@ export default function ServicesPage() {
         // Update existing service
         response = await fetch(`/api/service-types/${editingService.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          },
           body: JSON.stringify(payload),
         });
       } else {
         // Create new service
         response = await fetch('/api/service-types', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          },
           body: JSON.stringify(payload),
         });
       }

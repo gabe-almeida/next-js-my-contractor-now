@@ -79,7 +79,10 @@ export default function AdminAffiliatesPage() {
   const handleApprove = async (id: string) => {
     try {
       const response = await fetch(`/api/admin/affiliates/${id}/approve`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
       });
       const data = await response.json();
 
@@ -96,7 +99,10 @@ export default function AdminAffiliatesPage() {
 
     try {
       const response = await fetch(`/api/admin/affiliates/${id}/suspend`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
       });
       const data = await response.json();
 

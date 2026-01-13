@@ -98,7 +98,10 @@ export default function PayloadTestingPage() {
 
       const response = await fetch('/api/admin/test-payloads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
         body: JSON.stringify({
           serviceTypeId: selectedService,
           leadData
