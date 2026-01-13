@@ -343,7 +343,7 @@ async function main() {
       businessEmail: 'partners@modernize.com',
       businessPhone: '1-800-555-0201',
       active: true,
-      notes: 'Ping: https://hsapiservice.quinstage.com/ping-post/pings | Post: https://hsapiservice.quinstage.com/ping-post/posts | TagId: 204670250',
+      notes: 'API Docs: https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api | Ping: https://hsapiservice.quinstage.com/ping-post/pings | Post: https://hsapiservice.quinstage.com/ping-post/posts | TagId: 204670250',
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['trustedform_cert_url', 'tf_certificate'],
@@ -794,7 +794,7 @@ async function main() {
               valueMap: {
                 "within_3_months": "Immediately",
                 "3_plus_months": "1-6 months",
-                "not_sure": "1-6 months"
+                "not_sure": "Don't know"
               },
               required: true,
               order: 2,
@@ -947,7 +947,145 @@ async function main() {
         serviceTypeId: bathrooms.id,
         pingTemplate: JSON.stringify({ zip: '{{zipCode}}', owns_home: '{{ownsHome}}' }),
         postTemplate: JSON.stringify({ zip: '{{zipCode}}', owns_home: '{{ownsHome}}', bathroom_count: '{{bathroomCount}}', remodel_type: '{{projectScope}}', bathroom_type: '{{bathroomType}}' }),
-        fieldMappings: JSON.stringify({ zipCode: 'zip', ownsHome: 'owns_home' }),
+        fieldMappings: JSON.stringify({
+          version: "1.0",
+          mappings: [
+            // PING + POST fields
+            {
+              id: "map-bath-1",
+              sourceField: "zipCode",
+              targetField: "postalCode",
+              transform: undefined,
+              required: true,
+              order: 1,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-2",
+              sourceField: "timeframe",
+              targetField: "buyTimeframe",
+              transform: undefined,
+              valueMap: {
+                "within_3_months": "Immediately",
+                "3_plus_months": "1-6 months",
+                "not_sure": "Don't know"
+              },
+              required: true,
+              order: 2,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-3",
+              sourceField: "ownsHome",
+              targetField: "ownHome",
+              transform: "boolean.yesNo",
+              required: true,
+              order: 3,
+              includeInPing: true,
+              includeInPost: true
+            },
+            // POST-only fields
+            {
+              id: "map-bath-4",
+              sourceField: "trustedFormCertUrl",
+              targetField: "trustedFormToken",
+              transform: undefined,
+              required: false,
+              order: 4,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-5",
+              sourceField: "formData.firstName",
+              targetField: "firstName",
+              transform: undefined,
+              required: true,
+              order: 5,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-6",
+              sourceField: "formData.lastName",
+              targetField: "lastName",
+              transform: undefined,
+              required: true,
+              order: 6,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-7",
+              sourceField: "formData.phone",
+              targetField: "phone",
+              transform: "phone.digitsOnly",
+              required: true,
+              order: 7,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-8",
+              sourceField: "formData.email",
+              targetField: "email",
+              transform: undefined,
+              required: true,
+              order: 8,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-9",
+              sourceField: "formData.address.street",
+              targetField: "address",
+              transform: undefined,
+              required: true,
+              order: 9,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-10",
+              sourceField: "formData.address.city",
+              targetField: "city",
+              transform: undefined,
+              required: true,
+              order: 10,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-bath-11",
+              sourceField: "formData.address.state",
+              targetField: "state",
+              transform: undefined,
+              required: true,
+              order: 11,
+              includeInPing: false,
+              includeInPost: true
+            }
+          ],
+          pingStaticFields: {
+            tagId: "204670250",
+            service: "BATH_REMODEL",
+            partnerSourceId: "mycontractornow-bathrooms"
+          },
+          postStaticFields: {
+            tagId: "204670250",
+            service: "BATH_REMODEL",
+            partnerSourceId: "mycontractornow-bathrooms",
+            publisherSubId: "mcn-tx",
+            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+          },
+          meta: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            notes: "Modernize Bathrooms configuration for ping-post API"
+          }
+        }),
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 18.00,
@@ -960,7 +1098,160 @@ async function main() {
         serviceTypeId: roofing.id,
         pingTemplate: JSON.stringify({ zipcode: '{{zipCode}}', homeowner: '{{ownsHome}}' }),
         postTemplate: JSON.stringify({ zipcode: '{{zipCode}}', homeowner: '{{ownsHome}}', roof: '{{roofType}}', size: '{{roofSize}}' }),
-        fieldMappings: JSON.stringify({ zipCode: 'zipcode', ownsHome: 'homeowner' }),
+        fieldMappings: JSON.stringify({
+          version: "1.0",
+          mappings: [
+            // PING + POST fields
+            {
+              id: "map-roof-1",
+              sourceField: "zipCode",
+              targetField: "postalCode",
+              transform: undefined,
+              required: true,
+              order: 1,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-2",
+              sourceField: "timeframe",
+              targetField: "buyTimeframe",
+              transform: undefined,
+              valueMap: {
+                "within_3_months": "Immediately",
+                "3_plus_months": "1-6 months",
+                "not_sure": "Don't know"
+              },
+              required: true,
+              order: 2,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-3",
+              sourceField: "ownsHome",
+              targetField: "ownHome",
+              transform: "boolean.yesNo",
+              required: true,
+              order: 3,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-4",
+              sourceField: "formData.projectScope",
+              targetField: "RoofingPlan",
+              transform: undefined,
+              valueMap: {
+                "repair": "Repair existing roof",
+                "replacement": "Completely replace roof",
+                "installation": "Install roof on new construction"
+              },
+              required: true,
+              order: 4,
+              includeInPing: true,
+              includeInPost: true
+            },
+            // POST-only fields
+            {
+              id: "map-roof-5",
+              sourceField: "trustedFormCertUrl",
+              targetField: "trustedFormToken",
+              transform: undefined,
+              required: false,
+              order: 5,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-6",
+              sourceField: "formData.firstName",
+              targetField: "firstName",
+              transform: undefined,
+              required: true,
+              order: 6,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-7",
+              sourceField: "formData.lastName",
+              targetField: "lastName",
+              transform: undefined,
+              required: true,
+              order: 7,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-8",
+              sourceField: "formData.phone",
+              targetField: "phone",
+              transform: "phone.digitsOnly",
+              required: true,
+              order: 8,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-9",
+              sourceField: "formData.email",
+              targetField: "email",
+              transform: undefined,
+              required: true,
+              order: 9,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-10",
+              sourceField: "formData.address.street",
+              targetField: "address",
+              transform: undefined,
+              required: true,
+              order: 10,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-11",
+              sourceField: "formData.address.city",
+              targetField: "city",
+              transform: undefined,
+              required: true,
+              order: 11,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-roof-12",
+              sourceField: "formData.address.state",
+              targetField: "state",
+              transform: undefined,
+              required: true,
+              order: 12,
+              includeInPing: false,
+              includeInPost: true
+            }
+          ],
+          pingStaticFields: {
+            tagId: "204670250",
+            service: "ROOFING_METAL",
+            partnerSourceId: "mycontractornow-roofing"
+          },
+          postStaticFields: {
+            tagId: "204670250",
+            service: "ROOFING_METAL",
+            partnerSourceId: "mycontractornow-roofing",
+            publisherSubId: "mcn-tx",
+            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+          },
+          meta: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            notes: "Modernize Roofing configuration for ping-post API"
+          }
+        }),
         requiresTrustedForm: true,
         requiresJornaya: false,
         minBid: 22.00,
@@ -973,7 +1264,161 @@ async function main() {
         serviceTypeId: hvac.id,
         pingTemplate: JSON.stringify({ postal: '{{zipCode}}', owner: '{{ownsHome}}' }),
         postTemplate: JSON.stringify({ postal: '{{zipCode}}', owner: '{{ownsHome}}', hvac_type: '{{systemType}}', service: '{{serviceType}}' }),
-        fieldMappings: JSON.stringify({ zipCode: 'postal', ownsHome: 'owner' }),
+        fieldMappings: JSON.stringify({
+          version: "1.0",
+          mappings: [
+            // PING + POST fields
+            {
+              id: "map-hvac-1",
+              sourceField: "zipCode",
+              targetField: "postalCode",
+              transform: undefined,
+              required: true,
+              order: 1,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-2",
+              sourceField: "timeframe",
+              targetField: "buyTimeframe",
+              transform: undefined,
+              valueMap: {
+                "within_3_months": "Immediately",
+                "3_plus_months": "1-6 months",
+                "not_sure": "Don't know"
+              },
+              required: true,
+              order: 2,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-3",
+              sourceField: "ownsHome",
+              targetField: "ownHome",
+              transform: "boolean.yesNo",
+              required: true,
+              order: 3,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-4",
+              sourceField: "formData.serviceType",
+              targetField: "HVACInterest",
+              transform: undefined,
+              valueMap: {
+                "new_installation": "Install Central AC",
+                "replacement": "Install Central Heating",
+                "repair": "Repair Central AC",
+                "maintenance": "Repair Central Heating"
+              },
+              required: false,
+              order: 4,
+              includeInPing: false,
+              includeInPost: true
+            },
+            // POST-only fields
+            {
+              id: "map-hvac-5",
+              sourceField: "trustedFormCertUrl",
+              targetField: "trustedFormToken",
+              transform: undefined,
+              required: false,
+              order: 5,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-6",
+              sourceField: "formData.firstName",
+              targetField: "firstName",
+              transform: undefined,
+              required: true,
+              order: 6,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-7",
+              sourceField: "formData.lastName",
+              targetField: "lastName",
+              transform: undefined,
+              required: true,
+              order: 7,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-8",
+              sourceField: "formData.phone",
+              targetField: "phone",
+              transform: "phone.digitsOnly",
+              required: true,
+              order: 8,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-9",
+              sourceField: "formData.email",
+              targetField: "email",
+              transform: undefined,
+              required: true,
+              order: 9,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-10",
+              sourceField: "formData.address.street",
+              targetField: "address",
+              transform: undefined,
+              required: true,
+              order: 10,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-11",
+              sourceField: "formData.address.city",
+              targetField: "city",
+              transform: undefined,
+              required: true,
+              order: 11,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-hvac-12",
+              sourceField: "formData.address.state",
+              targetField: "state",
+              transform: undefined,
+              required: true,
+              order: 12,
+              includeInPing: false,
+              includeInPost: true
+            }
+          ],
+          pingStaticFields: {
+            tagId: "204670250",
+            service: "HVAC",
+            partnerSourceId: "mycontractornow-hvac"
+          },
+          postStaticFields: {
+            tagId: "204670250",
+            service: "HVAC",
+            partnerSourceId: "mycontractornow-hvac",
+            publisherSubId: "mcn-tx",
+            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+          },
+          meta: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            notes: "Modernize HVAC configuration for ping-post API"
+          }
+        }),
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 15.00,
