@@ -114,7 +114,42 @@ export default function BuyersPage() {
     setShowForm(true);
   };
 
-  const handleEditBuyer = (buyer: Buyer) => {
+  const handleEditBuyer = async (buyer: Buyer) => {
+    // Fetch buyer details with service configs
+    try {
+      const response = await fetch(`/api/admin/buyers/${buyer.id}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data.serviceConfigs) {
+          // Transform service configs to match BuyerServiceConfig type
+          const configs: BuyerServiceConfig[] = result.data.serviceConfigs.map((config: any) => ({
+            id: config.id,
+            buyerId: buyer.id,
+            serviceTypeId: config.serviceTypeId,
+            pingTemplate: null,
+            postTemplate: null,
+            fieldMappings: null,
+            requiresTrustedForm: config.requiresTrustedForm,
+            requiresJornaya: config.requiresJornaya,
+            minBid: config.minBid,
+            maxBid: config.maxBid,
+            active: config.active,
+            priority: 1,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }));
+          setBuyerConfigs(configs);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching buyer configs:', error);
+    }
+
     setEditingBuyer(buyer);
     setShowForm(true);
   };
