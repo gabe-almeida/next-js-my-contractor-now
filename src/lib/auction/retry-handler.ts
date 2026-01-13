@@ -156,12 +156,17 @@ export class RetryHandler {
     const startTime = Date.now();
 
     try {
+      // Ensure pingTemplate exists
+      if (!context.serviceConfig.pingTemplate) {
+        throw new Error(`Missing pingTemplate for buyer ${context.buyer.id}`);
+      }
+
       // Transform lead data using buyer's PING template
       const payload = await TemplateEngine.transform(
         context.lead,
         context.buyer,
         context.serviceConfig.pingTemplate,
-        context.serviceConfig.pingTemplate.includeCompliance
+        context.serviceConfig.pingTemplate?.includeCompliance ?? false
       );
 
       // Prepare headers
@@ -220,12 +225,17 @@ export class RetryHandler {
     const startTime = Date.now();
 
     try {
+      // Ensure postTemplate exists
+      if (!context.serviceConfig.postTemplate) {
+        throw new Error(`Missing postTemplate for buyer ${context.buyer.id}`);
+      }
+
       // Transform lead data using buyer's POST template
       const payload = await TemplateEngine.transform(
         context.lead,
         context.buyer,
         context.serviceConfig.postTemplate,
-        true // Always include compliance for POST
+        context.serviceConfig.postTemplate?.includeCompliance ?? true
       );
 
       // Add retry metadata

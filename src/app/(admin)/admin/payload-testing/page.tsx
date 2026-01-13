@@ -67,7 +67,11 @@ export default function PayloadTestingPage() {
 
   const fetchServiceTypes = async () => {
     try {
-      const response = await fetch('/api/admin/test-payloads');
+      const response = await fetch('/api/admin/test-payloads', {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
       const data = await response.json();
       
       if (data.success) {

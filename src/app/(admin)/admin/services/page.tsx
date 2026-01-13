@@ -39,7 +39,11 @@ export default function ServicesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/service-types?includeInactive=true');
+      const response = await fetch('/api/service-types?includeInactive=true', {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
       const result = await response.json();
 
       if (!response.ok || !result.success) {

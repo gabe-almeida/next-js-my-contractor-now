@@ -409,12 +409,17 @@ export class AuctionEngine {
     const { buyer, serviceConfig } = buyerConfig;
 
     try {
+      // Ensure pingTemplate exists
+      if (!serviceConfig.pingTemplate) {
+        throw new Error(`Missing pingTemplate for buyer ${buyer.id}`);
+      }
+
       // Transform lead data using buyer's PING template
       const payload = await TemplateEngine.transform(
         lead,
         buyer,
         serviceConfig.pingTemplate,
-        serviceConfig.pingTemplate.includeCompliance
+        serviceConfig.pingTemplate?.includeCompliance ?? false
       );
 
       // Prepare request headers
@@ -539,12 +544,17 @@ export class AuctionEngine {
     const { buyer, serviceConfig } = winnerConfig;
 
     try {
+      // Ensure postTemplate exists
+      if (!serviceConfig.postTemplate) {
+        throw new Error(`Missing postTemplate for buyer ${buyer.id}`);
+      }
+
       // Transform lead data using buyer's POST template
       const payload = await TemplateEngine.transform(
         lead,
         buyer,
         serviceConfig.postTemplate,
-        true // Always include compliance for POST
+        serviceConfig.postTemplate?.includeCompliance ?? true // Include compliance for POST
       );
 
       // Add auction metadata
@@ -764,12 +774,17 @@ export class AuctionEngine {
     const { buyer, serviceConfig } = buyerConfig;
 
     try {
+      // Ensure postTemplate exists
+      if (!serviceConfig.postTemplate) {
+        throw new Error(`Missing postTemplate for buyer ${buyer.id}`);
+      }
+
       // Transform lead data using buyer's POST template
       const payload = await TemplateEngine.transform(
         lead,
         buyer,
         serviceConfig.postTemplate,
-        true // Always include compliance for POST
+        serviceConfig.postTemplate?.includeCompliance ?? true // Include compliance for POST
       );
 
       // Add auction metadata

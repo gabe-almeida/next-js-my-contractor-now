@@ -399,7 +399,7 @@ export default function ServiceCoveragePage() {
                                 'bg-red-100 text-red-800'
                               }`}
                             >
-                              {zipData.avgPriority.toFixed(1)} avg
+                              {Number(zipData.avgPriority || 0).toFixed(1)} avg
                             </Badge>
                           </div>
                         </div>

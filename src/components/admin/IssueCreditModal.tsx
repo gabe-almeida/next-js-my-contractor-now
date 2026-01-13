@@ -130,7 +130,7 @@ export function IssueCreditModal({
               {originalBid && (
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500 mb-1">Original Winning Bid</p>
-                  <p className="text-xl font-semibold text-gray-900">${originalBid.toFixed(2)}</p>
+                  <p className="text-xl font-semibold text-gray-900">${Number(originalBid).toFixed(2)}</p>
                 </div>
               )}
 

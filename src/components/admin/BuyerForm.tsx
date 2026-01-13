@@ -128,12 +128,12 @@ export function BuyerForm({
         maxBid: config.maxBid,
         priority: config.priority,
         pingTemplate: {
-          includeCompliance: config.pingTemplate.includeCompliance,
-          staticFields: config.pingTemplate.staticFields || {},
+          includeCompliance: config.pingTemplate?.includeCompliance ?? false,
+          staticFields: config.pingTemplate?.staticFields || {},
         },
         postTemplate: {
-          includeCompliance: config.postTemplate.includeCompliance,
-          staticFields: config.postTemplate.staticFields || {},
+          includeCompliance: config.postTemplate?.includeCompliance ?? true,
+          staticFields: config.postTemplate?.staticFields || {},
         },
       })) || [],
     },

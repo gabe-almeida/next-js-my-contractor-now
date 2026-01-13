@@ -231,7 +231,7 @@ export function LeadStatusHistory({ leadId, onRefresh }: LeadStatusHistoryProps)
                   {entry.creditAmount && (
                     <div className="flex items-center space-x-2 mb-2 text-green-600">
                       <DollarSign className="h-4 w-4" />
-                      <span className="font-medium">${entry.creditAmount.toFixed(2)} credit issued</span>
+                      <span className="font-medium">${Number(entry.creditAmount).toFixed(2)} credit issued</span>
                     </div>
                   )}
 
