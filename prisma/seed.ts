@@ -331,7 +331,7 @@ async function main() {
       name: 'Modernize',
       displayName: 'Modernize Leads',
       type: 'NETWORK',
-      apiUrl: 'https://api.modernize.com/leads',
+      apiUrl: 'https://hsapiservice.quinstage.com/ping-post',
       authConfig: encrypt(JSON.stringify({ type: 'bearer', token: 'demo_modernize_token' })),
       webhookSecret: encrypt(generateWebhookSecret()),
       authType: 'bearer',
@@ -343,6 +343,7 @@ async function main() {
       businessEmail: 'partners@modernize.com',
       businessPhone: '1-800-555-0201',
       active: true,
+      notes: 'Ping: https://hsapiservice.quinstage.com/ping-post/pings | Post: https://hsapiservice.quinstage.com/ping-post/posts | TagId: 204670250',
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['trustedform_cert_url', 'tf_certificate'],
@@ -771,7 +772,169 @@ async function main() {
         serviceTypeId: windows.id,
         pingTemplate: JSON.stringify({ location: '{{zipCode}}', homeowner: '{{ownsHome}}' }),
         postTemplate: JSON.stringify({ location: '{{zipCode}}', homeowner: '{{ownsHome}}', window_count: '{{numberOfWindows}}' }),
-        fieldMappings: JSON.stringify({ zipCode: 'location', ownsHome: 'homeowner' }),
+        fieldMappings: JSON.stringify({
+          version: "1.0",
+          mappings: [
+            // PING + POST fields
+            {
+              id: "map-1",
+              sourceField: "zipCode",
+              targetField: "postalCode",
+              transform: undefined,
+              required: true,
+              order: 1,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-2",
+              sourceField: "timeframe",
+              targetField: "buyTimeframe",
+              transform: undefined,
+              valueMap: {
+                "within_3_months": "Immediately",
+                "3_plus_months": "1-6 months",
+                "not_sure": "1-6 months"
+              },
+              required: true,
+              order: 2,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-3",
+              sourceField: "ownsHome",
+              targetField: "ownHome",
+              transform: "boolean.yesNo",
+              required: true,
+              order: 3,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-4",
+              sourceField: "formData.numberOfWindows",
+              targetField: "NumberOfWindows",
+              transform: undefined,
+              required: true,
+              order: 4,
+              includeInPing: true,
+              includeInPost: true
+            },
+            {
+              id: "map-5",
+              sourceField: "formData.projectScope",
+              targetField: "WindowsProjectScope",
+              transform: undefined,
+              valueMap: {
+                "repair": "Repair",
+                "install": "Install"
+              },
+              required: true,
+              order: 5,
+              includeInPing: true,
+              includeInPost: true
+            },
+            // POST-only fields
+            {
+              id: "map-6",
+              sourceField: "trustedFormCertUrl",
+              targetField: "trustedFormToken",
+              transform: undefined,
+              required: false,
+              order: 6,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-7",
+              sourceField: "formData.firstName",
+              targetField: "firstName",
+              transform: undefined,
+              required: true,
+              order: 7,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-8",
+              sourceField: "formData.lastName",
+              targetField: "lastName",
+              transform: undefined,
+              required: true,
+              order: 8,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-9",
+              sourceField: "formData.phone",
+              targetField: "phone",
+              transform: "phone.digitsOnly",
+              required: true,
+              order: 9,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-10",
+              sourceField: "formData.email",
+              targetField: "email",
+              transform: undefined,
+              required: true,
+              order: 10,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-11",
+              sourceField: "formData.address.street",
+              targetField: "address",
+              transform: undefined,
+              required: true,
+              order: 11,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-12",
+              sourceField: "formData.address.city",
+              targetField: "city",
+              transform: undefined,
+              required: true,
+              order: 12,
+              includeInPing: false,
+              includeInPost: true
+            },
+            {
+              id: "map-13",
+              sourceField: "formData.address.state",
+              targetField: "state",
+              transform: undefined,
+              required: true,
+              order: 13,
+              includeInPing: false,
+              includeInPost: true
+            }
+          ],
+          pingStaticFields: {
+            tagId: "204670250",
+            service: "WINDOWS",
+            partnerSourceId: "mycontractornow-windows"
+          },
+          postStaticFields: {
+            tagId: "204670250",
+            service: "WINDOWS",
+            partnerSourceId: "mycontractornow-windows",
+            publisherSubId: "mcn-tx",
+            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+          },
+          meta: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            notes: "Modernize Windows configuration for ping-post API"
+          }
+        }),
         requiresTrustedForm: true,
         requiresJornaya: true,
         minBid: 12.00,
