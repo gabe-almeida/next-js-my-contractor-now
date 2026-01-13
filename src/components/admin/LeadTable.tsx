@@ -1,21 +1,31 @@
 'use client';
 
+/**
+ * LeadTable - Modern lead management table
+ *
+ * WHY: Central table for viewing and managing leads in admin panel.
+ * WHEN: Displayed on the leads management page.
+ * HOW: Renders filterable, sortable table with pagination.
+ */
+
 import { useState, useMemo } from 'react';
 import { Lead, LeadStatus } from '@/types';
 import { LeadDisposition } from '@/types/database';
 import { Button } from '@/components/ui/Button';
-import { 
-  Eye, 
-  Search, 
-  Filter, 
+import { StatusBadge } from '@/components/admin/ui';
+import {
+  Eye,
   Download,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
+import { AdminSearch, AdminSelect, AdminFilterBar } from '@/components/admin/ui';
 
 // Extended lead type from API response with flattened formData
-interface AdminLead extends Omit<Lead, 'formData'> {
+interface AdminLead extends Omit<Lead, 'formData' | 'winningBuyer'> {
   formData: {
     firstName?: string;
     lastName?: string;
@@ -38,11 +48,31 @@ interface LeadTableProps {
   onExport?: () => void;
 }
 
-export function LeadTable({ 
-  leads, 
-  loading = false, 
-  onViewDetails, 
-  onExport 
+const STATUS_OPTIONS = [
+  { value: 'ALL', label: 'All Status' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'SOLD', label: 'Sold' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'SCRUBBED', label: 'Scrubbed' },
+  { value: 'DUPLICATE', label: 'Duplicate' },
+];
+
+const DISPOSITION_OPTIONS = [
+  { value: 'ALL', label: 'All Disposition' },
+  { value: 'NEW', label: 'New' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'RETURNED', label: 'Returned' },
+  { value: 'DISPUTED', label: 'Disputed' },
+  { value: 'CREDITED', label: 'Credited' },
+  { value: 'WRITTEN_OFF', label: 'Written Off' },
+];
+
+export function LeadTable({
+  leads,
+  loading = false,
+  onViewDetails,
+  onExport,
 }: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
@@ -54,32 +84,30 @@ export function LeadTable({
 
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
-    let filtered = leads.filter(lead => {
-      // Cast to AdminLead for flattened formData access
+    let filtered = leads.filter((lead) => {
       const adminLead = lead as AdminLead;
       const firstName = adminLead.formData?.firstName?.toLowerCase() || '';
       const lastName = adminLead.formData?.lastName?.toLowerCase() || '';
       const searchLower = searchQuery.toLowerCase();
 
-      const matchesSearch = searchQuery === '' ||
+      const matchesSearch =
+        searchQuery === '' ||
         lead.zipCode.includes(searchQuery) ||
         lead.serviceType?.name.toLowerCase().includes(searchLower) ||
         firstName.includes(searchLower) ||
         lastName.includes(searchLower);
 
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
-      const matchesDisposition = dispositionFilter === 'ALL' ||
-        (lead as any).disposition === dispositionFilter;
+      const matchesDisposition =
+        dispositionFilter === 'ALL' || (lead as any).disposition === dispositionFilter;
 
       return matchesSearch && matchesStatus && matchesDisposition;
     });
 
-    // Sort leads
     filtered.sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
 
-      // Handle null/undefined values - push them to the end
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return 1;
       if (bValue == null) return -1;
@@ -92,7 +120,6 @@ export function LeadTable({
     return filtered;
   }, [leads, searchQuery, statusFilter, dispositionFilter, sortField, sortDirection]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredAndSortedLeads.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLeads = filteredAndSortedLeads.slice(startIndex, startIndex + itemsPerPage);
@@ -106,73 +133,26 @@ export function LeadTable({
     }
   };
 
-  const getStatusBadge = (status: LeadStatus) => {
-    const styles: Record<string, string> = {
-      PENDING: 'status-indicator status-pending',
-      PROCESSING: 'status-indicator status-processing',
-      AUCTIONED: 'status-indicator status-success',
-      AUCTION_COMPLETE: 'status-indicator status-success',
-      SOLD: 'status-indicator status-posted',
-      POSTED: 'status-indicator status-posted',
-      REJECTED: 'status-indicator status-failed',
-      EXPIRED: 'status-indicator status-failed',
-      FAILED: 'status-indicator status-failed',
-      SCRUBBED: 'px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800',
-      DUPLICATE: 'px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800'
-    };
-
-    return (
-      <span className={styles[status] || 'status-indicator status-pending'}>
-        {status.replace('_', ' ')}
-      </span>
+  const SortIcon = ({ field }: { field: keyof Lead }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />;
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="h-3.5 w-3.5 text-orange-500" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 text-orange-500" />
     );
-  };
-
-  const getDispositionBadge = (disposition: string | undefined) => {
-    if (!disposition) return null;
-
-    const styles: Record<string, string> = {
-      NEW: 'bg-gray-100 text-gray-700',
-      DELIVERED: 'bg-green-100 text-green-700',
-      RETURNED: 'bg-yellow-100 text-yellow-700',
-      DISPUTED: 'bg-orange-100 text-orange-700',
-      CREDITED: 'bg-blue-100 text-blue-700',
-      WRITTEN_OFF: 'bg-red-100 text-red-700'
-    };
-
-    return (
-      <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[disposition] || 'bg-gray-100'}`}>
-        {disposition.replace('_', ' ')}
-      </span>
-    );
-  };
-
-  const getComplianceIndicator = (lead: Lead) => {
-    const hasTrustedForm = !!lead.trustedFormCertId;
-    const hasJornaya = !!lead.jornayaLeadId;
-    
-    if (hasTrustedForm && hasJornaya) {
-      return <span className="text-green-600 text-xs">✓ Full</span>;
-    } else if (hasTrustedForm || hasJornaya) {
-      return <span className="text-yellow-600 text-xs">◐ Partial</span>;
-    } else {
-      return <span className="text-red-600 text-xs">✗ None</span>;
-    }
   };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex space-x-4">
-                <div className="h-4 bg-gray-200 rounded flex-1"></div>
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-              </div>
-            ))}
+            <div className="h-10 bg-gray-100 rounded-lg w-full"></div>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-14 bg-gray-50 rounded-lg"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -180,186 +160,234 @@ export function LeadTable({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header & Filters */}
+      <div className="p-5 border-b border-gray-100">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Lead Management</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Leads</h3>
           <Button
             variant="outline"
             onClick={onExport}
-            className="flex items-center space-x-2"
+            className="text-sm"
           >
-            <Download className="h-4 w-4" />
-            <span>Export</span>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, ZIP, or service..."
+        <AdminFilterBar>
+          <div className="flex-1 min-w-[200px]">
+            <AdminSearch
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              onChange={setSearchQuery}
+              placeholder="Search by name, ZIP, or service..."
             />
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as LeadStatus | 'ALL')}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="ALL">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="AUCTIONED">Auctioned</option>
-              <option value="SOLD">Sold</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="EXPIRED">Expired</option>
-              <option value="SCRUBBED">Scrubbed</option>
-              <option value="DUPLICATE">Duplicate</option>
-            </select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <select
-              value={dispositionFilter}
-              onChange={(e) => setDispositionFilter(e.target.value as LeadDisposition | 'ALL')}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="ALL">All Disposition</option>
-              <option value="NEW">New</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="RETURNED">Returned</option>
-              <option value="DISPUTED">Disputed</option>
-              <option value="CREDITED">Credited</option>
-              <option value="WRITTEN_OFF">Written Off</option>
-            </select>
-          </div>
-        </div>
+          <AdminSelect
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as LeadStatus | 'ALL')}
+            options={STATUS_OPTIONS}
+          />
+          <AdminSelect
+            value={dispositionFilter}
+            onChange={(v) => setDispositionFilter(v as LeadDisposition | 'ALL')}
+            options={DISPOSITION_OPTIONS}
+            icon={false}
+          />
+        </AdminFilterBar>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="data-table">
+        <table className="w-full">
           <thead>
-            <tr>
+            <tr className="bg-gray-50/80 border-b border-gray-100">
               <th
-                className="cursor-pointer hover:bg-gray-100"
+                className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors"
                 onClick={() => handleSort('createdAt')}
               >
-                <div className="flex items-center space-x-1">
-                  <span>Created</span>
-                  <ArrowUpDown className="h-3 w-3" />
+                <div className="flex items-center gap-1.5">
+                  Created
+                  <SortIcon field="createdAt" />
                 </div>
               </th>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Service</th>
-              <th>ZIP Code</th>
-              <th>Status</th>
-              <th>Sold To</th>
-              <th>Buyers Pinged</th>
-              <th>Winning Bid</th>
-              <th>Actions</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                First Name
+              </th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Last Name
+              </th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Service
+              </th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                ZIP
+              </th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Sold To
+              </th>
+              <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Pinged
+              </th>
+              <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Bid
+              </th>
+              <th className="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
-            {paginatedLeads.map((lead) => {
-              // Cast to AdminLead to access flattened formData
-              const adminLead = lead as AdminLead;
-              const firstName = adminLead.formData?.firstName || '-';
-              const lastName = adminLead.formData?.lastName || '-';
-              const buyerName = adminLead.winningBuyer?.name || '-';
-              const pingCount = adminLead.pingCount ?? 0;
+          <tbody className="divide-y divide-gray-50">
+            {paginatedLeads.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+                  No leads found matching your filters.
+                </td>
+              </tr>
+            ) : (
+              paginatedLeads.map((lead) => {
+                const adminLead = lead as AdminLead;
+                const firstName = adminLead.formData?.firstName || '-';
+                const lastName = adminLead.formData?.lastName || '-';
+                const buyerName = adminLead.winningBuyer?.name || '-';
+                const pingCount = adminLead.pingCount ?? 0;
 
-              return (
-                <tr key={lead.id} className="hover:bg-gray-50">
-                  <td>
-                    {new Date(lead.createdAt).toLocaleDateString()}
-                    <div className="text-xs text-gray-500">
-                      {new Date(lead.createdAt).toLocaleTimeString()}
-                    </div>
-                  </td>
-                  <td className="font-medium">{firstName}</td>
-                  <td className="font-medium">{lastName}</td>
-                  <td>
-                    <div className="font-medium">{lead.serviceType?.name || 'Unknown'}</div>
-                  </td>
-                  <td className="font-mono">{lead.zipCode}</td>
-                  <td>{getStatusBadge(lead.status)}</td>
-                  <td>
-                    {buyerName !== '-' ? (
-                      <span className="font-medium text-blue-600">{buyerName}</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="text-center">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {pingCount}
-                    </span>
-                  </td>
-                  <td>
-                    {lead.winningBid ? (
-                      <span className="font-medium text-green-600">
-                        ${Number(lead.winningBid).toFixed(2)}
+                return (
+                  <tr
+                    key={lead.id}
+                    className="hover:bg-orange-50/30 transition-colors cursor-pointer"
+                    onClick={() => onViewDetails(lead.id)}
+                  >
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(lead.createdAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                      {firstName}
+                    </td>
+                    <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                      {lastName}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-medium text-gray-900">
+                        {lead.serviceType?.name || 'Unknown'}
                       </span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewDetails(lead.id)}
-                      className="flex items-center space-x-1"
-                    >
-                      <Eye className="h-3 w-3" />
-                      <span>View</span>
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-mono text-gray-600">{lead.zipCode}</span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status={lead.status} />
+                    </td>
+                    <td className="px-4 py-4">
+                      {buyerName !== '-' ? (
+                        <span className="text-sm font-medium text-orange-600">{buyerName}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+                        {pingCount}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      {lead.winningBid ? (
+                        <span className="text-sm font-semibold text-emerald-600">
+                          ${Number(lead.winningBid).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewDetails(lead.id)}
+                        className="text-gray-500 hover:text-orange-600 hover:bg-orange-50"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-gray-200">
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/30">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedLeads.length)} of {filteredAndSortedLeads.length} results
-            </div>
-            
-            <div className="flex items-center space-x-2">
+            <p className="text-sm text-gray-500">
+              Showing <span className="font-medium text-gray-700">{startIndex + 1}</span> to{' '}
+              <span className="font-medium text-gray-700">
+                {Math.min(startIndex + itemsPerPage, filteredAndSortedLeads.length)}
+              </span>{' '}
+              of{' '}
+              <span className="font-medium text-gray-700">{filteredAndSortedLeads.length}</span>{' '}
+              results
+            </p>
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
+                className="px-3"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              
-              <span className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`min-w-[32px] h-8 px-2 text-sm font-medium rounded-md transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-orange-500 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
+                className="px-3"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
