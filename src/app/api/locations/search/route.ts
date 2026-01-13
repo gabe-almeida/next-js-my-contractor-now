@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { captureApiError } from '@/lib/sentry';
 
 interface SmartyStreetsResponse {
   input_index: number;
@@ -121,6 +122,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/locations/search', action: 'GET' });
     console.error('Location search error:', error);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }

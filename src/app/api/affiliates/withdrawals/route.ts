@@ -14,6 +14,7 @@ import {
   createWithdrawalRequest,
   getAvailableBalance
 } from '@/lib/services/affiliate-withdrawal-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for withdrawal request
 const withdrawalSchema = z.object({
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/withdrawals', action: 'GET' });
     console.error('Get affiliate withdrawals error:', error);
     return NextResponse.json({
       success: false,
@@ -143,6 +145,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/withdrawals', action: 'POST' });
     console.error('Create withdrawal request error:', error);
     return NextResponse.json({
       success: false,

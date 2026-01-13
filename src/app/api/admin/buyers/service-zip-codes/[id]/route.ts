@@ -3,6 +3,7 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
+import { captureApiError } from '@/lib/sentry';
 
 // GET /api/admin/buyers/service-zip-codes/[id] - Get single ZIP code
 async function handleGetZipCode(req: EnhancedRequest, { params }: { params: { id: string } }) {
@@ -58,6 +59,7 @@ async function handleGetZipCode(req: EnhancedRequest, { params }: { params: { id
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-zip-codes/[id]', action: 'GET' });
     console.error('Error fetching ZIP code:', error);
     const response = errorResponse(
       'FETCH_ERROR',
@@ -178,6 +180,7 @@ async function handleUpdateZipCode(req: EnhancedRequest, { params }: { params: {
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-zip-codes/[id]', action: 'PUT' });
     console.error('Error updating ZIP code:', error);
     const response = errorResponse(
       'UPDATE_ERROR',
@@ -226,6 +229,7 @@ async function handleDeleteZipCode(req: EnhancedRequest, { params }: { params: {
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-zip-codes/[id]', action: 'DELETE' });
     console.error('Error deleting ZIP code:', error);
     const response = errorResponse(
       'DELETE_ERROR',

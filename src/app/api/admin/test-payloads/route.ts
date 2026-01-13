@@ -5,6 +5,7 @@ import {
   generatePayloadPreview,
 } from '@/lib/field-mapping/configuration-service';
 import { FieldMapping } from '@/types/field-mapping';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * Test endpoint to preview payload transformations for each buyer
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/test-payloads', action: 'POST' });
     console.error('Payload test error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
@@ -194,6 +196,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/test-payloads', action: 'GET' });
     console.error('Service types fetch error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },

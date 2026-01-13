@@ -6,6 +6,7 @@ import { successResponse, errorResponse } from '@/lib/utils';
 import { ServiceZoneRepository } from '@/lib/repositories/service-zone-repository';
 import { BuyerEligibilityService } from '@/lib/services/buyer-eligibility-service';
 import { z } from 'zod';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for analytics queries
 const analyticsQuerySchema = z.object({
@@ -122,11 +123,12 @@ async function handleGetServiceZoneAnalytics(req: EnhancedRequest): Promise<Next
     return NextResponse.json(response);
     
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/service-zones/analytics', action: 'GET' });
     logger.error('Service zone analytics error', {
       error: (error as Error).message,
       requestId
     });
-    
+
     const response = errorResponse(
       'ANALYTICS_ERROR',
       'Failed to fetch service zone analytics',
@@ -134,7 +136,7 @@ async function handleGetServiceZoneAnalytics(req: EnhancedRequest): Promise<Next
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 
@@ -257,11 +259,12 @@ async function handleGetServiceAvailability(req: EnhancedRequest): Promise<NextR
     return NextResponse.json(response);
     
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/service-zones/analytics', action: 'GET' });
     logger.error('Service availability error', {
       error: (error as Error).message,
       requestId
     });
-    
+
     const response = errorResponse(
       'AVAILABILITY_ERROR',
       'Failed to fetch service availability',
@@ -269,7 +272,7 @@ async function handleGetServiceAvailability(req: EnhancedRequest): Promise<NextR
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }

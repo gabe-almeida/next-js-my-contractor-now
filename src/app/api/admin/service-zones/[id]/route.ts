@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { ServiceZoneRepository, ServiceZoneInput } from '@/lib/repositories/service-zone-repository';
 import { z } from 'zod';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for updates
 const updateServiceZoneSchema = z.object({
@@ -54,12 +55,13 @@ async function handleGetServiceZone(
     return NextResponse.json(response);
     
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/service-zones/[id]', action: 'GET' });
     logger.error('Service zone fetch error', {
       error: (error as Error).message,
       serviceZoneId: id,
       requestId
     });
-    
+
     const response = errorResponse(
       'FETCH_ERROR',
       'Failed to fetch service zone',
@@ -67,7 +69,7 @@ async function handleGetServiceZone(
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }
@@ -130,6 +132,7 @@ async function handleUpdateServiceZone(
       return NextResponse.json(response, { status: 404 });
     }
     
+    captureApiError(error, { route: '/api/admin/service-zones/[id]', action: 'PUT' });
     const response = errorResponse(
       'UPDATE_ERROR',
       'Failed to update service zone',
@@ -137,7 +140,7 @@ async function handleUpdateServiceZone(
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }
@@ -196,6 +199,7 @@ async function handleDeleteServiceZone(
       return NextResponse.json(response, { status: 404 });
     }
     
+    captureApiError(error, { route: '/api/admin/service-zones/[id]', action: 'DELETE' });
     const response = errorResponse(
       'DELETION_ERROR',
       'Failed to delete service zone',
@@ -203,7 +207,7 @@ async function handleDeleteServiceZone(
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }

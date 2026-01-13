@@ -9,6 +9,7 @@ import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 import { BuyerResponseParser } from '@/lib/buyers/response-parser';
 import { NormalizedPingStatus, NormalizedPostStatus } from '@/types/response-mapping';
+import { captureApiError } from '@/lib/sentry';
 
 // Webhook endpoint for buyer responses
 async function handleBuyerWebhook(
@@ -129,13 +130,14 @@ async function handleBuyerWebhook(
     return NextResponse.json(webhookResponse);
     
   } catch (error) {
+    captureApiError(error, { route: `/api/webhooks/${buyer}`, action: 'POST', extra: { requestId, buyer } });
     logger.error('Webhook processing error', {
       error: (error as Error).message,
       requestId,
       buyer,
       stack: (error as Error).stack
     });
-    
+
     const response = errorResponse(
       'WEBHOOK_PROCESSING_ERROR',
       'Failed to process webhook',
@@ -143,7 +145,7 @@ async function handleBuyerWebhook(
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }

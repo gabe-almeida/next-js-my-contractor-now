@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getPermissionsForRole, getAdminById } from '@/lib/services/admin-auth-service';
+import { captureApiError } from '@/lib/sentry';
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/auth/admin/me', action: 'GET' });
     console.error('Get user error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to get user' },

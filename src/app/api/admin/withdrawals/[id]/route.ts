@@ -12,6 +12,7 @@ import {
   getWithdrawalById,
   processWithdrawal
 } from '@/lib/services/affiliate-withdrawal-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema
 const processSchema = z.object({
@@ -60,6 +61,7 @@ export async function GET(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/withdrawals/[id]', action: 'GET' });
     console.error('Get admin withdrawal error:', error);
     return NextResponse.json({
       success: false,
@@ -121,6 +123,7 @@ export async function PUT(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/withdrawals/[id]', action: 'PUT' });
     console.error('Process withdrawal error:', error);
     return NextResponse.json({
       success: false,

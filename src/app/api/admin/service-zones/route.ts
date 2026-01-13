@@ -6,6 +6,7 @@ import { generateId, successResponse, errorResponse } from '@/lib/utils';
 import { ServiceZoneRepository, ServiceZoneInput, BulkServiceZoneInput } from '@/lib/repositories/service-zone-repository';
 import { BuyerEligibilityService } from '@/lib/services/buyer-eligibility-service';
 import { z } from 'zod';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schemas
 const serviceZoneSchema = z.object({
@@ -111,11 +112,12 @@ async function handleGetServiceZones(req: EnhancedRequest): Promise<NextResponse
     return NextResponse.json(response);
     
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/service-zones', action: 'GET' });
     logger.error('Service zones fetch error', {
       error: (error as Error).message,
       requestId
     });
-    
+
     const response = errorResponse(
       'FETCH_ERROR',
       'Failed to fetch service zones',
@@ -123,7 +125,7 @@ async function handleGetServiceZones(req: EnhancedRequest): Promise<NextResponse
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }
@@ -180,12 +182,13 @@ async function handleCreateServiceZone(
     return NextResponse.json(response, { status: 201 });
     
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/service-zones', action: 'POST' });
     logger.error('Service zone creation error', {
       error: (error as Error).message,
       requestId,
       data: validatedData
     });
-    
+
     const response = errorResponse(
       'CREATION_ERROR',
       'Failed to create service zone',
@@ -193,7 +196,7 @@ async function handleCreateServiceZone(
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }
@@ -244,11 +247,12 @@ async function handleDeleteServiceZones(req: EnhancedRequest): Promise<NextRespo
     return NextResponse.json(response);
     
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/service-zones', action: 'DELETE' });
     logger.error('Service zones deletion error', {
       error: (error as Error).message,
       requestId
     });
-    
+
     const response = errorResponse(
       'DELETION_ERROR',
       'Failed to delete service zones',
@@ -256,7 +260,7 @@ async function handleDeleteServiceZones(req: EnhancedRequest): Promise<NextRespo
       undefined,
       requestId
     );
-    
+
     return NextResponse.json(response, { status: 500 });
   }
 }

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { ZipCodeImportService, MODERNIZE_SHEET_MAPPINGS } from '@/lib/services/zip-code-import-service';
 import { logger } from '@/lib/logger';
+import { captureApiError } from '@/lib/sentry';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -137,6 +138,7 @@ export async function POST(
       },
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]/zip-codes/preview', action: 'POST' });
     logger.error('Failed to preview ZIP code file', {
       error: (error as Error).message,
       stack: (error as Error).stack,

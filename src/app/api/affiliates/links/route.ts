@@ -14,6 +14,7 @@ import {
   createLink,
   buildTrackingUrl
 } from '@/lib/services/affiliate-link-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for creating a link
 // Accepts both targetPath and targetUrl for compatibility
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/links', action: 'GET' });
     console.error('Get affiliate links error:', error);
     return NextResponse.json({
       success: false,
@@ -142,6 +144,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/links', action: 'POST' });
     console.error('Create affiliate link error:', error);
     return NextResponse.json({
       success: false,

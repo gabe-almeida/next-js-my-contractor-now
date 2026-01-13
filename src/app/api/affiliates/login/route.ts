@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { authenticateAffiliate } from '@/lib/services/affiliate-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for login
 const loginSchema = z.object({
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/login', action: 'POST' });
     console.error('Affiliate login error:', error);
     return NextResponse.json({
       success: false,

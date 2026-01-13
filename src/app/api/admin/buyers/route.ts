@@ -7,6 +7,7 @@ import { generateId, successResponse, errorResponse } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
 import { generateWebhookSecret } from '@/lib/security/webhook-signatures';
 import { encrypt, decrypt, isEncrypted } from '@/lib/security/encryption';
+import { captureApiError } from '@/lib/sentry';
 
 // Get all buyers
 async function handleGetBuyers(req: EnhancedRequest): Promise<NextResponse> {
@@ -121,6 +122,7 @@ async function handleGetBuyers(req: EnhancedRequest): Promise<NextResponse> {
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers', action: 'GET', extra: { requestId } });
     logger.error('Buyers fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,
@@ -287,6 +289,7 @@ async function handleCreateBuyer(
     return NextResponse.json(response, { status: 201 });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers', action: 'POST', extra: { requestId, buyerName: validatedData.name } });
     logger.error('Buyer creation error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

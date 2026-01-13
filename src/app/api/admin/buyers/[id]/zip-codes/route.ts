@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { captureApiError } from '@/lib/sentry'
 
 // Validation schemas
 const addZipCodeSchema = z.object({
@@ -27,7 +28,7 @@ const bulkUpdateSchema = z.object({
 })
 
 // Helper function to handle Prisma errors
-function handlePrismaError(error: any) {
+function handlePrismaError(error: any, action: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002':
@@ -58,6 +59,7 @@ function handlePrismaError(error: any) {
           { status: 400 }
         )
       default:
+        captureApiError(error, { route: '/api/admin/buyers/[id]/zip-codes', action })
         console.error('Prisma error:', error)
         return NextResponse.json(
           {
@@ -71,6 +73,7 @@ function handlePrismaError(error: any) {
   }
 
   if (error instanceof Prisma.PrismaClientInitializationError) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]/zip-codes', action })
     console.error('Database connection error:', error)
     return NextResponse.json(
       {
@@ -83,6 +86,7 @@ function handlePrismaError(error: any) {
   }
 
   // Generic error
+  captureApiError(error, { route: '/api/admin/buyers/[id]/zip-codes', action })
   console.error('Unexpected error:', error)
   return NextResponse.json(
     {
@@ -193,7 +197,7 @@ export async function GET(
     })
 
   } catch (error) {
-    return handlePrismaError(error)
+    return handlePrismaError(error, 'GET')
   }
 }
 
@@ -317,7 +321,7 @@ export async function POST(
     }, { status: 201 })
 
   } catch (error) {
-    return handlePrismaError(error)
+    return handlePrismaError(error, 'POST')
   }
 }
 
@@ -372,7 +376,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    return handlePrismaError(error)
+    return handlePrismaError(error, 'PUT')
   }
 }
 
@@ -423,6 +427,6 @@ export async function DELETE(
     })
 
   } catch (error) {
-    return handlePrismaError(error)
+    return handlePrismaError(error, 'DELETE')
   }
 }

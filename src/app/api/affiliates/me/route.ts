@@ -14,6 +14,7 @@ import {
   changePassword,
   verifyAffiliateToken
 } from '@/lib/services/affiliate-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for profile update
 const updateSchema = z.object({
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/me', action: 'GET' });
     console.error('Get affiliate profile error:', error);
     return NextResponse.json({
       success: false,
@@ -171,6 +173,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/me', action: 'PUT' });
     console.error('Update affiliate profile error:', error);
     return NextResponse.json({
       success: false,

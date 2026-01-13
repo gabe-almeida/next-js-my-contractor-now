@@ -12,6 +12,7 @@ import { RedisCache } from '@/config/redis';
 import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
+import { captureApiError } from '@/lib/sentry';
 
 type TimeframeOption = '24h' | '7d' | '30d' | '90d';
 
@@ -286,6 +287,7 @@ async function handleGetActivity(
     return NextResponse.json(successResponse(result, requestId));
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]/activity', action: 'GET' });
     logger.error('Buyer activity fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

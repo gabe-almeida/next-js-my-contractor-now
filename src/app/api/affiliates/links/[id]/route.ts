@@ -14,6 +14,7 @@ import {
   deleteLink,
   buildTrackingUrl
 } from '@/lib/services/affiliate-link-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for updating a link
 const updateLinkSchema = z.object({
@@ -91,6 +92,7 @@ export async function PUT(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/links/[id]', action: 'PUT' });
     console.error('Update affiliate link error:', error);
     return NextResponse.json({
       success: false,
@@ -129,6 +131,7 @@ export async function DELETE(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/links/[id]', action: 'DELETE' });
     console.error('Delete affiliate link error:', error);
     return NextResponse.json({
       success: false,

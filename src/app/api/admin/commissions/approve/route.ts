@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateAdminAuth } from '@/lib/security';
 import { approveCommissions } from '@/lib/services/affiliate-commission-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema
 const approveSchema = z.object({
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/commissions/approve', action: 'POST' });
     console.error('Approve commissions error:', error);
     return NextResponse.json({
       success: false,

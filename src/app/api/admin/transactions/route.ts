@@ -3,6 +3,7 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * Admin Transactions API
@@ -138,6 +139,7 @@ async function handleGetTransactions(req: EnhancedRequest): Promise<NextResponse
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/transactions', action: 'GET' });
     logger.error('Transactions fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

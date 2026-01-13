@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAffiliateToken } from '@/lib/services/affiliate-service';
 import { getCommissionsByAffiliateId, getAffiliateStats } from '@/lib/services/affiliate-commission-service';
 import { CommissionStatus } from '@/types/database';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * Extracts and verifies affiliate ID from request
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/commissions', action: 'GET' });
     console.error('Get affiliate commissions error:', error);
     return NextResponse.json({
       success: false,

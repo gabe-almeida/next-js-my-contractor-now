@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
 import { expandServiceLocationsToZipCodes, type ExpandedServiceMapping } from '@/lib/services/location-expansion';
+import { captureApiError } from '@/lib/sentry';
 
 const prisma = new PrismaClient();
 
@@ -176,6 +177,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    captureApiError(error, { route: '/api/contractors/service-locations', action: 'POST' });
     return NextResponse.json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -280,6 +282,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/contractors/service-locations', action: 'GET' });
     console.error('Error retrieving service locations:', error);
     return NextResponse.json({
       success: false,
@@ -304,6 +307,7 @@ export async function PUT(request: NextRequest) {
     return await POST(request);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/contractors/service-locations', action: 'PUT' });
     console.error('Error updating service locations:', error);
     return NextResponse.json({
       success: false,
@@ -364,6 +368,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/contractors/service-locations', action: 'DELETE' });
     console.error('Error deleting service locations:', error);
     return NextResponse.json({
       success: false,

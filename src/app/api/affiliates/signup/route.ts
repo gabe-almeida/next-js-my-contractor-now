@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAffiliate } from '@/lib/services/affiliate-service';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for signup
 const signupSchema = z.object({
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/signup', action: 'POST' });
     console.error('Affiliate signup error:', error);
     return NextResponse.json({
       success: false,

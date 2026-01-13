@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * GET /api/admin/buyers/[id]/service-config
@@ -120,6 +121,7 @@ export async function GET(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]/service-config', action: 'GET' });
     console.error('Error fetching buyer service config:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch service configuration' },

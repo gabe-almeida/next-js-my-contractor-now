@@ -12,6 +12,7 @@ import {
   getSampleLeadData,
 } from '@/lib/field-mapping/configuration-service';
 import type { FieldMappingConfig } from '@/types/field-mapping';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * POST /api/admin/field-mappings/preview
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
       sampleDataUsed: data,
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/field-mappings/preview', action: 'POST' });
     console.error('Field mapping preview error:', error);
     return NextResponse.json(
       {

@@ -27,6 +27,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { buildQuestionFlow, buildFallbackFlow, validateQuestionFlow } from '@/lib/questions/flow-builder';
 import { RedisCache } from '@/config/redis';
+import { captureApiError } from '@/lib/sentry';
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
@@ -123,6 +124,7 @@ export async function GET(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/services/[slug]/flow', action: 'GET' });
     console.error('Flow API error:', error);
 
     return NextResponse.json(

@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminLogin } from '@/lib/services/admin-auth-service';
 import { z } from 'zod';
+import { captureApiError } from '@/lib/sentry';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    captureApiError(error, { route: '/api/auth/admin/login', action: 'POST' });
     console.error('Login error:', error);
     return NextResponse.json(
       { success: false, error: 'Login failed' },

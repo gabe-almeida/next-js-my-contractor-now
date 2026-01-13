@@ -11,6 +11,7 @@ import {
   getValidNextDispositions
 } from '@/lib/services/lead-accounting-service';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
+import { captureApiError } from '@/lib/sentry';
 
 // Get specific lead with full details
 async function handleGetLead(
@@ -152,6 +153,7 @@ async function handleGetLead(
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/leads/[id]', action: 'GET' });
     logger.error('Admin lead fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,
@@ -280,6 +282,7 @@ async function handleUpdateLeadStatus(
     );
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/leads/[id]', action: 'PUT' });
     logger.error('Lead status update error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

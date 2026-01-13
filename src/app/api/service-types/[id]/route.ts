@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * Invalidate service flow cache when service is updated
@@ -57,6 +58,7 @@ export async function GET(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/service-types/[id]', action: 'GET' });
     console.error('Get service type error:', error);
     const { message, statusCode } = handleApiError(error);
 
@@ -134,6 +136,7 @@ export async function PUT(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/service-types/[id]', action: 'PUT' });
     console.error('Update service type error:', error);
     const { message, statusCode } = handleApiError(error);
 
@@ -202,6 +205,7 @@ export async function DELETE(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/service-types/[id]', action: 'DELETE' });
     console.error('Delete service type error:', error);
     const { message, statusCode } = handleApiError(error);
 

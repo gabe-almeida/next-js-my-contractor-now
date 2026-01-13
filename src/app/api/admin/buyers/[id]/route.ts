@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
 import { BuyerResponseParser } from '@/lib/buyers/response-parser';
+import { captureApiError } from '@/lib/sentry';
 
 // Get specific buyer
 async function handleGetBuyer(
@@ -120,6 +121,7 @@ async function handleGetBuyer(
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]', action: 'GET', extra: { requestId, buyerId: id } });
     logger.error('Buyer fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,
@@ -338,6 +340,7 @@ async function handleUpdateBuyer(
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]', action: 'PUT', extra: { requestId, buyerId: id } });
     logger.error('Buyer update error', {
       error: (error as Error).message,
       stack: (error as Error).stack,
@@ -434,6 +437,7 @@ async function handleDeleteBuyer(
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]', action: 'DELETE', extra: { requestId, buyerId: id } });
     logger.error('Buyer deletion error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

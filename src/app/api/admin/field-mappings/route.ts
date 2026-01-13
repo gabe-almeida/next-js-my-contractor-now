@@ -19,6 +19,7 @@ import type {
   FieldMappingConfig,
   FieldMappingApiResponse,
 } from '@/types/field-mapping';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * GET /api/admin/field-mappings
@@ -117,6 +118,7 @@ export async function GET(request: NextRequest) {
       transforms: AVAILABLE_TRANSFORMS,
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/field-mappings', action: 'GET' });
     console.error('Field mappings GET error:', error);
     return NextResponse.json(
       {
@@ -192,6 +194,7 @@ export async function PUT(request: NextRequest) {
       message: 'Field mappings saved successfully',
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/field-mappings', action: 'PUT' });
     console.error('Field mappings PUT error:', error);
     return NextResponse.json(
       {
@@ -244,6 +247,7 @@ export async function PATCH(request: NextRequest) {
       message: `Buyer ${active ? 'enabled' : 'disabled'} for this service type`,
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/field-mappings', action: 'PATCH' });
     console.error('Field mappings PATCH error:', error);
     return NextResponse.json(
       {

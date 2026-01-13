@@ -14,6 +14,7 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { getLeadStatusHistory } from '@/lib/services/lead-accounting-service';
+import { captureApiError } from '@/lib/sentry';
 
 async function handleGetHistory(
   req: EnhancedRequest,
@@ -57,6 +58,7 @@ async function handleGetHistory(
     );
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/leads/[id]/history', action: 'GET' });
     logger.error('Lead history fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

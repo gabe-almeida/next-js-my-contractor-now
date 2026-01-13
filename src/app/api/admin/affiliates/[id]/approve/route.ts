@@ -12,6 +12,7 @@ import {
   updateAffiliateStatus
 } from '@/lib/services/affiliate-service';
 import { AffiliateStatus } from '@/types/database';
+import { captureApiError } from '@/lib/sentry';
 
 export async function POST(
   request: NextRequest,
@@ -68,6 +69,7 @@ export async function POST(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/affiliates/[id]/approve', action: 'POST' });
     console.error('Approve affiliate error:', error);
     return NextResponse.json({
       success: false,

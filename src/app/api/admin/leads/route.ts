@@ -6,6 +6,7 @@ import { successResponse, errorResponse } from '@/lib/utils';
 import { Lead, LeadStatus } from '@/types';
 import { LeadDisposition } from '@/types/database';
 import { prisma } from '@/lib/prisma';
+import { captureApiError } from '@/lib/sentry';
 
 // Admin leads management endpoint
 async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
@@ -177,6 +178,7 @@ async function handleGetLeads(req: EnhancedRequest): Promise<NextResponse> {
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/leads', action: 'GET', extra: { requestId, page, limit, status, serviceTypeId } });
     logger.error('Admin leads fetch error', {
       error: (error as Error).message,
       stack: (error as Error).stack,
@@ -389,6 +391,7 @@ async function handleGetLeadAnalytics(req: EnhancedRequest): Promise<NextRespons
     return NextResponse.json(response);
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/leads', action: 'GET_ANALYTICS', extra: { requestId, period } });
     logger.error('Lead analytics error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

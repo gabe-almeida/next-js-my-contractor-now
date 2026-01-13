@@ -3,6 +3,7 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
+import { captureApiError } from '@/lib/sentry';
 
 // GET /api/admin/buyers/service-configs - List all service configs with filters
 async function handleGetServiceConfigs(req: EnhancedRequest) {
@@ -68,6 +69,7 @@ async function handleGetServiceConfigs(req: EnhancedRequest) {
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-configs', action: 'GET' });
     console.error('Error fetching service configs:', error);
     const response = errorResponse(
       'FETCH_ERROR',
@@ -210,6 +212,7 @@ async function handleCreateServiceConfig(req: EnhancedRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-configs', action: 'POST' });
     console.error('Error creating service config:', error);
     const response = errorResponse(
       'CREATE_ERROR',

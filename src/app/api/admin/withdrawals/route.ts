@@ -12,6 +12,7 @@ import {
   getWithdrawalStats
 } from '@/lib/services/affiliate-withdrawal-service';
 import { WithdrawalStatus } from '@/types/database';
+import { captureApiError } from '@/lib/sentry';
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/withdrawals', action: 'GET' });
     console.error('Get admin withdrawals error:', error);
     return NextResponse.json({
       success: false,

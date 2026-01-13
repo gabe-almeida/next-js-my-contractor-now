@@ -14,6 +14,7 @@ import {
   MODERNIZE_SHEET_MAPPINGS,
 } from '@/lib/services/zip-code-import-service';
 import { logger } from '@/lib/logger';
+import { captureApiError } from '@/lib/sentry';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -136,6 +137,7 @@ export async function POST(
       },
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]/zip-codes/bulk', action: 'POST' });
     logger.error('Bulk ZIP code import failed', {
       error: (error as Error).message,
       stack: (error as Error).stack,
@@ -193,6 +195,7 @@ export async function GET(
       },
     });
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/buyers/[id]/zip-codes/bulk', action: 'GET' });
     logger.error('Failed to get bulk import info', {
       error: (error as Error).message,
     });

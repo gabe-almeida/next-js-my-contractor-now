@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createServiceTypeSchema, updateServiceTypeSchema } from '@/lib/validations/lead';
 import { handleApiError } from '@/lib/utils';
+import { captureApiError } from '@/lib/sentry';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/service-types', action: 'GET' });
     console.error('Get service types error:', error);
     const { message, statusCode } = handleApiError(error);
     
@@ -81,6 +83,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/service-types', action: 'POST' });
     console.error('Create service type error:', error);
     const { message, statusCode } = handleApiError(error);
     

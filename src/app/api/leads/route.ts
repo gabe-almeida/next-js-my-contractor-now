@@ -63,6 +63,7 @@ import { recordConversion } from '@/lib/services/affiliate-link-service';
 import { AuctionEngine } from '@/lib/auction/engine';
 import { LeadData } from '@/lib/templates/types';
 import { trackLeadCAPI } from '@/lib/meta/conversion-api';
+import { captureApiError } from '@/lib/sentry';
 
 export async function POST(request: NextRequest) {
   try {
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest) {
     try {
       serviceSchema = generateZodSchema(serviceType.formSchema);
     } catch (error) {
+      captureApiError(error, { route: '/api/leads', action: 'schema_generation', extra: { serviceType: serviceType.name } });
       console.error('Dynamic schema generation failed:', error);
       return NextResponse.json({
         success: false,
@@ -452,6 +454,7 @@ export async function POST(request: NextRequest) {
         console.log('[API /api/leads] Lead status updated:', { leadId: result.id, newStatus });
       } catch (auctionError) {
         // Auction failed but lead is still saved - log error
+        captureApiError(auctionError, { route: '/api/leads', action: 'inline_auction', extra: { leadId: result.id } });
         console.error('[API /api/leads] Inline auction failed:', auctionError);
       }
     }
@@ -538,6 +541,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/leads', action: 'POST' });
     console.error('Lead submission error:', error);
 
     return NextResponse.json({
@@ -612,6 +616,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/leads', action: 'GET' });
     console.error('Get leads error:', error);
 
     return NextResponse.json({

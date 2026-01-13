@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAdminAuth } from '@/lib/security';
 import { getPendingCommissions } from '@/lib/services/affiliate-commission-service';
+import { captureApiError } from '@/lib/sentry';
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/commissions', action: 'GET' });
     console.error('Get admin commissions error:', error);
     return NextResponse.json({
       success: false,

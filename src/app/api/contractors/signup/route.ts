@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { BuyerType } from '@/types/database';
 import { z } from 'zod';
 import { expandServiceLocationsToZipCodes, ServiceLocationMapping } from '@/lib/services/location-expansion';
+import { captureApiError } from '@/lib/sentry';
 
 // Additional contact validation schema
 const additionalContactSchema = z.object({
@@ -315,6 +316,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    captureApiError(error, { route: '/api/contractors/signup', action: 'POST' });
     return NextResponse.json(
       { error: 'Internal server error during registration' },
       { status: 500 }
@@ -378,6 +380,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/contractors/signup', action: 'GET' });
     console.error('Error fetching contractor signups:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve contractor signups' },

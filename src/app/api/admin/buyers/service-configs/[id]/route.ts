@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
 import { invalidateServiceConfigCache } from '@/lib/field-mapping/database-buyer-loader';
+import { captureApiError } from '@/lib/sentry';
 
 // GET /api/admin/buyers/service-configs/[id] - Get single service config
 async function handleGetServiceConfig(req: EnhancedRequest, { params }: { params: { id: string } }) {
@@ -59,6 +60,7 @@ async function handleGetServiceConfig(req: EnhancedRequest, { params }: { params
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-configs/[id]', action: 'GET' });
     console.error('Error fetching service config:', error);
     const response = errorResponse(
       'FETCH_ERROR',
@@ -154,6 +156,7 @@ async function handleUpdateServiceConfig(req: EnhancedRequest, { params }: { par
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-configs/[id]', action: 'PUT' });
     console.error('Error updating service config:', error);
     const response = errorResponse(
       'UPDATE_ERROR',
@@ -221,6 +224,7 @@ async function handleDeleteServiceConfig(req: EnhancedRequest, { params }: { par
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-configs/[id]', action: 'DELETE' });
     console.error('Error deleting service config:', error);
     const response = errorResponse(
       'DELETE_ERROR',

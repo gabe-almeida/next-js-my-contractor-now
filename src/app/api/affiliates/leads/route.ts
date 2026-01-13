@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAffiliateToken } from '@/lib/services/affiliate-service';
 import { prisma } from '@/lib/prisma';
+import { captureApiError } from '@/lib/sentry';
 
 /**
  * Extracts and verifies affiliate ID from request
@@ -117,6 +118,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/affiliates/leads', action: 'GET' });
     console.error('Get affiliate leads error:', error);
     return NextResponse.json({
       success: false,

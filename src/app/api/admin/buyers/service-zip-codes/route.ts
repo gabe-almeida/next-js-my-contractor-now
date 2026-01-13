@@ -3,6 +3,7 @@ import { withMiddleware, EnhancedRequest } from '@/lib/middleware';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
+import { captureApiError } from '@/lib/sentry';
 
 // GET /api/admin/buyers/service-zip-codes - List all ZIP codes with filters
 async function handleGetZipCodes(req: EnhancedRequest) {
@@ -70,6 +71,7 @@ async function handleGetZipCodes(req: EnhancedRequest) {
 
     return NextResponse.json(response);
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-zip-codes', action: 'GET' });
     console.error('Error fetching ZIP codes:', error);
     const response = errorResponse(
       'FETCH_ERROR',
@@ -207,6 +209,7 @@ async function handleCreateZipCode(req: EnhancedRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error: any) {
+    captureApiError(error, { route: '/api/admin/buyers/service-zip-codes', action: 'POST' });
     console.error('Error creating ZIP code:', error);
     const response = errorResponse(
       'CREATE_ERROR',

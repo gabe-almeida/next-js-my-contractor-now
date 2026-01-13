@@ -15,6 +15,7 @@ import { RedisCache } from '@/config/redis';
 import { logger } from '@/lib/logger';
 import { successResponse, errorResponse } from '@/lib/utils';
 import { issueCredit } from '@/lib/services/lead-accounting-service';
+import { captureApiError } from '@/lib/sentry';
 
 async function handleIssueCredit(
   req: EnhancedRequest,
@@ -98,6 +99,7 @@ async function handleIssueCredit(
     );
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/leads/[id]/credit', action: 'POST' });
     logger.error('Credit issuance error', {
       error: (error as Error).message,
       stack: (error as Error).stack,

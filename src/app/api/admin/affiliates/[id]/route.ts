@@ -17,6 +17,7 @@ import {
 } from '@/lib/services/affiliate-service';
 import { getAffiliateStats } from '@/lib/services/affiliate-commission-service';
 import { AffiliateStatus } from '@/types/database';
+import { captureApiError } from '@/lib/sentry';
 
 // Validation schema for updating affiliate
 const updateAffiliateSchema = z.object({
@@ -83,6 +84,7 @@ export async function GET(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/affiliates/[id]', action: 'GET' });
     console.error('Get admin affiliate error:', error);
     return NextResponse.json({
       success: false,
@@ -170,6 +172,7 @@ export async function PUT(
     });
 
   } catch (error) {
+    captureApiError(error, { route: '/api/admin/affiliates/[id]', action: 'PUT' });
     console.error('Update admin affiliate error:', error);
     return NextResponse.json({
       success: false,
