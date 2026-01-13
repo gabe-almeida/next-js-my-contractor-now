@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { generateWebhookSecret } from '../src/lib/security/webhook-signatures.js'
 import { encrypt } from '../src/lib/security/encryption.js'
+import { DEFAULT_TCPA_TEXT_PLAIN } from '../src/config/tcpa.js'
 
 const prisma = new PrismaClient()
 
@@ -919,15 +920,12 @@ async function main() {
           ],
           pingStaticFields: {
             tagId: "204670250",
-            service: "WINDOWS",
-            partnerSourceId: "mycontractornow-windows"
+            service: "WINDOWS"
           },
           postStaticFields: {
             tagId: "204670250",
             service: "WINDOWS",
-            partnerSourceId: "mycontractornow-windows",
-            publisherSubId: "mcn-tx",
-            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+            homePhoneConsentLanguage: DEFAULT_TCPA_TEXT_PLAIN
           },
           meta: {
             createdAt: new Date().toISOString(),
@@ -1070,15 +1068,12 @@ async function main() {
           ],
           pingStaticFields: {
             tagId: "204670250",
-            service: "BATH_REMODEL",
-            partnerSourceId: "mycontractornow-bathrooms"
+            service: "BATH_REMODEL"
           },
           postStaticFields: {
             tagId: "204670250",
             service: "BATH_REMODEL",
-            partnerSourceId: "mycontractornow-bathrooms",
-            publisherSubId: "mcn-tx",
-            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+            homePhoneConsentLanguage: DEFAULT_TCPA_TEXT_PLAIN
           },
           meta: {
             createdAt: new Date().toISOString(),
@@ -1236,15 +1231,12 @@ async function main() {
           ],
           pingStaticFields: {
             tagId: "204670250",
-            service: "ROOFING_METAL",
-            partnerSourceId: "mycontractornow-roofing"
+            service: "ROOFING_METAL"
           },
           postStaticFields: {
             tagId: "204670250",
             service: "ROOFING_METAL",
-            partnerSourceId: "mycontractornow-roofing",
-            publisherSubId: "mcn-tx",
-            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+            homePhoneConsentLanguage: DEFAULT_TCPA_TEXT_PLAIN
           },
           meta: {
             createdAt: new Date().toISOString(),
@@ -1403,15 +1395,12 @@ async function main() {
           ],
           pingStaticFields: {
             tagId: "204670250",
-            service: "HVAC",
-            partnerSourceId: "mycontractornow-hvac"
+            service: "HVAC"
           },
           postStaticFields: {
             tagId: "204670250",
             service: "HVAC",
-            partnerSourceId: "mycontractornow-hvac",
-            publisherSubId: "mcn-tx",
-            homePhoneConsentLanguage: "By submitting this form, I consent to receive calls and texts from contractors regarding my project."
+            homePhoneConsentLanguage: DEFAULT_TCPA_TEXT_PLAIN
           },
           meta: {
             createdAt: new Date().toISOString(),
