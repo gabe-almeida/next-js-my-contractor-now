@@ -38,8 +38,16 @@ export default function BuyersPage() {
       try {
         // Fetch buyers and services in parallel
         const [buyersResponse, servicesResponse] = await Promise.all([
-          fetch('/api/admin/buyers?includeInactive=true'),
-          fetch('/api/admin/services')
+          fetch('/api/admin/buyers?includeInactive=true', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          }),
+          fetch('/api/admin/services', {
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            }
+          })
         ]);
 
         if (!buyersResponse.ok) {
