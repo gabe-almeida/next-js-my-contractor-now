@@ -69,7 +69,11 @@ export function BuyerServiceZipManager({
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/buyers/${buyerId}/zip-codes`);
+      const response = await fetch(`/api/admin/buyers/${buyerId}/zip-codes`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
       const data = await response.json();
 
       if (!response.ok) {

@@ -121,6 +121,9 @@ export function BulkZipCodeUpload({
 
       const response = await fetch(`/api/admin/buyers/${buyerId}/zip-codes/preview`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
         body: formData,
       });
 
@@ -218,6 +221,9 @@ export function BulkZipCodeUpload({
 
       const response = await fetch(`/api/admin/buyers/${buyerId}/zip-codes/bulk`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
         body: formData,
       });
 

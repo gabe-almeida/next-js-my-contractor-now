@@ -56,6 +56,7 @@ export function ServiceZipMapping({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
         },
         body: JSON.stringify({
           zipCodeIds: [zipCodeId],
@@ -100,6 +101,9 @@ export function ServiceZipMapping({
         `/api/admin/buyers/${buyerId}/zip-codes?ids=${zipCodeId}`,
         {
           method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
         }
       );
 
@@ -131,6 +135,7 @@ export function ServiceZipMapping({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
         },
         body: JSON.stringify({
           zipCodeIds: Array.from(selectedZipCodes),
@@ -164,6 +169,9 @@ export function ServiceZipMapping({
         `/api/admin/buyers/${buyerId}/zip-codes?ids=${Array.from(selectedZipCodes).join(',')}`,
         {
           method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
         }
       );
 

@@ -70,7 +70,11 @@ export function BuyerServiceCoverageTab({
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/buyers/${buyerId}/service-config`);
+      const response = await fetch(`/api/admin/buyers/${buyerId}/service-config`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch service configuration');

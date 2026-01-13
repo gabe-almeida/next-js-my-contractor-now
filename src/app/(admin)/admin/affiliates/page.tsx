@@ -58,7 +58,11 @@ export default function AdminAffiliatesPage() {
       if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
 
-      const response = await fetch(`/api/admin/affiliates?${params}`);
+      const response = await fetch(`/api/admin/affiliates?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
       const data = await response.json();
 
       if (data.success) {

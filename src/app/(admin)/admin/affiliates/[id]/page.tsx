@@ -70,7 +70,11 @@ export default function AdminAffiliateDetailPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/admin/affiliates/${id}`);
+      const response = await fetch(`/api/admin/affiliates/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
       const data = await response.json();
 
       if (data.success) {

@@ -83,7 +83,11 @@ export default function BuyerDetailPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/buyers/${buyerId}`);
+      const response = await fetch(`/api/admin/buyers/${buyerId}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
+      });
 
       if (!response.ok) {
         if (response.status === 404) {
