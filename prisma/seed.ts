@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { generateWebhookSecret } from '../src/lib/security/webhook-signatures.js'
 import { encrypt } from '../src/lib/security/encryption.js'
-import { DEFAULT_TCPA_TEXT_PLAIN } from '../src/config/tcpa.js'
+import { DEFAULT_TCPA_TEXT_PLAIN } from '../src/config/tcpa'
 
 const prisma = new PrismaClient()
 
