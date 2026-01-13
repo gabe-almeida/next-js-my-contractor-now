@@ -146,6 +146,44 @@ export default function RootLayout({
             `
           }}
         />
+
+        {/*
+          Meta Pixel - Facebook tracking for campaign optimization
+          Tracks PageView on all pages, Lead events on form submissions
+          Pixel ID: 215812654357251
+          Docs: https://developers.facebook.com/docs/meta-pixel
+        */}
+        <Script
+          id="meta-pixel"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+
+              fbq('init', '215812654357251');
+              fbq('track', 'PageView');
+
+              console.log('%c✅ Meta Pixel initialized', 'color: blue; font-weight: bold;');
+              console.log('%cMeta Pixel ID: 215812654357251', 'color: blue;');
+            `
+          }}
+        />
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{display: 'none'}}
+            src="https://www.facebook.com/tr?id=215812654357251&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
       </head>
       <body className={`${inter.className} antialiased`}>
         <ErrorBoundary>

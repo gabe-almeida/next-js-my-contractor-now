@@ -62,6 +62,7 @@ import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 import { recordConversion } from '@/lib/services/affiliate-link-service';
 import { AuctionEngine } from '@/lib/auction/engine';
 import { LeadData } from '@/lib/templates/types';
+import { trackLeadCAPI } from '@/lib/meta/conversion-api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -465,6 +466,63 @@ export async function POST(request: NextRequest) {
       recordConversion(affiliateCode).catch(err => {
         console.warn('Failed to record affiliate conversion:', err);
       });
+    }
+
+    // Send Lead event to Meta Conversion API (server-side)
+    // Fire and forget - don't block lead response for Meta tracking
+    try {
+      // Extract form data for customer information
+      const formDataObj = sanitizedFormData as any;
+
+      // Build Meta CAPI user data
+      const metaUserData = {
+        email: formDataObj.email,
+        phone: formDataObj.phone,
+        firstName: formDataObj.firstName,
+        lastName: formDataObj.lastName,
+        city: formDataObj.city,
+        state: formDataObj.state || formDataObj.stateAbbrev,
+        zipCode: zipCode,
+        country: 'us',
+        externalId: result.id,
+        // NOT hashed per Meta requirements
+        clientIpAddress: leadComplianceData?.ipAddress || undefined,
+        clientUserAgent: leadComplianceData?.userAgent || undefined,
+        fbc: leadComplianceData?.attribution?.fbc || undefined,
+        fbp: leadComplianceData?.attribution?.fbp || undefined,
+      };
+
+      // Build custom data (lead value, service info)
+      const metaCustomData = {
+        currency: 'USD',
+        value: 50, // Estimated lead value (adjust as needed)
+        content_name: serviceType.name,
+        content_category: 'Home Services',
+        status: 'submitted',
+      };
+
+      // Get event source URL from referer or default
+      const eventSourceUrl = request.headers.get('referer') || 'https://mycontractornow.com';
+
+      // Generate event ID for deduplication with client-side pixel
+      const eventId = `lead_${result.id}_${Date.now()}`;
+
+      // Send to Meta CAPI (fire and forget)
+      trackLeadCAPI(metaUserData, metaCustomData, eventSourceUrl, eventId).catch(err => {
+        console.warn('[Meta CAPI] Failed to send Lead event:', err);
+      });
+
+      console.log('[Meta CAPI] Lead event queued for sending:', {
+        leadId: result.id,
+        eventId,
+        hasEmail: !!metaUserData.email,
+        hasPhone: !!metaUserData.phone,
+        hasFBC: !!metaUserData.fbc,
+        hasFBP: !!metaUserData.fbp,
+      });
+    } catch (metaError) {
+      // Log error but don't fail lead submission
+      console.error('[Meta CAPI] Error preparing Lead event:', metaError);
     }
 
     return NextResponse.json({

@@ -402,14 +402,6 @@ export function LeadDetailModal({
                             )}
                           </span>
                         </div>
-                        {lead.compliance.complianceData?.ipAddress && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">IP Address</span>
-                            <span className="font-mono text-xs">
-                              {lead.compliance.complianceData.ipAddress}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -486,21 +478,134 @@ export function LeadDetailModal({
                   </div>
                 </div>
 
-                {/* Attribution & Traffic Source */}
-                {lead.compliance.complianceData?.attribution && (
+                {/* Marketing Attribution */}
+                {(lead.compliance.complianceData?.attribution || lead.compliance.complianceData?.userAgent) && (
                   <div className="bg-white border rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
                       <TrendingUp className="h-4 w-4 mr-2" />
-                      Attribution & Traffic Source
+                      Marketing Attribution
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* UTM Parameters */}
-                      {(lead.compliance.complianceData.attribution.utm_source ||
-                        lead.compliance.complianceData.attribution.utm_medium ||
-                        lead.compliance.complianceData.attribution.utm_campaign) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Browser & Device Info */}
+                      {(lead.compliance.complianceData?.userAgent || lead.compliance.complianceData?.ipAddress) && (
                         <div className="space-y-2 text-sm">
                           <h5 className="font-medium text-gray-600 flex items-center">
-                            <Globe className="h-3 w-3 mr-1" /> UTM Parameters
+                            <Activity className="h-3 w-3 mr-1" /> Browser & Device
+                          </h5>
+                          {lead.compliance.complianceData?.userAgent && (
+                            <div>
+                              <span className="text-gray-500 block mb-1">User Agent</span>
+                              <span className="font-mono text-xs text-gray-700 break-all">
+                                {lead.compliance.complianceData.userAgent}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData?.ipAddress && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">IP Address</span>
+                              <span className="font-mono text-xs">
+                                {lead.compliance.complianceData.ipAddress}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Meta (Facebook) Tracking */}
+                      {(lead.compliance.complianceData?.attribution?.fbclid ||
+                        lead.compliance.complianceData?.attribution?.fbc ||
+                        lead.compliance.complianceData?.attribution?.fbp) && (
+                        <div className="space-y-2 text-sm">
+                          <h5 className="font-medium text-gray-600 flex items-center">
+                            <span className="text-blue-600">📘</span> Meta (Facebook)
+                          </h5>
+                          {lead.compliance.complianceData.attribution.fbclid && (
+                            <div>
+                              <span className="text-gray-500 block">Click ID (fbclid)</span>
+                              <span className="text-blue-600 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.fbclid}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.fbc && (
+                            <div>
+                              <span className="text-gray-500 block">Cookie (fbc)</span>
+                              <span className="text-blue-700 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.fbc}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.fbp && (
+                            <div>
+                              <span className="text-gray-500 block">Browser ID (fbp)</span>
+                              <span className="text-blue-800 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.fbp}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Google Tracking */}
+                      {(lead.compliance.complianceData?.attribution?.gclid ||
+                        lead.compliance.complianceData?.attribution?.wbraid ||
+                        lead.compliance.complianceData?.attribution?.gbraid ||
+                        lead.compliance.complianceData?.attribution?._ga ||
+                        lead.compliance.complianceData?.attribution?._gid) && (
+                        <div className="space-y-2 text-sm">
+                          <h5 className="font-medium text-gray-600 flex items-center">
+                            <span className="text-green-600">🔍</span> Google Ads & Analytics
+                          </h5>
+                          {lead.compliance.complianceData.attribution.gclid && (
+                            <div>
+                              <span className="text-gray-500 block">Click ID (gclid)</span>
+                              <span className="text-green-600 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.gclid}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.wbraid && (
+                            <div>
+                              <span className="text-gray-500 block">Web Conversion (wbraid)</span>
+                              <span className="text-green-700 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.wbraid}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.gbraid && (
+                            <div>
+                              <span className="text-gray-500 block">iOS App (gbraid)</span>
+                              <span className="text-green-800 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.gbraid}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution._ga && (
+                            <div>
+                              <span className="text-gray-500 block">GA Client ID (_ga)</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution._ga}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution._gid && (
+                            <div>
+                              <span className="text-gray-500 block">GA Session (_gid)</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution._gid}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* UTM Parameters */}
+                      {(lead.compliance.complianceData?.attribution?.utm_source ||
+                        lead.compliance.complianceData?.attribution?.utm_medium ||
+                        lead.compliance.complianceData?.attribution?.utm_campaign) && (
+                        <div className="space-y-2 text-sm">
+                          <h5 className="font-medium text-gray-600 flex items-center">
+                            <Globe className="h-3 w-3 mr-1" /> UTM Campaign Tracking
                           </h5>
                           {lead.compliance.complianceData.attribution.utm_source && (
                             <div className="flex justify-between">
@@ -545,60 +650,53 @@ export function LeadDetailModal({
                         </div>
                       )}
 
-                      {/* Click IDs */}
-                      {(lead.compliance.complianceData.attribution.gclid ||
-                        lead.compliance.complianceData.attribution.fbclid ||
-                        lead.compliance.complianceData.attribution.msclkid ||
-                        lead.compliance.complianceData.attribution.ttclid) && (
+                      {/* Other Platform Click IDs */}
+                      {(lead.compliance.complianceData?.attribution?.msclkid ||
+                        lead.compliance.complianceData?.attribution?.ttclid ||
+                        lead.compliance.complianceData?.attribution?.li_fat_id ||
+                        lead.compliance.complianceData?.attribution?.twclid ||
+                        lead.compliance.complianceData?.attribution?.rdt_cid) && (
                         <div className="space-y-2 text-sm">
                           <h5 className="font-medium text-gray-600 flex items-center">
-                            <MousePointer className="h-3 w-3 mr-1" /> Click IDs
+                            <MousePointer className="h-3 w-3 mr-1" /> Other Platforms
                           </h5>
-                          {lead.compliance.complianceData.attribution.gclid && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">Google Ads</span>
-                              <span className="text-green-600 font-mono text-xs truncate max-w-[120px]" title={lead.compliance.complianceData.attribution.gclid}>
-                                {lead.compliance.complianceData.attribution.gclid.slice(0, 12)}...
-                              </span>
-                            </div>
-                          )}
-                          {lead.compliance.complianceData.attribution.fbclid && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">Facebook</span>
-                              <span className="text-blue-600 font-mono text-xs truncate max-w-[120px]" title={lead.compliance.complianceData.attribution.fbclid}>
-                                {lead.compliance.complianceData.attribution.fbclid.slice(0, 12)}...
-                              </span>
-                            </div>
-                          )}
                           {lead.compliance.complianceData.attribution.msclkid && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">Microsoft</span>
-                              <span className="text-cyan-600 font-mono text-xs truncate max-w-[120px]" title={lead.compliance.complianceData.attribution.msclkid}>
-                                {lead.compliance.complianceData.attribution.msclkid.slice(0, 12)}...
+                            <div>
+                              <span className="text-gray-500 block">Microsoft Ads</span>
+                              <span className="text-cyan-600 font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.msclkid}
                               </span>
                             </div>
                           )}
                           {lead.compliance.complianceData.attribution.ttclid && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">TikTok</span>
-                              <span className="font-mono text-xs truncate max-w-[120px]" title={lead.compliance.complianceData.attribution.ttclid}>
-                                {lead.compliance.complianceData.attribution.ttclid.slice(0, 12)}...
+                            <div>
+                              <span className="text-gray-500 block">TikTok</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.ttclid}
                               </span>
                             </div>
                           )}
-                          {lead.compliance.complianceData.attribution.wbraid && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">wbraid</span>
-                              <span className="font-mono text-xs truncate max-w-[120px]">
-                                {lead.compliance.complianceData.attribution.wbraid.slice(0, 12)}...
+                          {lead.compliance.complianceData.attribution.li_fat_id && (
+                            <div>
+                              <span className="text-gray-500 block">LinkedIn</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.li_fat_id}
                               </span>
                             </div>
                           )}
-                          {lead.compliance.complianceData.attribution.gbraid && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">gbraid</span>
-                              <span className="font-mono text-xs truncate max-w-[120px]">
-                                {lead.compliance.complianceData.attribution.gbraid.slice(0, 12)}...
+                          {lead.compliance.complianceData.attribution.twclid && (
+                            <div>
+                              <span className="text-gray-500 block">Twitter</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.twclid}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.rdt_cid && (
+                            <div>
+                              <span className="text-gray-500 block">Reddit</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.rdt_cid}
                               </span>
                             </div>
                           )}
@@ -606,41 +704,37 @@ export function LeadDetailModal({
                       )}
 
                       {/* Page Context */}
-                      <div className="space-y-2 text-sm">
-                        <h5 className="font-medium text-gray-600">Page Context</h5>
-                        {lead.compliance.complianceData.attribution.landing_page && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Landing Page</span>
-                            <span className="font-mono text-xs truncate max-w-[150px]" title={lead.compliance.complianceData.attribution.landing_page}>
-                              {lead.compliance.complianceData.attribution.landing_page}
-                            </span>
-                          </div>
-                        )}
-                        {lead.compliance.complianceData.attribution.referrer_domain && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Referrer</span>
-                            <span className="font-medium">
-                              {lead.compliance.complianceData.attribution.referrer_domain}
-                            </span>
-                          </div>
-                        )}
-                        {lead.compliance.complianceData.attribution._ga && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">GA Client</span>
-                            <span className="font-mono text-xs truncate max-w-[120px]" title={lead.compliance.complianceData.attribution._ga}>
-                              {lead.compliance.complianceData.attribution._ga.slice(0, 15)}...
-                            </span>
-                          </div>
-                        )}
-                        {lead.compliance.complianceData.attribution.first_touch_timestamp && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">First Touch</span>
-                            <span className="text-xs">
-                              {new Date(lead.compliance.complianceData.attribution.first_touch_timestamp).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                      {(lead.compliance.complianceData?.attribution?.landing_page ||
+                        lead.compliance.complianceData?.attribution?.referrer_domain ||
+                        lead.compliance.complianceData?.attribution?.first_touch_timestamp) && (
+                        <div className="space-y-2 text-sm">
+                          <h5 className="font-medium text-gray-600">Page Context</h5>
+                          {lead.compliance.complianceData.attribution.landing_page && (
+                            <div>
+                              <span className="text-gray-500 block">Landing Page</span>
+                              <span className="font-mono text-xs break-all">
+                                {lead.compliance.complianceData.attribution.landing_page}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.referrer_domain && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Referrer</span>
+                              <span className="font-medium">
+                                {lead.compliance.complianceData.attribution.referrer_domain}
+                              </span>
+                            </div>
+                          )}
+                          {lead.compliance.complianceData.attribution.first_touch_timestamp && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">First Touch</span>
+                              <span className="text-xs">
+                                {new Date(lead.compliance.complianceData.attribution.first_touch_timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
