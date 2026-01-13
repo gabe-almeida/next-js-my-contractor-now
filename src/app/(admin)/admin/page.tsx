@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [leadsData, setLeadsData] = useState<ChartData[]>([]);
   const [revenueData, setRevenueData] = useState<ChartData[]>([]);
   const [serviceData, setServiceData] = useState<ChartData[]>([]);
+  const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,6 +80,9 @@ export default function AdminDashboard() {
             trustedFormCoverage = (withTF / leads.length) * 100;
             jornayaCoverage = (withJornaya / leads.length) * 100;
             fullComplianceRate = (withBoth / leads.length) * 100;
+
+            // Store recent leads for activity feed
+            setRecentLeads(leads.slice(0, 5));
           }
         }
 
@@ -297,7 +301,7 @@ export default function AdminDashboard() {
 
         {/* Recent Activity */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+          <h3 className="text-lg font-semibold mb-4">Recent Leads</h3>
           <div className="space-y-4">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
@@ -306,34 +310,40 @@ export default function AdminDashboard() {
                   <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
                 </div>
               ))
+            ) : recentLeads.length > 0 ? (
+              recentLeads.map((lead) => {
+                const statusColors: Record<string, string> = {
+                  SOLD: 'bg-green-500',
+                  PENDING: 'bg-yellow-500',
+                  PROCESSING: 'bg-blue-500',
+                  REJECTED: 'bg-red-500',
+                  EXPIRED: 'bg-gray-500'
+                };
+                const timeAgo = (date: string) => {
+                  const now = new Date();
+                  const then = new Date(date);
+                  const diffMs = now.getTime() - then.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  if (diffMins < 1) return 'just now';
+                  if (diffMins < 60) return `${diffMins} min ago`;
+                  const diffHours = Math.floor(diffMins / 60);
+                  if (diffHours < 24) return `${diffHours}h ago`;
+                  const diffDays = Math.floor(diffHours / 24);
+                  return `${diffDays}d ago`;
+                };
+                return (
+                  <div key={lead.id} className="flex items-center space-x-3 text-sm">
+                    <div className={`h-2 w-2 ${statusColors[lead.status] || 'bg-gray-400'} rounded-full`}></div>
+                    <span className="text-gray-900 flex-1">
+                      {lead.serviceType?.displayName || lead.serviceType?.name || 'Lead'} - {lead.zipCode}
+                      {lead.winningBid && <span className="text-green-600 ml-1">${Number(lead.winningBid).toFixed(2)}</span>}
+                    </span>
+                    <span className="text-gray-500 text-xs">{timeAgo(lead.createdAt)}</span>
+                  </div>
+                );
+              })
             ) : (
-              <>
-                <div className="flex items-center space-x-3 text-sm">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span className="text-gray-900">New lead submitted for Windows service</span>
-                  <span className="text-gray-500">2 min ago</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm">
-                  <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-gray-900">Auction completed - $42.50 winning bid</span>
-                  <span className="text-gray-500">5 min ago</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm">
-                  <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-gray-900">Lead posted to HomeAdvisor successfully</span>
-                  <span className="text-gray-500">8 min ago</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm">
-                  <div className="h-2 w-2 bg-yellow-500 rounded-full"></div>
-                  <span className="text-gray-900">New buyer configuration added</span>
-                  <span className="text-gray-500">12 min ago</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span className="text-gray-900">Bathroom service lead processed</span>
-                  <span className="text-gray-500">15 min ago</span>
-                </div>
-              </>
+              <div className="text-sm text-gray-500">No recent leads</div>
             )}
           </div>
         </div>

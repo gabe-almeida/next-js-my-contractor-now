@@ -143,14 +143,6 @@ export default function TransactionsPage() {
     return <span className={styles[status]}>{status}</span>;
   };
 
-  const getBuyerName = (buyerId: string) => {
-    const buyerNames: Record<string, string> = {
-      'buyer-1': 'HomeAdvisor',
-      'buyer-2': 'Modernize',
-      'buyer-3': 'Angi'
-    };
-    return buyerNames[buyerId] || buyerId;
-  };
 
   const handleViewDetails = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -355,7 +347,7 @@ export default function TransactionsPage() {
                           {transaction.actionType}
                         </span>
                       </td>
-                      <td>{getBuyerName(transaction.buyerId)}</td>
+                      <td>{transaction.buyerDisplayName || transaction.buyerName || transaction.buyerId}</td>
                       <td className="font-mono text-sm text-gray-600">
                         {transaction.leadId}
                       </td>
@@ -459,7 +451,7 @@ export default function TransactionsPage() {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Buyer:</dt>
-                      <dd>{getBuyerName(selectedTransaction.buyerId)}</dd>
+                      <dd>{selectedTransaction.buyerDisplayName || selectedTransaction.buyerName || selectedTransaction.buyerId}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Action:</dt>

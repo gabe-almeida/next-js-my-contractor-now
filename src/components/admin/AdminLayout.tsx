@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -71,18 +71,7 @@ const navigationItems = [
 
 export function AdminLayout({ children, user }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState(0);
   const pathname = usePathname();
-
-  // Mock notification polling
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // In real app, this would fetch from API
-      setNotifications(prev => Math.max(0, prev + Math.floor(Math.random() * 2)));
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const isActivePath = (href: string) => {
     if (href === '/admin') {
@@ -187,17 +176,10 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
             </button>
 
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <div className="relative">
-                <Button variant="ghost" size="icon">
-                  <Bell className="h-5 w-5 text-gray-400" />
-                </Button>
-                {notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {notifications > 9 ? '9+' : notifications}
-                  </span>
-                )}
-              </div>
+              {/* Notifications placeholder */}
+              <Button variant="ghost" size="icon">
+                <Bell className="h-5 w-5 text-gray-400" />
+              </Button>
 
               {/* Real-time indicator */}
               <div className="flex items-center space-x-2">

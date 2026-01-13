@@ -72,28 +72,28 @@ const Button = memo(forwardRef<HTMLButtonElement, ButtonProps>(
         aria-disabled={isDisabled}
         {...props}
       >
-        <span className="flex items-center justify-center gap-2">
-          {loading ? (
-            <>
-              <LoadingSpinner 
-                size="sm" 
-                color={variant === 'outline' ? 'blue' : 'white'} 
-                aria-hidden="true"
-              />
-              <span>{loadingText || children}</span>
-            </>
-          ) : (
-            <>
-              {icon && iconPosition === 'left' && (
-                <span className="-ml-1" aria-hidden="true">{icon}</span>
-              )}
-              <span>{children}</span>
-              {icon && iconPosition === 'right' && (
-                <span className="-mr-1" aria-hidden="true">{icon}</span>
-              )}
-            </>
-          )}
-        </span>
+        {loading ? (
+          <>
+            <LoadingSpinner
+              size="sm"
+              color={variant === 'outline' ? 'blue' : 'white'}
+              aria-hidden="true"
+            />
+            <span className="ml-2">{loadingText || children}</span>
+          </>
+        ) : icon ? (
+          <>
+            {iconPosition === 'left' && (
+              <span className="mr-2" aria-hidden="true">{icon}</span>
+            )}
+            {children}
+            {iconPosition === 'right' && (
+              <span className="ml-2" aria-hidden="true">{icon}</span>
+            )}
+          </>
+        ) : (
+          children
+        )}
       </button>
     );
   }

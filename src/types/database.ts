@@ -375,6 +375,8 @@ export interface Transaction {
   id: string;
   leadId: string;
   buyerId: string;
+  buyerName?: string | null;
+  buyerDisplayName?: string | null;
   actionType: TransactionActionType;
   payload: Record<string, any>; // Parsed JSON from string
   response?: Record<string, any> | null; // Parsed JSON from string
@@ -386,7 +388,7 @@ export interface Transaction {
   trustedFormPresent: boolean;
   jornayaPresent: boolean;
   createdAt: Date;
-  
+
   // Relations
   lead?: Lead;
   buyer?: Buyer;
