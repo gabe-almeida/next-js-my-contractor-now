@@ -126,7 +126,10 @@ export default function BuyersPage() {
 
     try {
       const response = await fetch(`/api/admin/buyers/${buyerId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        }
       });
 
       if (!response.ok) {
@@ -157,7 +160,10 @@ export default function BuyersPage() {
     try {
       const response = await fetch(`/api/admin/buyers/${buyerId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
         body: JSON.stringify({ active: newActiveState })
       });
 
@@ -208,7 +214,10 @@ export default function BuyersPage() {
         // Update existing buyer
         const response = await fetch(`/api/admin/buyers/${editingBuyer.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          },
           body: JSON.stringify(apiData)
         });
 
@@ -237,7 +246,10 @@ export default function BuyersPage() {
         // Create new buyer
         const response = await fetch('/api/admin/buyers', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          },
           body: JSON.stringify(apiData)
         });
 
