@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
-import { generateWebhookSecret } from '../src/lib/security/webhook-signatures'
-import { encrypt } from '../src/lib/security/encryption'
+import { generateWebhookSecret } from '../src/lib/security/webhook-signatures.js'
+import { encrypt } from '../src/lib/security/encryption.js'
 
 const prisma = new PrismaClient()
 
