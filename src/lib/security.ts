@@ -226,16 +226,18 @@ export const validateAdminAuth = async (req: NextRequest): Promise<{
 
 /**
  * Secure CORS configuration with whitelist support
+ * Hardcoded allowed origins (not secrets - publicly visible in headers)
  */
 export const getSecureCorsHeaders = (origin?: string): Record<string, string> => {
-  const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()) || [
+  const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://your-production-domain.com'
+    'https://mycontractornow.com',
+    'https://www.mycontractornow.com'
   ];
-  
+
   const isAllowed = origin && allowedOrigins.includes(origin);
-  
+
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : 'null',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
