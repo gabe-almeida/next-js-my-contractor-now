@@ -33,72 +33,41 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       setLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock compliance metrics
-      setComplianceMetrics({
-        trustedFormCoverage: 94.2,
-        jornayaCoverage: 91.8,
-        fullComplianceRate: 89.5,
-        avgQualityScore: 8.4,
-        complianceTrend: 2.3,
-        qualityTrend: 1.8,
-        totalLeadsAnalyzed: 1247,
-        highQualityLeads: 1089
-      });
 
-      // Mock auction metrics
-      setAuctionMetrics({
-        avgBidAmount: 42.65,
-        bidParticipationRate: 78.3,
-        auctionSuccessRate: 91.2,
-        avgResponseTime: 2.4,
-        topBuyer: 'HomeAdvisor',
-        totalRevenue: 53248.90
-      });
+      try {
+        const response = await fetch(`/api/admin/analytics?period=${timeframe}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
+        });
 
-      // Mock revenue data
-      setRevenueData([
-        { date: '2024-01-15', revenue: 4200, leads: 98, avgBid: 42.86 },
-        { date: '2024-01-16', revenue: 3850, leads: 89, avgBid: 43.26 },
-        { date: '2024-01-17', revenue: 4950, leads: 115, avgBid: 43.04 },
-        { date: '2024-01-18', revenue: 5200, leads: 124, avgBid: 41.94 },
-        { date: '2024-01-19', revenue: 4700, leads: 108, avgBid: 43.52 },
-        { date: '2024-01-20', revenue: 5400, leads: 132, avgBid: 40.91 },
-        { date: '2024-01-21', revenue: 4950, leads: 119, avgBid: 41.60 }
-      ]);
+        if (!response.ok) {
+          throw new Error('Failed to fetch analytics');
+        }
 
-      // Mock compliance data
-      setComplianceData([
-        { date: '2024-01-15', trustedForm: 93.2, jornaya: 90.1, both: 88.4 },
-        { date: '2024-01-16', trustedForm: 94.1, jornaya: 91.3, both: 89.2 },
-        { date: '2024-01-17', trustedForm: 93.8, jornaya: 90.8, both: 88.9 },
-        { date: '2024-01-18', trustedForm: 94.5, jornaya: 92.1, both: 89.8 },
-        { date: '2024-01-19', trustedForm: 94.8, jornaya: 91.9, both: 89.7 },
-        { date: '2024-01-20', trustedForm: 95.1, jornaya: 92.4, both: 90.3 },
-        { date: '2024-01-21', trustedForm: 94.7, jornaya: 91.8, both: 89.5 }
-      ]);
+        const data = await response.json();
+        const analytics = data.data;
 
-      // Mock buyer performance
-      setBuyerPerformance([
-        { buyer: 'HomeAdvisor', avgBid: 45.20, winRate: 32.4, volume: 285 },
-        { buyer: 'Modernize', avgBid: 41.80, winRate: 28.7, volume: 241 },
-        { buyer: 'Angi', avgBid: 38.90, winRate: 22.1, volume: 189 },
-        { buyer: 'Thumbtack', avgBid: 44.10, winRate: 16.8, volume: 132 }
-      ]);
+        // Set all analytics data from API
+        setComplianceMetrics(analytics.complianceMetrics);
+        setAuctionMetrics(analytics.auctionMetrics);
+        setRevenueData(analytics.revenueData);
+        setComplianceData(analytics.complianceData);
+        setBuyerPerformance(analytics.buyerPerformance);
+        setQualityScores(analytics.qualityScores);
 
-      // Mock quality scores
-      setQualityScores([
-        { service: 'Windows', avgScore: 8.7, count: 342 },
-        { service: 'Bathrooms', avgScore: 8.2, count: 289 },
-        { service: 'Roofing', avgScore: 8.9, count: 234 },
-        { service: 'Kitchens', avgScore: 8.1, count: 198 },
-        { service: 'HVAC', avgScore: 8.5, count: 184 }
-      ]);
-
-      setLoading(false);
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+        // Set empty defaults on error
+        setComplianceMetrics(null);
+        setAuctionMetrics(null);
+        setRevenueData([]);
+        setComplianceData([]);
+        setBuyerPerformance([]);
+        setQualityScores([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAnalytics();

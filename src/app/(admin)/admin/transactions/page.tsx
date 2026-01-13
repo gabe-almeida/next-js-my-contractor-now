@@ -33,53 +33,64 @@ export default function TransactionsPage() {
   // Real-time updates
   const { updates, isConnected } = useRealTimeUpdates({ enabled: true });
 
-  // Mock data - replace with actual API calls
+  // Fetch real transactions from API
   useEffect(() => {
     const fetchTransactions = async () => {
       setLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock transaction data
-      const mockTransactions: Transaction[] = Array.from({ length: 100 }, (_, i) => {
-        const isRecent = i < 20;
-        const statuses: TransactionStatus[] = [TransactionStatus.SUCCESS, TransactionStatus.FAILED, TransactionStatus.PENDING, TransactionStatus.TIMEOUT];
-        const status = statuses[Math.floor(Math.random() * 4)] ?? TransactionStatus.PENDING;
-        const actionTypes: TransactionActionType[] = [TransactionActionType.PING, TransactionActionType.POST];
-        const actionType = actionTypes[Math.floor(Math.random() * 2)] ?? TransactionActionType.PING;
-        
-        return {
-          id: `txn-${String(i + 1).padStart(6, '0')}`,
-          leadId: `lead-${String(Math.floor(Math.random() * 1000) + 1).padStart(4, '0')}`,
-          buyerId: `buyer-${Math.floor(Math.random() * 3) + 1}`,
-          actionType,
+
+      try {
+        const params = new URLSearchParams({
+          limit: '200', // Fetch more for better filtering
+          page: '1'
+        });
+
+        const response = await fetch(`/api/admin/transactions?${params}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch transactions');
+        }
+
+        const data = await response.json();
+        const fetchedTransactions: Transaction[] = (data.data?.transactions || []).map((tx: any) => ({
+          id: tx.id,
+          leadId: tx.leadId,
+          buyerId: tx.buyerId,
+          buyerName: tx.buyerName,
+          buyerDisplayName: tx.buyerDisplayName,
+          actionType: tx.actionType as TransactionActionType,
           payload: {
-            zipCode: String(Math.floor(Math.random() * 90000) + 10000),
-            serviceType: ['Windows', 'Bathrooms', 'Roofing'][Math.floor(Math.random() * 3)],
-            ...(actionType === TransactionActionType.PING ? { bidRequest: true } : { leadData: 'full_lead_data' })
+            zipCode: tx.leadZipCode,
+            serviceType: tx.serviceDisplayName || tx.serviceType
           },
-          response: status === TransactionStatus.SUCCESS ? {
+          response: tx.status === 'SUCCESS' ? {
             success: true,
-            bidAmount: actionType === TransactionActionType.PING ? Math.floor(Math.random() * 80) + 20 : undefined,
+            bidAmount: tx.bidAmount,
             message: 'Lead processed successfully'
-          } : status === TransactionStatus.FAILED ? {
+          } : tx.status === 'FAILED' ? {
             success: false,
-            error: 'Invalid lead data',
-            code: 'VALIDATION_ERROR'
+            error: tx.errorMessage || 'Transaction failed',
+            code: 'ERROR'
           } : undefined,
-          status,
-          responseTime: Math.floor(Math.random() * 5000) + 500,
-          errorMessage: status === TransactionStatus.FAILED ? 'Validation failed: Missing required field' : undefined,
-          complianceIncluded: Math.random() > 0.2,
-          trustedFormPresent: Math.random() > 0.3,
-          jornayaPresent: Math.random() > 0.4,
-          createdAt: new Date(Date.now() - (isRecent ? Math.random() * 60 * 60 * 1000 : Math.random() * 7 * 24 * 60 * 60 * 1000))
-        };
-      });
-      
-      setTransactions(mockTransactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-      setLoading(false);
+          status: tx.status as TransactionStatus,
+          responseTime: tx.responseTime || 0,
+          errorMessage: tx.errorMessage,
+          complianceIncluded: tx.complianceIncluded,
+          trustedFormPresent: tx.trustedFormPresent,
+          jornayaPresent: tx.jornayaPresent,
+          createdAt: new Date(tx.createdAt)
+        }));
+
+        setTransactions(fetchedTransactions);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        setTransactions([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchTransactions();
