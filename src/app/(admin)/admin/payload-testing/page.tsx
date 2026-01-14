@@ -273,7 +273,7 @@ export default function PayloadTestingPage() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <span className="text-sm font-medium text-gray-500">Total Buyers</span>
               </div>
-              <div className="text-2xl font-bold mt-1">{testResults.length}</div>
+              <div className="text-2xl font-bold mt-1">{(testResults || []).length}</div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
@@ -282,7 +282,7 @@ export default function PayloadTestingPage() {
                 <span className="text-sm font-medium text-gray-500">Success</span>
               </div>
               <div className="text-2xl font-bold mt-1 text-emerald-600">
-                {testResults.filter(r => {
+                {(testResults || []).filter(r => {
                   const errors = viewMode === 'ping' ? r.ping?.errors : r.post?.errors;
                   return !errors || errors.length === 0;
                 }).length}
@@ -295,7 +295,7 @@ export default function PayloadTestingPage() {
                 <span className="text-sm font-medium text-gray-500">Warnings</span>
               </div>
               <div className="text-2xl font-bold mt-1 text-amber-600">
-                {testResults.filter(r => {
+                {(testResults || []).filter(r => {
                   const warnings = viewMode === 'ping' ? r.ping?.warnings : r.post?.warnings;
                   return warnings && warnings.length > 0;
                 }).length}
@@ -308,7 +308,7 @@ export default function PayloadTestingPage() {
                 <span className="text-sm font-medium text-gray-500">Errors</span>
               </div>
               <div className="text-2xl font-bold mt-1 text-red-600">
-                {testResults.filter(r => {
+                {(testResults || []).filter(r => {
                   const errors = viewMode === 'ping' ? r.ping?.errors : r.post?.errors;
                   return errors && errors.length > 0;
                 }).length}
@@ -318,7 +318,7 @@ export default function PayloadTestingPage() {
 
           {/* Buyer Results */}
           <div className="space-y-4">
-            {testResults.map(result => {
+            {(testResults || []).map(result => {
               const currentView = viewMode === 'ping' ? result.ping : result.post;
               const isExpanded = expandedBuyer === result.buyerId;
               const errors = currentView?.errors || [];

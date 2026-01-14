@@ -26,6 +26,12 @@ import {
 } from 'lucide-react';
 import { DashboardMetrics, ChartData } from '@/types';
 
+// Helper to format percentages to 2 decimal places max
+const formatPercent = (value: number | undefined | null): string => {
+  if (value === undefined || value === null) return '0';
+  return Number(value).toFixed(2).replace(/\.?0+$/, '');
+};
+
 export default function AdminDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [leadsData, setLeadsData] = useState<ChartData[]>([]);
@@ -218,7 +224,7 @@ export default function AdminDashboard() {
 
         <MetricCard
           title="Conversion Rate"
-          value={`${metrics?.conversionRate || 0}%`}
+          value={`${formatPercent(metrics?.conversionRate)}%`}
           description="Lead to post"
           icon={<TrendingUp className="h-4 w-4" />}
           loading={loading}
@@ -229,7 +235,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
           title="TrustedForm Coverage"
-          value={`${metrics?.trustedFormCoverage || 0}%`}
+          value={`${formatPercent(metrics?.trustedFormCoverage)}%`}
           description="Leads with certificates"
           icon={<Shield className="h-4 w-4" />}
           loading={loading}
@@ -237,7 +243,7 @@ export default function AdminDashboard() {
 
         <MetricCard
           title="Jornaya Coverage"
-          value={`${metrics?.jornayaCoverage || 0}%`}
+          value={`${formatPercent(metrics?.jornayaCoverage)}%`}
           description="Leads with LeadID"
           icon={<CheckCircle className="h-4 w-4" />}
           loading={loading}
@@ -245,7 +251,7 @@ export default function AdminDashboard() {
 
         <MetricCard
           title="Full Compliance"
-          value={`${metrics?.fullComplianceRate || 0}%`}
+          value={`${formatPercent(metrics?.fullComplianceRate)}%`}
           description="Both TF & Jornaya"
           icon={<AlertTriangle className="h-4 w-4" />}
           loading={loading}

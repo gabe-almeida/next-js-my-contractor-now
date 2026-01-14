@@ -26,6 +26,12 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+// Helper to format percentages to 2 decimal places max
+const formatPercent = (value: number | undefined | null): string => {
+  if (value === undefined || value === null) return '0';
+  return Number(value).toFixed(2).replace(/\.?0+$/, '');
+};
+
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('7d');
@@ -146,7 +152,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="TrustedForm Coverage"
-            value={`${complianceMetrics?.trustedFormCoverage || 0}%`}
+            value={`${formatPercent(complianceMetrics?.trustedFormCoverage)}%`}
             description="Leads with TF certificates"
             icon={<Shield className="h-4 w-4" />}
             loading={loading}
@@ -154,7 +160,7 @@ export default function AnalyticsPage() {
 
           <MetricCard
             title="Jornaya Coverage"
-            value={`${complianceMetrics?.jornayaCoverage || 0}%`}
+            value={`${formatPercent(complianceMetrics?.jornayaCoverage)}%`}
             description="Leads with LeadID"
             icon={<CheckCircle className="h-4 w-4" />}
             loading={loading}
@@ -162,7 +168,7 @@ export default function AnalyticsPage() {
 
           <MetricCard
             title="Full Compliance"
-            value={`${complianceMetrics?.fullComplianceRate || 0}%`}
+            value={`${formatPercent(complianceMetrics?.fullComplianceRate)}%`}
             description="Both TF & Jornaya"
             icon={<AlertTriangle className="h-4 w-4" />}
             loading={loading}
@@ -192,7 +198,7 @@ export default function AnalyticsPage() {
 
           <MetricCard
             title="Participation Rate"
-            value={`${auctionMetrics?.bidParticipationRate || 0}%`}
+            value={`${formatPercent(auctionMetrics?.bidParticipationRate)}%`}
             description="Buyers bidding"
             icon={<Users className="h-4 w-4" />}
             loading={loading}
@@ -200,7 +206,7 @@ export default function AnalyticsPage() {
 
           <MetricCard
             title="Success Rate"
-            value={`${auctionMetrics?.auctionSuccessRate || 0}%`}
+            value={`${formatPercent(auctionMetrics?.auctionSuccessRate)}%`}
             description="Completed auctions"
             icon={<TrendingUp className="h-4 w-4" />}
             loading={loading}
