@@ -260,14 +260,13 @@ export class ZipCodeImportService {
     const startTime = Date.now();
 
     try {
-      // Find the service type
+      // Find the service type (allow inactive for admin bulk operations)
       const serviceType = await prisma.serviceType.findFirst({
         where: {
           OR: [
             { name: serviceTypeName },
             { id: serviceTypeName },
           ],
-          active: true,
         },
       });
 
@@ -291,25 +290,29 @@ export class ZipCodeImportService {
         },
       });
 
-      // Perform atomic replacement in a transaction
-      const result = await prisma.$transaction(async (tx) => {
-        // Delete all existing ZIP codes for this buyer/service type
-        const deleteResult = await tx.buyerServiceZipCode.deleteMany({
-          where: {
-            buyerId,
-            serviceTypeId: serviceType.id,
-          },
-        });
-
-        logger.info('Deleted existing ZIP codes', {
+      // Perform atomic replacement (non-transactional for large batches to avoid timeouts)
+      // Delete all existing ZIP codes for this buyer/service type
+      const deleteResult = await prisma.buyerServiceZipCode.deleteMany({
+        where: {
           buyerId,
           serviceTypeId: serviceType.id,
-          deletedCount: deleteResult.count,
-        });
+        },
+      });
 
-        // Insert new ZIP codes
-        const insertResult = await tx.buyerServiceZipCode.createMany({
-          data: zipCodes.map((zc) => ({
+      logger.info('Deleted existing ZIP codes', {
+        buyerId,
+        serviceTypeId: serviceType.id,
+        deletedCount: deleteResult.count,
+      });
+
+      // Insert new ZIP codes in batches to avoid transaction timeouts
+      const BATCH_SIZE = 5000;
+      let totalInserted = 0;
+
+      for (let i = 0; i < zipCodes.length; i += BATCH_SIZE) {
+        const batch = zipCodes.slice(i, i + BATCH_SIZE);
+        const insertResult = await prisma.buyerServiceZipCode.createMany({
+          data: batch.map((zc) => ({
             buyerId,
             serviceTypeId: serviceType.id,
             zipCode: zc.zipCode,
@@ -318,40 +321,41 @@ export class ZipCodeImportService {
             minBid: options?.defaultMinBid,
             maxBid: options?.defaultMaxBid,
           })),
-          skipDuplicates: true, // Safety: skip if any slipped through dedup
+          skipDuplicates: true,
         });
+        totalInserted += insertResult.count;
+      }
 
-        logger.info('Inserted new ZIP codes', {
-          buyerId,
-          serviceTypeId: serviceType.id,
-          insertedCount: insertResult.count,
-        });
+      logger.info('Inserted new ZIP codes', {
+        buyerId,
+        serviceTypeId: serviceType.id,
+        insertedCount: totalInserted,
+      });
 
-        // Update the BuyerServiceConfig with last update timestamp
-        await tx.buyerServiceConfig.upsert({
-          where: {
-            buyerId_serviceTypeId: {
-              buyerId,
-              serviceTypeId: serviceType.id,
-            },
-          },
-          update: {
-            lastZipCodeUpdate: new Date(),
-            zipCodeSource: sourceFileName,
-          },
-          create: {
+      // Update the BuyerServiceConfig with last update timestamp
+      await prisma.buyerServiceConfig.upsert({
+        where: {
+          buyerId_serviceTypeId: {
             buyerId,
             serviceTypeId: serviceType.id,
-            pingTemplate: '{}',
-            postTemplate: '{}',
-            fieldMappings: '{}',
-            lastZipCodeUpdate: new Date(),
-            zipCodeSource: sourceFileName,
           },
-        });
-
-        return { deletedCount: deleteResult.count, insertedCount: insertResult.count };
+        },
+        update: {
+          lastZipCodeUpdate: new Date(),
+          zipCodeSource: sourceFileName,
+        },
+        create: {
+          buyerId,
+          serviceTypeId: serviceType.id,
+          pingTemplate: '{}',
+          postTemplate: '{}',
+          fieldMappings: '{}',
+          lastZipCodeUpdate: new Date(),
+          zipCodeSource: sourceFileName,
+        },
       });
+
+      const result = { deletedCount: deleteResult.count, insertedCount: totalInserted };
 
       const duration = Date.now() - startTime;
 
