@@ -11,11 +11,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import {
+  AdminDetailPageHeader,
+  AdminTabNav,
+  AdminSection,
+  AdminStatGrid,
+  AdminInfoGrid,
+  StatusBadge
+} from '@/components/admin/ui';
 import { BuyerActivityTab } from '@/components/admin/BuyerActivityTab';
 import { BuyerServiceCoverageTab } from '@/components/admin/BuyerServiceCoverageTab';
 import {
-  ArrowLeft,
   AlertCircle,
   RefreshCw,
   Building2,
@@ -26,9 +32,9 @@ import {
   Mail,
   Phone,
   User,
-  CheckCircle,
-  XCircle,
-  Shield
+  Shield,
+  FileText,
+  Award
 } from 'lucide-react';
 
 type TabType = 'details' | 'activity' | 'coverage';
@@ -116,34 +122,34 @@ export default function BuyerDetailPage() {
     }
   }, [buyerId, fetchBuyer]);
 
-  const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'details', label: 'Details', icon: <Building2 className="h-4 w-4" /> },
-    { id: 'activity', label: 'Activity', icon: <Activity className="h-4 w-4" /> },
-    { id: 'coverage', label: 'ZIP Coverage', icon: <MapPin className="h-4 w-4" /> }
+  const tabs = [
+    { id: 'details' as TabType, label: 'Details', icon: Building2 },
+    { id: 'activity' as TabType, label: 'Activity', icon: Activity },
+    { id: 'coverage' as TabType, label: 'ZIP Coverage', icon: MapPin }
   ];
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="h-8 w-8 bg-gray-200 rounded" />
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-8 w-8 bg-gray-200 rounded-lg" />
             <div className="h-8 bg-gray-200 rounded w-1/3" />
           </div>
 
-          <div className="flex space-x-1 mb-6">
+          <div className="flex gap-2 mb-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-10 w-24 bg-gray-200 rounded" />
+              <div key={i} className="h-10 w-24 bg-gray-200 rounded-lg" />
             ))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded" />
+              <div key={i} className="h-24 bg-gray-200 rounded-xl" />
             ))}
           </div>
 
-          <div className="h-64 bg-gray-200 rounded" />
+          <div className="h-64 bg-gray-200 rounded-xl" />
         </div>
       </div>
     );
@@ -152,35 +158,27 @@ export default function BuyerDetailPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/admin/buyers')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Buyer Details</h1>
-        </div>
+        <AdminDetailPageHeader
+          title="Buyer Details"
+          backHref="/admin/buyers"
+          backLabel="Back to Buyers"
+        />
 
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
-              <AlertCircle className="h-5 w-5" />
-              <span className="font-medium">Failed to load buyer</span>
-            </div>
-            <p className="text-red-700 mt-2">{error}</p>
-            <Button
-              variant="outline"
-              onClick={fetchBuyer}
-              className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-red-50 rounded-xl border border-red-200 p-6">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertCircle className="h-5 w-5" />
+            <span className="font-medium">Failed to load buyer</span>
+          </div>
+          <p className="text-red-700 mt-2">{error}</p>
+          <Button
+            variant="outline"
+            onClick={fetchBuyer}
+            className="mt-4 gap-2 border-red-300 text-red-700 hover:bg-red-100"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
@@ -188,110 +186,64 @@ export default function BuyerDetailPage() {
   if (!buyer) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/admin/buyers')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Buyer Not Found</h1>
-        </div>
+        <AdminDetailPageHeader
+          title="Buyer Not Found"
+          backHref="/admin/buyers"
+          backLabel="Back to Buyers"
+        />
 
-        <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Buyer Not Found
-            </h3>
-            <p className="text-gray-500 mb-6">
-              The buyer you are looking for does not exist or has been removed.
-            </p>
-            <Button
-              onClick={() => router.push('/admin/buyers')}
-              variant="outline"
-            >
-              Back to Buyers
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm py-12 text-center">
+          <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Buyer Not Found
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            The buyer you are looking for does not exist or has been removed.
+          </p>
+          <Button
+            onClick={() => router.push('/admin/buyers')}
+            variant="outline"
+          >
+            Back to Buyers
+          </Button>
+        </div>
       </div>
     );
   }
 
+  // Prepare badges for the detail header
+  const badges = [
+    <span
+      key="type"
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        buyer.type === 'NETWORK'
+          ? 'bg-purple-100 text-purple-800'
+          : 'bg-orange-100 text-orange-800'
+      }`}
+    >
+      {buyer.type}
+    </span>,
+    <StatusBadge key="status" status={buyer.active ? 'ACTIVE' : 'INACTIVE'} />
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/admin/buyers')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {buyer.displayName || buyer.name}
-              </h1>
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  buyer.type === 'NETWORK'
-                    ? 'bg-purple-100 text-purple-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}
-              >
-                {buyer.type}
-              </span>
-              {buyer.active ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Active
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Inactive
-                </span>
-              )}
-            </div>
-            <p className="text-gray-500 mt-1">{buyer.name}</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          onClick={fetchBuyer}
-          className="text-gray-400 hover:text-gray-600"
-          title="Refresh"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
+      <AdminDetailPageHeader
+        title={buyer.displayName || buyer.name}
+        subtitle={buyer.name}
+        backHref="/admin/buyers"
+        backLabel="Back to Buyers"
+        badges={badges}
+        onRefresh={fetchBuyer}
+      />
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      <AdminTabNav
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as TabType)}
+      />
 
       {/* Tab Content */}
       {activeTab === 'details' && (
@@ -310,7 +262,7 @@ export default function BuyerDetailPage() {
           <div className="flex justify-end">
             <Button
               onClick={() => router.push(`/admin/buyers/${buyer.id}/zip-codes`)}
-              className="flex items-center gap-2"
+              className="gap-2 bg-orange-500 hover:bg-orange-600"
             >
               <MapPin className="h-4 w-4" />
               Manage ZIP Codes
@@ -332,7 +284,7 @@ export default function BuyerDetailPage() {
  *
  * WHY: Display buyer configuration info in organized sections
  * WHEN: Details tab is active
- * HOW: Render buyer data in card-based layout
+ * HOW: Render buyer data using shared admin components
  */
 function BuyerDetailsContent({ buyer }: { buyer: BuyerData }) {
   const formatCurrency = (value: number) =>
@@ -341,221 +293,140 @@ function BuyerDetailsContent({ buyer }: { buyer: BuyerData }) {
       currency: 'USD'
     }).format(value);
 
+  // Stats for AdminStatGrid
+  const stats = [
+    {
+      label: 'Total Transactions',
+      value: buyer.stats.totalTransactions.toLocaleString(),
+      icon: FileText,
+    },
+    {
+      label: 'Leads Won',
+      value: buyer.stats.leadsWon.toLocaleString(),
+      icon: Award,
+      accentColor: 'emerald' as const,
+    },
+    {
+      label: 'ZIP Codes',
+      value: buyer.stats.zipCodeCount.toLocaleString(),
+      icon: MapPin,
+      accentColor: 'orange' as const,
+    },
+    {
+      label: 'Service Configs',
+      value: buyer.serviceConfigs.length.toString(),
+      icon: Shield,
+      accentColor: 'blue' as const,
+    },
+  ];
+
+  // API Configuration info items
+  const apiInfoItems = [
+    { label: 'API URL', value: <span className="font-mono text-sm break-all">{buyer.apiUrl}</span>, icon: Globe },
+    { label: 'Authentication Type', value: <span className="capitalize">{buyer.authType}</span>, icon: Shield },
+    { label: 'PING Timeout', value: `${buyer.pingTimeout}ms`, icon: Clock },
+    { label: 'POST Timeout', value: `${buyer.postTimeout}ms`, icon: Clock },
+  ];
+
+  // Contact info items (only include non-null values)
+  const contactInfoItems = [
+    buyer.contactName && { label: 'Contact Name', value: buyer.contactName, icon: User },
+    buyer.contactEmail && { label: 'Contact Email', value: buyer.contactEmail, icon: Mail },
+    buyer.contactPhone && { label: 'Contact Phone', value: buyer.contactPhone, icon: Phone },
+    buyer.businessEmail && { label: 'Business Email', value: buyer.businessEmail, icon: Mail },
+    buyer.businessPhone && { label: 'Business Phone', value: buyer.businessPhone, icon: Phone },
+  ].filter(Boolean) as Array<{ label: string; value: string; icon: any }>;
+
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Total Transactions</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {buyer.stats.totalTransactions.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Leads Won</div>
-            <div className="text-2xl font-bold text-green-600">
-              {buyer.stats.leadsWon.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">ZIP Codes</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {buyer.stats.zipCodeCount.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Service Configs</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {buyer.serviceConfigs.length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <AdminStatGrid stats={stats} />
 
       {/* API Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            API Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-gray-500">API URL</div>
-              <div className="text-gray-900 font-mono text-sm break-all">
-                {buyer.apiUrl}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Authentication Type</div>
-              <div className="text-gray-900 capitalize">{buyer.authType}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                PING Timeout
-              </div>
-              <div className="text-gray-900">{buyer.pingTimeout}ms</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                POST Timeout
-              </div>
-              <div className="text-gray-900">{buyer.postTimeout}ms</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AdminSection
+        title="API Configuration"
+        icon={<Globe className="h-5 w-5 text-orange-600" />}
+      >
+        <AdminInfoGrid items={apiInfoItems} columns={2} />
+      </AdminSection>
 
       {/* Contact Information */}
-      {(buyer.contactName || buyer.contactEmail || buyer.contactPhone ||
-        buyer.businessEmail || buyer.businessPhone) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Contact Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {buyer.contactName && (
-                <div>
-                  <div className="text-sm text-gray-500">Contact Name</div>
-                  <div className="text-gray-900">{buyer.contactName}</div>
-                </div>
-              )}
-              {buyer.contactEmail && (
-                <div>
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    Contact Email
-                  </div>
-                  <div className="text-gray-900">{buyer.contactEmail}</div>
-                </div>
-              )}
-              {buyer.contactPhone && (
-                <div>
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    Contact Phone
-                  </div>
-                  <div className="text-gray-900">{buyer.contactPhone}</div>
-                </div>
-              )}
-              {buyer.businessEmail && (
-                <div>
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    Business Email
-                  </div>
-                  <div className="text-gray-900">{buyer.businessEmail}</div>
-                </div>
-              )}
-              {buyer.businessPhone && (
-                <div>
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    Business Phone
-                  </div>
-                  <div className="text-gray-900">{buyer.businessPhone}</div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {contactInfoItems.length > 0 && (
+        <AdminSection
+          title="Contact Information"
+          icon={<User className="h-5 w-5 text-orange-600" />}
+        >
+          <AdminInfoGrid items={contactInfoItems} columns={3} />
+        </AdminSection>
       )}
 
       {/* Service Configurations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Service Configurations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {buyer.serviceConfigs.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No service configurations found
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
-                      Service
-                    </th>
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
-                      Bid Range
-                    </th>
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
-                      Compliance
-                    </th>
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {buyer.serviceConfigs.map((config) => (
-                    <tr
-                      key={config.id}
-                      className="border-b border-gray-100 hover:bg-gray-50"
-                    >
-                      <td className="py-3 px-2 text-sm text-gray-900">
-                        {config.serviceName}
-                      </td>
-                      <td className="py-3 px-2 text-sm text-gray-900">
-                        {formatCurrency(config.minBid)} - {formatCurrency(config.maxBid)}
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="flex gap-2">
-                          {config.requiresTrustedForm && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              TrustedForm
-                            </span>
-                          )}
-                          {config.requiresJornaya && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                              Jornaya
-                            </span>
-                          )}
-                          {!config.requiresTrustedForm && !config.requiresJornaya && (
-                            <span className="text-gray-400 text-xs">None</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2">
-                        {config.active ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                            Inactive
+      <AdminSection
+        title="Service Configurations"
+        icon={<Shield className="h-5 w-5 text-orange-600" />}
+      >
+        {buyer.serviceConfigs.length === 0 ? (
+          <div className="text-center py-8 text-sm text-gray-500">
+            No service configurations found
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Service
+                  </th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Bid Range
+                  </th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Compliance
+                  </th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {buyer.serviceConfigs.map((config) => (
+                  <tr
+                    key={config.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="py-3 px-2 text-sm font-medium text-gray-900">
+                      {config.serviceName}
+                    </td>
+                    <td className="py-3 px-2 text-sm text-gray-900">
+                      {formatCurrency(config.minBid)} - {formatCurrency(config.maxBid)}
+                    </td>
+                    <td className="py-3 px-2">
+                      <div className="flex gap-2">
+                        {config.requiresTrustedForm && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                            TrustedForm
                           </span>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        {config.requiresJornaya && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700">
+                            Jornaya
+                          </span>
+                        )}
+                        {!config.requiresTrustedForm && !config.requiresJornaya && (
+                          <span className="text-gray-400 text-xs">None</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2">
+                      <StatusBadge status={config.active ? 'ACTIVE' : 'INACTIVE'} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AdminSection>
 
       {/* Timestamps */}
       <div className="text-sm text-gray-500 flex items-center gap-6">

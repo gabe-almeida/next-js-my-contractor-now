@@ -5,7 +5,7 @@
  *
  * WHY: Provides detailed view of individual affiliate with management actions.
  * WHEN: Admin clicks on an affiliate from the list to view details.
- * HOW: Fetches affiliate details, stats, links, commissions, and withdrawals.
+ * HOW: Fetches affiliate details, stats, and profile using shared admin components.
  */
 
 import { useState, useEffect } from 'react';
@@ -13,8 +13,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import {
-  ArrowLeft,
-  RefreshCw,
+  AdminDetailPageHeader,
+  AdminSection,
+  AdminStatGrid,
+  AdminInfoGrid,
+  StatusBadge
+} from '@/components/admin/ui';
+import {
   CheckCircle,
   XCircle,
   User,
@@ -24,7 +29,8 @@ import {
   Calendar,
   DollarSign,
   Link as LinkIcon,
-  MousePointerClick
+  MousePointerClick,
+  Award
 } from 'lucide-react';
 
 interface Affiliate {
@@ -49,12 +55,6 @@ interface Stats {
   totalConversions: number;
   totalLinks: number;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  ACTIVE: 'bg-green-100 text-green-800',
-  SUSPENDED: 'bg-red-100 text-red-800',
-};
 
 export default function AdminAffiliateDetailPage() {
   const params = useParams();
@@ -156,206 +156,174 @@ export default function AdminAffiliateDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-8 w-8 bg-gray-200 rounded-lg" />
+            <div className="h-8 bg-gray-200 rounded w-1/3" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded-xl" />
+            ))}
+          </div>
+          <div className="h-64 bg-gray-200 rounded-xl" />
+        </div>
       </div>
     );
   }
 
   if (!affiliate) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Affiliate not found</p>
-        <Link href="/admin/affiliates">
-          <Button variant="outline" className="mt-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+      <div className="space-y-6">
+        <AdminDetailPageHeader
+          title="Affiliate Not Found"
+          backHref="/admin/affiliates"
+          backLabel="Back to Affiliates"
+        />
+
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm py-12 text-center">
+          <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Affiliate Not Found
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            The affiliate you are looking for does not exist or has been removed.
+          </p>
+          <Button
+            onClick={() => router.push('/admin/affiliates')}
+            variant="outline"
+          >
             Back to Affiliates
           </Button>
-        </Link>
+        </div>
       </div>
     );
   }
 
+  // Stats for AdminStatGrid
+  const statItems = stats ? [
+    {
+      label: 'Total Earnings',
+      value: formatCurrency(stats.totalEarnings),
+      icon: DollarSign,
+      accentColor: 'emerald' as const,
+    },
+    {
+      label: 'Pending',
+      value: formatCurrency(stats.pendingEarnings),
+      icon: DollarSign,
+      accentColor: 'amber' as const,
+    },
+    {
+      label: 'Available',
+      value: formatCurrency(stats.availableBalance),
+      icon: DollarSign,
+      accentColor: 'blue' as const,
+    },
+    {
+      label: 'Links',
+      value: stats.totalLinks.toString(),
+      icon: LinkIcon,
+      accentColor: 'orange' as const,
+    },
+    {
+      label: 'Clicks',
+      value: stats.totalClicks.toLocaleString(),
+      icon: MousePointerClick,
+    },
+    {
+      label: 'Conversions',
+      value: stats.totalConversions.toLocaleString(),
+      icon: Award,
+      accentColor: 'emerald' as const,
+    },
+  ] : [];
+
+  // Profile info items
+  const profileInfoItems = [
+    { label: 'Name', value: `${affiliate.firstName} ${affiliate.lastName}`, icon: User },
+    { label: 'Email', value: affiliate.email, icon: Mail },
+    { label: 'Phone', value: affiliate.phone || '-', icon: Phone },
+    {
+      label: 'Website',
+      value: affiliate.website ? (
+        <a href={affiliate.website} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline">
+          {affiliate.website}
+        </a>
+      ) : '-',
+      icon: Globe
+    },
+    { label: 'Commission Rate', value: `${(affiliate.commissionRate * 100).toFixed(0)}%`, icon: DollarSign },
+    { label: 'Joined', value: formatDate(affiliate.createdAt), icon: Calendar },
+    ...(affiliate.approvedAt ? [{ label: 'Approved', value: formatDate(affiliate.approvedAt), icon: CheckCircle }] : [])
+  ];
+
+  // Map status to StatusBadge status type
+  const mapStatus = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return 'ACTIVE';
+      case 'PENDING': return 'PENDING';
+      case 'SUSPENDED': return 'REJECTED';
+      default: return 'INACTIVE';
+    }
+  };
+
+  // Prepare badges for the detail header
+  const badges = [
+    <StatusBadge key="status" status={mapStatus(affiliate.status)} />
+  ];
+
+  // Header actions
+  const headerActions = (
+    <div className="flex gap-2">
+      {affiliate.status === 'PENDING' && (
+        <Button
+          onClick={handleApprove}
+          disabled={actionLoading}
+          className="gap-2 bg-emerald-500 hover:bg-emerald-600"
+        >
+          <CheckCircle className="h-4 w-4" />
+          Approve
+        </Button>
+      )}
+      {affiliate.status === 'ACTIVE' && (
+        <Button
+          onClick={handleSuspend}
+          disabled={actionLoading}
+          variant="outline"
+          className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
+        >
+          <XCircle className="h-4 w-4" />
+          Suspend
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/affiliates">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {affiliate.firstName} {affiliate.lastName}
-            </h1>
-            <p className="text-sm text-gray-500">{affiliate.email}</p>
-          </div>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[affiliate.status]}`}>
-            {affiliate.status}
-          </span>
-        </div>
-        <div className="flex space-x-3">
-          <Button variant="outline" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {affiliate.status === 'PENDING' && (
-            <Button
-              onClick={handleApprove}
-              disabled={actionLoading}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Approve
-            </Button>
-          )}
-          {affiliate.status === 'ACTIVE' && (
-            <Button
-              onClick={handleSuspend}
-              disabled={actionLoading}
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Suspend
-            </Button>
-          )}
-        </div>
-      </div>
+      <AdminDetailPageHeader
+        title={`${affiliate.firstName} ${affiliate.lastName}`}
+        subtitle={affiliate.email}
+        backHref="/admin/affiliates"
+        backLabel="Back to Affiliates"
+        badges={badges}
+        onRefresh={fetchData}
+        actions={headerActions}
+      />
 
       {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-green-500" />
-              <div className="ml-3">
-                <p className="text-xs text-gray-500">Total Earnings</p>
-                <p className="text-lg font-bold">{formatCurrency(stats.totalEarnings)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-yellow-500" />
-              <div className="ml-3">
-                <p className="text-xs text-gray-500">Pending</p>
-                <p className="text-lg font-bold">{formatCurrency(stats.pendingEarnings)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-blue-500" />
-              <div className="ml-3">
-                <p className="text-xs text-gray-500">Available</p>
-                <p className="text-lg font-bold">{formatCurrency(stats.availableBalance)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <LinkIcon className="h-8 w-8 text-purple-500" />
-              <div className="ml-3">
-                <p className="text-xs text-gray-500">Links</p>
-                <p className="text-lg font-bold">{stats.totalLinks}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <MousePointerClick className="h-8 w-8 text-indigo-500" />
-              <div className="ml-3">
-                <p className="text-xs text-gray-500">Clicks</p>
-                <p className="text-lg font-bold">{stats.totalClicks.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <User className="h-8 w-8 text-emerald-500" />
-              <div className="ml-3">
-                <p className="text-xs text-gray-500">Conversions</p>
-                <p className="text-lg font-bold">{stats.totalConversions.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {stats && <AdminStatGrid stats={statItems} columns={6} />}
 
       {/* Profile Details */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Profile Details</h3>
-        </div>
-        <div className="px-4 py-5 sm:p-6">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            <div className="flex items-center">
-              <User className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <dt className="text-sm text-gray-500">Name</dt>
-                <dd className="text-sm font-medium text-gray-900">
-                  {affiliate.firstName} {affiliate.lastName}
-                </dd>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Mail className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <dt className="text-sm text-gray-500">Email</dt>
-                <dd className="text-sm font-medium text-gray-900">{affiliate.email}</dd>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Phone className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <dt className="text-sm text-gray-500">Phone</dt>
-                <dd className="text-sm font-medium text-gray-900">{affiliate.phone || '-'}</dd>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Globe className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <dt className="text-sm text-gray-500">Website</dt>
-                <dd className="text-sm font-medium text-gray-900">
-                  {affiliate.website ? (
-                    <a href={affiliate.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                      {affiliate.website}
-                    </a>
-                  ) : '-'}
-                </dd>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <DollarSign className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <dt className="text-sm text-gray-500">Commission Rate</dt>
-                <dd className="text-sm font-medium text-gray-900">
-                  {(affiliate.commissionRate * 100).toFixed(0)}%
-                </dd>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Calendar className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <dt className="text-sm text-gray-500">Joined</dt>
-                <dd className="text-sm font-medium text-gray-900">{formatDate(affiliate.createdAt)}</dd>
-              </div>
-            </div>
-            {affiliate.approvedAt && (
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-gray-400 mr-3" />
-                <div>
-                  <dt className="text-sm text-gray-500">Approved</dt>
-                  <dd className="text-sm font-medium text-gray-900">{formatDate(affiliate.approvedAt)}</dd>
-                </div>
-              </div>
-            )}
-          </dl>
-        </div>
-      </div>
+      <AdminSection
+        title="Profile Details"
+        icon={<User className="h-5 w-5 text-orange-600" />}
+      >
+        <AdminInfoGrid items={profileInfoItems} columns={2} />
+      </AdminSection>
     </div>
   );
 }

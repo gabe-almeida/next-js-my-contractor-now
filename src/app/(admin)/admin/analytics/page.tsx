@@ -1,23 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Analytics Dashboard Page
+ *
+ * WHY: Provides detailed compliance and auction analytics.
+ * WHEN: Admin needs to analyze platform performance metrics.
+ * HOW: Fetches real data from API and displays in consistent UI components.
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { MetricCard } from '@/components/charts/MetricCard';
 import { LineChart } from '@/components/charts/LineChart';
-import { BarChart } from '@/components/charts/BarChart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { AdminPageHeader, AdminSection, AdminSelect } from '@/components/admin/ui';
 import { Button } from '@/components/ui/Button';
-import { 
-  Shield, 
-  CheckCircle, 
-  AlertTriangle, 
+import {
+  Shield,
+  CheckCircle,
+  AlertTriangle,
   TrendingUp,
   DollarSign,
   Users,
   Target,
   Activity,
   Download,
-  Calendar,
-  Filter
+  RefreshCw
 } from 'lucide-react';
 
 export default function AnalyticsPage() {
@@ -29,142 +35,143 @@ export default function AnalyticsPage() {
   const [complianceData, setComplianceData] = useState<any[]>([]);
   const [buyerPerformance, setBuyerPerformance] = useState<any[]>([]);
   const [qualityScores, setQualityScores] = useState<any[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      setLoading(true);
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
 
-      try {
-        const response = await fetch(`/api/admin/analytics?period=${timeframe}`, {
-          headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch analytics');
+    try {
+      const response = await fetch(`/api/admin/analytics?period=${timeframe}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
         }
+      });
 
-        const data = await response.json();
-        const analytics = data.data;
-
-        // Set all analytics data from API
-        setComplianceMetrics(analytics.complianceMetrics);
-        setAuctionMetrics(analytics.auctionMetrics);
-        setRevenueData(analytics.revenueData);
-        setComplianceData(analytics.complianceData);
-        setBuyerPerformance(analytics.buyerPerformance);
-        setQualityScores(analytics.qualityScores);
-
-      } catch (error) {
-        console.error('Error fetching analytics:', error);
-        // Set empty defaults on error
-        setComplianceMetrics(null);
-        setAuctionMetrics(null);
-        setRevenueData([]);
-        setComplianceData([]);
-        setBuyerPerformance([]);
-        setQualityScores([]);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics');
       }
-    };
 
-    fetchAnalytics();
+      const data = await response.json();
+      const analytics = data.data;
+
+      // Set all analytics data from API
+      setComplianceMetrics(analytics.complianceMetrics);
+      setAuctionMetrics(analytics.auctionMetrics);
+      setRevenueData(analytics.revenueData);
+      setComplianceData(analytics.complianceData);
+      setBuyerPerformance(analytics.buyerPerformance);
+      setQualityScores(analytics.qualityScores);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      // Set empty defaults on error
+      setComplianceMetrics(null);
+      setAuctionMetrics(null);
+      setRevenueData([]);
+      setComplianceData([]);
+      setBuyerPerformance([]);
+      setQualityScores([]);
+    } finally {
+      setLoading(false);
+    }
   }, [timeframe]);
 
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
   const handleExport = () => {
-    // Mock export functionality
-    console.log('Exporting analytics data...');
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      timeframe,
+      complianceMetrics,
+      auctionMetrics,
+      revenueData,
+      complianceData,
+      buyerPerformance,
+      qualityScores
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${timeframe}-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const timeframeOptions = [
+    { value: '1d', label: 'Last 24 Hours' },
+    { value: '7d', label: 'Last 7 Days' },
+    { value: '30d', label: 'Last 30 Days' },
+    { value: '90d', label: 'Last 90 Days' }
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-gray-500">Performance metrics and compliance analytics</p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
-            <select
+      {/* Page Header */}
+      <AdminPageHeader
+        title="Analytics Dashboard"
+        description="Performance metrics and compliance analytics"
+        lastUpdated={lastUpdated}
+        actions={
+          <div className="flex items-center gap-3">
+            <AdminSelect
               value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-blue-500 focus:border-blue-500"
+              onChange={setTimeframe}
+              options={timeframeOptions}
+              icon={false}
+            />
+            <Button
+              variant="outline"
+              onClick={fetchAnalytics}
+              disabled={loading}
+              className="gap-2"
             >
-              <option value="1d">Last 24 Hours</option>
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="90d">Last 90 Days</option>
-            </select>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={handleExport} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            className="flex items-center space-x-2"
-          >
-            <Download className="h-4 w-4" />
-            <span>Export</span>
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Compliance Metrics */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Compliance Metrics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="TrustedForm Coverage"
             value={`${complianceMetrics?.trustedFormCoverage || 0}%`}
             description="Leads with TF certificates"
-            trend={{
-              value: complianceMetrics?.complianceTrend || 0,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<Shield className="h-4 w-4" />}
             loading={loading}
           />
-          
+
           <MetricCard
             title="Jornaya Coverage"
             value={`${complianceMetrics?.jornayaCoverage || 0}%`}
             description="Leads with LeadID"
-            trend={{
-              value: complianceMetrics?.complianceTrend || 0,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<CheckCircle className="h-4 w-4" />}
             loading={loading}
           />
-          
+
           <MetricCard
             title="Full Compliance"
             value={`${complianceMetrics?.fullComplianceRate || 0}%`}
             description="Both TF & Jornaya"
-            trend={{
-              value: complianceMetrics?.complianceTrend || 0,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<AlertTriangle className="h-4 w-4" />}
             loading={loading}
           />
-          
+
           <MetricCard
             title="Avg Quality Score"
             value={complianceMetrics?.avgQualityScore || 0}
             description="Lead quality rating"
-            trend={{
-              value: complianceMetrics?.qualityTrend || 0,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<Target className="h-4 w-4" />}
             loading={loading}
           />
@@ -174,55 +181,35 @@ export default function AnalyticsPage() {
       {/* Auction Performance */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Auction Performance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Average Bid"
             value={`$${auctionMetrics?.avgBidAmount || 0}`}
             description="Per lead"
-            trend={{
-              value: 3.2,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<DollarSign className="h-4 w-4" />}
             loading={loading}
           />
-          
+
           <MetricCard
             title="Participation Rate"
             value={`${auctionMetrics?.bidParticipationRate || 0}%`}
             description="Buyers bidding"
-            trend={{
-              value: 1.8,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<Users className="h-4 w-4" />}
             loading={loading}
           />
-          
+
           <MetricCard
             title="Success Rate"
             value={`${auctionMetrics?.auctionSuccessRate || 0}%`}
             description="Completed auctions"
-            trend={{
-              value: 2.5,
-              label: 'vs last period',
-              direction: 'up'
-            }}
             icon={<TrendingUp className="h-4 w-4" />}
             loading={loading}
           />
-          
+
           <MetricCard
             title="Avg Response Time"
             value={`${auctionMetrics?.avgResponseTime || 0}s`}
             description="Buyer response"
-            trend={{
-              value: -0.8,
-              label: 'vs last period',
-              direction: 'down'
-            }}
             icon={<Activity className="h-4 w-4" />}
             loading={loading}
           />
@@ -231,7 +218,6 @@ export default function AnalyticsPage() {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Trends */}
         <LineChart
           title="Revenue & Lead Volume Trends"
           data={revenueData}
@@ -245,7 +231,7 @@ export default function AnalyticsPage() {
             },
             {
               dataKey: 'leads',
-              stroke: '#6366f1',
+              stroke: '#f97316',
               name: 'Lead Count',
               strokeWidth: 2
             }
@@ -253,7 +239,6 @@ export default function AnalyticsPage() {
           loading={loading}
         />
 
-        {/* Compliance Trends */}
         <LineChart
           title="Compliance Coverage Trends"
           data={complianceData}
@@ -267,13 +252,13 @@ export default function AnalyticsPage() {
             },
             {
               dataKey: 'jornaya',
-              stroke: '#f59e0b',
+              stroke: '#f97316',
               name: 'Jornaya (%)',
               strokeWidth: 2
             },
             {
               dataKey: 'both',
-              stroke: '#ef4444',
+              stroke: '#10b981',
               name: 'Both (%)',
               strokeWidth: 3
             }
@@ -284,117 +269,104 @@ export default function AnalyticsPage() {
 
       {/* Performance Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Buyer Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Buyer Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex justify-between">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {buyerPerformance.map((buyer, index) => (
-                  <div key={buyer.buyer} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{buyer.buyer}</div>
-                      <div className="text-sm text-gray-500">
-                        {buyer.volume} leads • {buyer.winRate}% win rate
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium text-green-600">${buyer.avgBid}</div>
-                      <div className="text-sm text-gray-500">avg bid</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Service Quality Scores */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Service Quality Scores</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex justify-between">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {qualityScores.map((service, index) => (
-                  <div key={service.service} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{service.service}</div>
-                      <div className="text-sm text-gray-500">
-                        {service.count} leads analyzed
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium text-blue-600">{service.avgScore}/10</div>
-                      <div className="text-sm text-gray-500">quality score</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Compliance Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Compliance Analysis Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <AdminSection title="Buyer Performance">
           {loading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex justify-between">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : buyerPerformance.length > 0 ? (
+            <div className="space-y-3">
+              {buyerPerformance.map((buyer) => (
+                <div key={buyer.buyer} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{buyer.buyer}</div>
+                    <div className="text-sm text-gray-500">
+                      {buyer.volume} leads • {buyer.winRate}% win rate
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-emerald-600">${buyer.avgBid}</div>
+                    <div className="text-sm text-gray-500">avg bid</div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {complianceMetrics?.totalLeadsAnalyzed || 0}
-                </div>
-                <div className="text-sm text-gray-500">Total Leads Analyzed</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {complianceMetrics?.highQualityLeads || 0}
-                </div>
-                <div className="text-sm text-gray-500">High Quality Leads</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {auctionMetrics?.topBuyer || 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500">Top Performing Buyer</div>
-              </div>
-            </div>
+            <div className="text-sm text-gray-500 text-center py-4">No buyer performance data available</div>
           )}
-        </CardContent>
-      </Card>
+        </AdminSection>
+
+        <AdminSection title="Service Quality Scores">
+          {loading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex justify-between">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : qualityScores.length > 0 ? (
+            <div className="space-y-3">
+              {qualityScores.map((service) => (
+                <div key={service.service} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{service.service}</div>
+                    <div className="text-sm text-gray-500">
+                      {service.count} leads analyzed
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-orange-600">{service.avgScore}/10</div>
+                    <div className="text-sm text-gray-500">quality score</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500 text-center py-4">No quality score data available</div>
+          )}
+        </AdminSection>
+      </div>
+
+      {/* Compliance Summary */}
+      <AdminSection title="Compliance Analysis Summary">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center p-4 bg-emerald-50 rounded-lg">
+              <div className="text-2xl font-bold text-emerald-600">
+                {complianceMetrics?.totalLeadsAnalyzed || 0}
+              </div>
+              <div className="text-sm text-gray-600">Total Leads Analyzed</div>
+            </div>
+
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">
+                {complianceMetrics?.highQualityLeads || 0}
+              </div>
+              <div className="text-sm text-gray-600">High Quality Leads</div>
+            </div>
+
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {auctionMetrics?.topBuyer || 'N/A'}
+              </div>
+              <div className="text-sm text-gray-600">Top Performing Buyer</div>
+            </div>
+          </div>
+        )}
+      </AdminSection>
     </div>
   );
 }
