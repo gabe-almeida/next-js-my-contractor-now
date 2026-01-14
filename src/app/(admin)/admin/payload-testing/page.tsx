@@ -33,28 +33,31 @@ interface PayloadTestResult {
   buyerName: string;
   buyerApiUrl: string;
   active: boolean;
-  requiresTrustedForm: boolean;
-  requiresJornaya: boolean;
-  ping: {
-    templateId: string | null;
-    hasTemplate: boolean;
-    payload: any;
-    errors: string[];
-    warnings: string[];
-    mappingCount: number;
+  requiresTrustedForm?: boolean;
+  requiresJornaya?: boolean;
+  error?: string;
+  ping?: {
+    templateId?: string | null;
+    hasTemplate?: boolean;
+    payload?: any;
+    errors?: string[];
+    warnings?: string[];
+    mappingCount?: number;
+    error?: string;
   };
-  post: {
-    templateId: string | null;
-    hasTemplate: boolean;
-    payload: any;
-    errors: string[];
-    warnings: string[];
-    mappingCount: number;
+  post?: {
+    templateId?: string | null;
+    hasTemplate?: boolean;
+    payload?: any;
+    errors?: string[];
+    warnings?: string[];
+    mappingCount?: number;
+    error?: string;
   };
-  sourceData: {
-    original: any;
-    enriched: any;
-    withCompliance: any;
+  sourceData?: {
+    original?: any;
+    enriched?: any;
+    withCompliance?: any;
   };
 }
 
@@ -161,15 +164,15 @@ export default function PayloadTestingPage() {
     URL.revokeObjectURL(url);
   };
 
-  const getStatusColor = (errors: string[], warnings: string[]) => {
-    if (errors.length > 0) return 'text-red-600';
-    if (warnings.length > 0) return 'text-amber-600';
+  const getStatusColor = (errors?: string[], warnings?: string[]) => {
+    if (errors && errors.length > 0) return 'text-red-600';
+    if (warnings && warnings.length > 0) return 'text-amber-600';
     return 'text-emerald-600';
   };
 
-  const getStatusIcon = (errors: string[], warnings: string[]) => {
-    if (errors.length > 0) return <XCircle className="w-4 h-4" />;
-    if (warnings.length > 0) return <AlertTriangle className="w-4 h-4" />;
+  const getStatusIcon = (errors?: string[], warnings?: string[]) => {
+    if (errors && errors.length > 0) return <XCircle className="w-4 h-4" />;
+    if (warnings && warnings.length > 0) return <AlertTriangle className="w-4 h-4" />;
     return <CheckCircle className="w-4 h-4" />;
   };
 
@@ -279,9 +282,10 @@ export default function PayloadTestingPage() {
                 <span className="text-sm font-medium text-gray-500">Success</span>
               </div>
               <div className="text-2xl font-bold mt-1 text-emerald-600">
-                {testResults.filter(r =>
-                  (viewMode === 'ping' ? r.ping.errors : r.post.errors).length === 0
-                ).length}
+                {testResults.filter(r => {
+                  const errors = viewMode === 'ping' ? r.ping?.errors : r.post?.errors;
+                  return !errors || errors.length === 0;
+                }).length}
               </div>
             </div>
 
@@ -291,9 +295,10 @@ export default function PayloadTestingPage() {
                 <span className="text-sm font-medium text-gray-500">Warnings</span>
               </div>
               <div className="text-2xl font-bold mt-1 text-amber-600">
-                {testResults.filter(r =>
-                  (viewMode === 'ping' ? r.ping.warnings : r.post.warnings).length > 0
-                ).length}
+                {testResults.filter(r => {
+                  const warnings = viewMode === 'ping' ? r.ping?.warnings : r.post?.warnings;
+                  return warnings && warnings.length > 0;
+                }).length}
               </div>
             </div>
 
@@ -303,9 +308,10 @@ export default function PayloadTestingPage() {
                 <span className="text-sm font-medium text-gray-500">Errors</span>
               </div>
               <div className="text-2xl font-bold mt-1 text-red-600">
-                {testResults.filter(r =>
-                  (viewMode === 'ping' ? r.ping.errors : r.post.errors).length > 0
-                ).length}
+                {testResults.filter(r => {
+                  const errors = viewMode === 'ping' ? r.ping?.errors : r.post?.errors;
+                  return errors && errors.length > 0;
+                }).length}
               </div>
             </div>
           </div>
@@ -315,6 +321,8 @@ export default function PayloadTestingPage() {
             {testResults.map(result => {
               const currentView = viewMode === 'ping' ? result.ping : result.post;
               const isExpanded = expandedBuyer === result.buyerId;
+              const errors = currentView?.errors || [];
+              const warnings = currentView?.warnings || [];
 
               return (
                 <div key={result.buyerId} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -324,8 +332,8 @@ export default function PayloadTestingPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={getStatusColor(currentView.errors, currentView.warnings)}>
-                          {getStatusIcon(currentView.errors, currentView.warnings)}
+                        <div className={getStatusColor(errors, warnings)}>
+                          {getStatusIcon(errors, warnings)}
                         </div>
 
                         <div>
@@ -349,12 +357,16 @@ export default function PayloadTestingPage() {
                       <div className="text-right flex items-center gap-4">
                         <div>
                           <div className="text-sm text-gray-600">
-                            {currentView.mappingCount} mappings
+                            {currentView?.mappingCount ?? 0} mappings
                           </div>
                           <div className="mt-1">
-                            {currentView.hasTemplate ? (
+                            {currentView?.hasTemplate ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
                                 Has Template
+                              </span>
+                            ) : currentView?.payload ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                                Has Mappings
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">
@@ -371,16 +383,24 @@ export default function PayloadTestingPage() {
                   {isExpanded && (
                     <div className="px-4 pb-4 border-t border-gray-100">
                       <div className="pt-4 space-y-4">
+                        {/* Top-level error */}
+                        {result.error && (
+                          <div className="flex items-center gap-2 text-red-600 text-sm">
+                            <XCircle className="w-4 h-4" />
+                            {result.error}
+                          </div>
+                        )}
+
                         {/* Errors & Warnings */}
-                        {(currentView.errors.length > 0 || currentView.warnings.length > 0) && (
+                        {(errors.length > 0 || warnings.length > 0) && (
                           <div className="space-y-2">
-                            {currentView.errors.map((error, idx) => (
+                            {errors.map((error, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-red-600 text-sm">
                                 <XCircle className="w-4 h-4" />
                                 {error}
                               </div>
                             ))}
-                            {currentView.warnings.map((warning, idx) => (
+                            {warnings.map((warning, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-amber-600 text-sm">
                                 <AlertTriangle className="w-4 h-4" />
                                 {warning}
@@ -396,36 +416,38 @@ export default function PayloadTestingPage() {
                             {viewMode.toUpperCase()} Payload
                           </h4>
                           <pre className="bg-gray-900 text-emerald-400 p-4 rounded-lg overflow-auto text-xs">
-                            {JSON.stringify(currentView.payload, null, 2)}
+                            {JSON.stringify(currentView?.payload || {}, null, 2)}
                           </pre>
                         </div>
 
                         {/* Source Data */}
-                        <details className="mt-4">
-                          <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
-                            View Source Data
-                          </summary>
-                          <div className="mt-2 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            <div>
-                              <h5 className="text-sm font-medium text-gray-600 mb-1">Original</h5>
-                              <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40">
-                                {JSON.stringify(result.sourceData.original, null, 2)}
-                              </pre>
+                        {result.sourceData && (
+                          <details className="mt-4">
+                            <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
+                              View Source Data
+                            </summary>
+                            <div className="mt-2 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-600 mb-1">Original</h5>
+                                <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40">
+                                  {JSON.stringify(result.sourceData.original || {}, null, 2)}
+                                </pre>
+                              </div>
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-600 mb-1">Enriched</h5>
+                                <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40">
+                                  {JSON.stringify(result.sourceData.enriched || {}, null, 2)}
+                                </pre>
+                              </div>
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-600 mb-1">With Compliance</h5>
+                                <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40">
+                                  {JSON.stringify(result.sourceData.withCompliance || {}, null, 2)}
+                                </pre>
+                              </div>
                             </div>
-                            <div>
-                              <h5 className="text-sm font-medium text-gray-600 mb-1">Enriched</h5>
-                              <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40">
-                                {JSON.stringify(result.sourceData.enriched, null, 2)}
-                              </pre>
-                            </div>
-                            <div>
-                              <h5 className="text-sm font-medium text-gray-600 mb-1">With Compliance</h5>
-                              <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40">
-                                {JSON.stringify(result.sourceData.withCompliance, null, 2)}
-                              </pre>
-                            </div>
-                          </div>
-                        </details>
+                          </details>
+                        )}
                       </div>
                     </div>
                   )}
