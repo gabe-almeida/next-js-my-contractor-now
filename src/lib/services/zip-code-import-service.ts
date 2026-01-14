@@ -260,7 +260,6 @@ export class ZipCodeImportService {
     const startTime = Date.now();
 
     try {
-      // Find the service type (allow inactive for admin bulk operations)
       const serviceType = await prisma.serviceType.findFirst({
         where: {
           OR: [
@@ -282,7 +281,6 @@ export class ZipCodeImportService {
         };
       }
 
-      // Count existing ZIP codes before deletion
       const previousZipCount = await prisma.buyerServiceZipCode.count({
         where: {
           buyerId,
@@ -290,49 +288,64 @@ export class ZipCodeImportService {
         },
       });
 
-      // Perform atomic replacement (non-transactional for large batches to avoid timeouts)
-      // Delete all existing ZIP codes for this buyer/service type
-      const deleteResult = await prisma.buyerServiceZipCode.deleteMany({
+      const existingZips = await prisma.buyerServiceZipCode.findMany({
         where: {
           buyerId,
           serviceTypeId: serviceType.id,
         },
+        select: { zipCode: true },
       });
 
-      logger.info('Deleted existing ZIP codes', {
+      const existingZipSet = new Set(existingZips.map(z => z.zipCode));
+      const newZipSet = new Set(zipCodes.map(z => z.zipCode));
+
+      const zipsToAdd = zipCodes.filter(z => !existingZipSet.has(z.zipCode));
+      const zipsToRemove = existingZips.filter(z => !newZipSet.has(z.zipCode));
+
+      const keptCount = existingZips.length - zipsToRemove.length;
+      const duplicatesRemoved = zipCodes.length - zipsToAdd.length - keptCount;
+
+      logger.info('Analyzing ZIP code changes', {
         buyerId,
         serviceTypeId: serviceType.id,
-        deletedCount: deleteResult.count,
+        previousCount: previousZipCount,
+        toAdd: zipsToAdd.length,
+        toRemove: zipsToRemove.length,
+        kept: keptCount,
+        duplicatesRemoved,
       });
 
-      // Insert new ZIP codes in batches to avoid transaction timeouts
-      const BATCH_SIZE = 5000;
-      let totalInserted = 0;
-
-      for (let i = 0; i < zipCodes.length; i += BATCH_SIZE) {
-        const batch = zipCodes.slice(i, i + BATCH_SIZE);
-        const insertResult = await prisma.buyerServiceZipCode.createMany({
-          data: batch.map((zc) => ({
+      if (zipsToRemove.length > 0) {
+        await prisma.buyerServiceZipCode.deleteMany({
+          where: {
             buyerId,
             serviceTypeId: serviceType.id,
-            zipCode: zc.zipCode,
-            active: true,
-            priority: zc.tier || options?.defaultPriority || 100,
-            minBid: options?.defaultMinBid,
-            maxBid: options?.defaultMaxBid,
-          })),
-          skipDuplicates: true,
+            zipCode: { in: zipsToRemove.map(z => z.zipCode) },
+          },
         });
-        totalInserted += insertResult.count;
       }
 
-      logger.info('Inserted new ZIP codes', {
-        buyerId,
-        serviceTypeId: serviceType.id,
-        insertedCount: totalInserted,
-      });
+      let addedCount = 0;
+      if (zipsToAdd.length > 0) {
+        const BATCH_SIZE = 5000;
+        for (let i = 0; i < zipsToAdd.length; i += BATCH_SIZE) {
+          const batch = zipsToAdd.slice(i, i + BATCH_SIZE);
+          const result = await prisma.buyerServiceZipCode.createMany({
+            data: batch.map((zc) => ({
+              buyerId,
+              serviceTypeId: serviceType.id,
+              zipCode: zc.zipCode,
+              active: true,
+              priority: zc.tier || options?.defaultPriority || 100,
+              minBid: options?.defaultMinBid,
+              maxBid: options?.defaultMaxBid,
+            })),
+            skipDuplicates: true,
+          });
+          addedCount += result.count;
+        }
+      }
 
-      // Update the BuyerServiceConfig with last update timestamp
       await prisma.buyerServiceConfig.upsert({
         where: {
           buyerId_serviceTypeId: {
@@ -355,25 +368,27 @@ export class ZipCodeImportService {
         },
       });
 
-      const result = { deletedCount: deleteResult.count, insertedCount: totalInserted };
-
       const duration = Date.now() - startTime;
+      const newZipCount = keptCount + addedCount;
 
       logger.info('ZIP code import completed', {
         buyerId,
         serviceType: serviceTypeName,
         previousCount: previousZipCount,
-        newCount: result.insertedCount,
+        newCount: newZipCount,
+        added: addedCount,
+        removed: zipsToRemove.length,
+        kept: keptCount,
         durationMs: duration,
       });
 
       return {
         success: true,
         serviceType: serviceTypeName,
-        totalZipCodes: zipCodes.length,
-        duplicatesRemoved: 0, // Already deduped before this method
+        totalZipCodes: newZipCount,
+        duplicatesRemoved,
         previousZipCount,
-        newZipCount: result.insertedCount,
+        newZipCount,
       };
     } catch (error) {
       logger.error('ZIP code import failed', {
@@ -385,7 +400,7 @@ export class ZipCodeImportService {
       return {
         success: false,
         serviceType: serviceTypeName,
-        totalZipCodes: zipCodes.length,
+        totalZipCodes: 0,
         duplicatesRemoved: 0,
         previousZipCount: 0,
         newZipCount: 0,
