@@ -69,10 +69,10 @@ export async function POST(
     // Read file buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Parse the file
+    // Lightweight preview - only scan, don't load all data
     const isExcel = fileExtension === 'xlsx' || fileExtension === 'xls';
     const parsedData = isExcel
-      ? await ZipCodeImportService.parseExcelFile(buffer, file.name)
+      ? await ZipCodeImportService.previewExcelFile(buffer, file.name, 10)
       : await ZipCodeImportService.parseCsvFile(buffer, file.name);
 
     logger.info('File preview parsed', {

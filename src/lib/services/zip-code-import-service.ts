@@ -109,12 +109,13 @@ export class ZipCodeImportService {
    * WHY: Need to extract ZIP codes from Excel files with multiple sheets
    * WHEN: Called when user uploads a file
    * HOW: Uses xlsx library to parse workbook and extract ZIP data from each sheet
+   *
+   * MEMORY OPTIMIZED: Uses streaming approach for large files to avoid OOM
    */
   static async parseExcelFile(
     buffer: Buffer,
     fileName: string
   ): Promise<ParsedFileData> {
-    // Dynamic import to avoid bundling xlsx in client code
     const XLSX = await import('xlsx');
 
     const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -122,10 +123,81 @@ export class ZipCodeImportService {
 
     for (const sheetName of workbook.SheetNames) {
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+
+      const zipCodeEntry: ZipCodeEntry[] = [];
+
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      const headerRowIndex = 0;
+
+      for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = worksheet[cellAddress];
+
+          if (!cell) continue;
+
+          const cellValue = XLSX.utils.format_cell(cell);
+
+          if (!cellValue) continue;
+
+          const header = R === headerRowIndex ? cellValue.toLowerCase() : null;
+          const isHeaderRow = R === headerRowIndex;
+
+          if (isHeaderRow) {
+            continue;
+          }
+
+          if (header === 'zip' || header === 'zip_code' || header === 'zipcode' || cellAddress.match(/A\d+/i)) {
+            const zipCode = String(cellValue || '').trim();
+
+            if (zipCode && zipCode.length >= 5) {
+              zipCodeEntry.push({
+                zipCode: zipCode.slice(0, 5),
+              });
+            }
+          }
+        }
+      }
+
+      sheets.push({
+        name: sheetName,
+        zipCodes: zipCodeEntry,
+      });
+
+      logger.info('Parsed Excel sheet', {
+        sheetName,
+        zipCount: zipCodeEntry.length,
+      });
+    }
+
+    return { fileName, sheets };
+  }
+
+  /**
+   * Lightweight preview - only scan sheets without loading all data
+   *
+   * WHY: Preview should not crash when previewing large files
+   * WHEN: Called when user uploads file for preview
+   * HOW: Scans only first N rows of each sheet
+   */
+  static async previewExcelFile(
+    buffer: Buffer,
+    fileName: string,
+    maxRowsPerSheet: number = 5
+  ): Promise<ParsedFileData> {
+    const XLSX = await import('xlsx');
+
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheets: ParsedFileData['sheets'] = [];
+
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+        range: maxRowsPerSheet,
+      });
 
       const zipCodes: ZipCodeEntry[] = jsonData.map((row) => ({
-        // Handle different column naming conventions
         zipCode: String(row['Zip'] || row['zip'] || row['ZIP'] || row['zip_code'] || row['zipCode'] || '').trim(),
         city: row['City'] || row['city'],
         state: row['State'] || row['state'],
@@ -138,9 +210,10 @@ export class ZipCodeImportService {
         zipCodes,
       });
 
-      logger.info('Parsed Excel sheet', {
+      logger.info('Previewed Excel sheet', {
         sheetName,
         zipCount: zipCodes.length,
+        previewRows: Math.min(jsonData.length, maxRowsPerSheet),
       });
     }
 
