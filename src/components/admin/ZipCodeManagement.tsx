@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as React from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -152,42 +153,44 @@ export function ZipCodeManagement({
   };
 
   // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string;
-        let zipCodes: string[] = [];
+    let zipCodes: string[] = [];
 
-        if (file.name.endsWith('.json')) {
-          // Parse JSON
-          const parsed = JSON.parse(content);
-          if (Array.isArray(parsed)) {
-            zipCodes = parsed.map(item => 
-              typeof item === 'string' ? item : item.zipCode || ''
-            ).filter(zip => zip);
-          } else if (parsed.zipCodes && Array.isArray(parsed.zipCodes)) {
-            zipCodes = parsed.zipCodes;
-          }
-        } else {
-          // Parse CSV/TXT
-          zipCodes = content
-            .split(/[,\s\n]+/)
-            .map(zip => zip.trim())
-            .filter(zip => /^\d{5}$/.test(zip));
+    try {
+      const ext = file.name.toLowerCase().split('.').pop();
+
+      if (ext === 'xlsx' || ext === 'xls') {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json<string[]>(firstSheet, { header: 1 });
+        zipCodes = data.flat().map(zip => String(zip).trim()).filter(zip => /^\d{5}$/.test(zip));
+      } else if (ext === 'json') {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          zipCodes = parsed.map(item =>
+            typeof item === 'string' ? item : item.zipCode || ''
+          ).filter(zip => zip);
+        } else if (parsed.zipCodes && Array.isArray(parsed.zipCodes)) {
+          zipCodes = parsed.zipCodes;
         }
-
-        setValue('zipCodes', zipCodes.join('\n'));
-        setImportMode(false);
-      } catch (error) {
-        setError('Failed to parse file. Please check the format.');
+      } else {
+        const text = await file.text();
+        zipCodes = text
+          .split(/[,\s\n]+/)
+          .map(zip => zip.trim())
+          .filter(zip => /^\d{5}$/.test(zip));
       }
-    };
 
-    reader.readAsText(file);
+      setValue('zipCodes', zipCodes.join('\n'));
+      setImportMode(false);
+    } catch (error) {
+      setError('Failed to parse file. Please check the format.');
+    }
   };
 
   // Export template
@@ -313,7 +316,7 @@ export function ZipCodeManagement({
                   <div className="mt-3">
                     <input
                       type="file"
-                      accept=".json,.csv,.txt"
+                      accept=".xlsx,.xls,.json,.csv,.txt"
                       onChange={handleFileUpload}
                       className="block w-full text-sm text-gray-500
                         file:mr-4 file:py-2 file:px-4
@@ -323,7 +326,7 @@ export function ZipCodeManagement({
                         hover:file:bg-blue-100"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Supports JSON, CSV, and TXT files with zip codes
+                      Supports Excel (.xlsx, .xls), JSON, CSV, and TXT files with zip codes
                     </p>
                   </div>
                 )}

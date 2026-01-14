@@ -8,7 +8,7 @@ services:
       corepack enable &&
       corepack prepare pnpm@latest --activate &&
       pnpm install --frozen-lockfile &&
-      pnpm run build
+      SKIP_SENTRY_UPLOAD=1 pnpm run build
     startCommand: node .next/standalone/server.js
     envVars:
       - key: NODE_ENV
@@ -22,3 +22,5 @@ services:
         - pnpm-lock.yaml
         - prisma/**
         - next.config.js
+      cacheKeyFiles:
+        - pnpm-lock.yaml
