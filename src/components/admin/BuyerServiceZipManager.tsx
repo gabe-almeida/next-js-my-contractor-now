@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ServiceZipMapping } from './ServiceZipMapping';
 import { ZipCodeManagement } from './ZipCodeManagement';
-import { 
-  Plus, 
-  Settings, 
-  Download, 
-  Upload, 
+import { BulkZipCodeUpload } from './BulkZipCodeUpload';
+import {
+  Plus,
+  Settings,
+  Download,
+  Upload,
   Search,
   Filter,
   MapPin,
@@ -58,6 +59,7 @@ export function BuyerServiceZipManager({
   const [serviceZipData, setServiceZipData] = useState<ServiceZipData[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [showManagementModal, setShowManagementModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterActive, setFilterActive] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -210,6 +212,15 @@ export function BuyerServiceZipManager({
           >
             <Download className="h-4 w-4" />
             <span>Export</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setShowBulkUploadModal(true)}
+            className="flex items-center space-x-2"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Bulk Import (Excel)</span>
           </Button>
 
           <Button
@@ -379,6 +390,17 @@ export function BuyerServiceZipManager({
           buyerName={buyerName}
           services={services}
           onClose={() => setShowManagementModal(false)}
+          onSuccess={handleZipCodeAdded}
+        />
+      )}
+
+      {/* Bulk ZIP Code Upload Modal */}
+      {showBulkUploadModal && (
+        <BulkZipCodeUpload
+          buyerId={buyerId}
+          buyerName={buyerName}
+          services={services}
+          onClose={() => setShowBulkUploadModal(false)}
           onSuccess={handleZipCodeAdded}
         />
       )}
