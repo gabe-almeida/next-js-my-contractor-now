@@ -68,6 +68,7 @@ interface AttributionData {
 interface TransactionItem {
   id: string;
   buyerId: string;
+  buyerName: string | null;
   actionType: 'PING' | 'POST' | 'PING_WEBHOOK' | 'POST_WEBHOOK' | 'STATUS_UPDATE';
   status: string;
   bidAmount: number | null;
@@ -813,9 +814,9 @@ export function LeadDetailModal({
                               <td className="py-2 px-2">
                                 <a
                                   href={`/admin/buyers/${tx.buyerId}`}
-                                  className="text-blue-600 hover:text-blue-800 font-mono text-xs"
+                                  className="text-blue-600 hover:text-blue-800 text-sm"
                                 >
-                                  {tx.buyerId.slice(0, 8)}...
+                                  {tx.buyerName || tx.buyerId.slice(0, 8) + '...'}
                                 </a>
                               </td>
                               <td className="py-2 px-2">

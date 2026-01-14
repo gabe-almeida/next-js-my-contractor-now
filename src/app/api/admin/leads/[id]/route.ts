@@ -56,6 +56,15 @@ async function handleGetLead(
         transactions: {
           orderBy: {
             createdAt: 'desc'
+          },
+          include: {
+            buyer: {
+              select: {
+                id: true,
+                name: true,
+                displayName: true
+              }
+            }
           }
         },
         complianceAudits: {
@@ -138,6 +147,7 @@ async function handleGetLead(
       transactions: lead.transactions.map(tx => ({
         id: tx.id,
         buyerId: tx.buyerId,
+        buyerName: tx.buyer?.displayName || tx.buyer?.name || null,
         actionType: tx.actionType,
         status: tx.status,
         bidAmount: tx.bidAmount,
