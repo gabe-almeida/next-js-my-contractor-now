@@ -1,29 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Services Admin Page
+ *
+ * WHY: Manage service types and their form schemas
+ * WHEN: Admin needs to create/edit/delete services or configure form fields
+ * HOW: Fetches from /api/service-types, displays in modern table view
+ */
+
+import { useState, useEffect, useMemo } from 'react';
 import { ServiceForm } from '@/components/admin/ServiceForm';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import {
+  AdminPageHeader,
+  AdminDataTable,
+  StatusBadge,
+  type TableColumn,
+  type RowAction,
+} from '@/components/admin/ui';
 import { ServiceType } from '@/types';
 import {
   Plus,
   Edit,
   Trash2,
   Eye,
-  ToggleLeft,
-  ToggleRight,
-  Search,
+  RefreshCw,
   AlertCircle,
-  RefreshCw
+  Settings,
+  Layers,
 } from 'lucide-react';
-
-/**
- * Services Admin Page
- *
- * WHY: Manage service types and their form schemas
- * WHEN: Admin needs to create/edit/delete services or configure form fields
- * HOW: Fetches from /api/service-types, saves via POST/PUT
- */
 
 export default function ServicesPage() {
   const [services, setServices] = useState<ServiceType[]>([]);
@@ -31,7 +36,7 @@ export default function ServicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<ServiceType | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
   // Fetch services from API
   const fetchServices = async () => {
@@ -41,8 +46,8 @@ export default function ServicesPage() {
     try {
       const response = await fetch('/api/service-types?includeInactive=true', {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-        }
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
       });
       const result = await response.json();
 
@@ -59,6 +64,7 @@ export default function ServicesPage() {
       }));
 
       setServices(parsedServices);
+      setLastRefresh(new Date());
     } catch (err) {
       console.error('Failed to fetch services:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch services');
@@ -81,14 +87,18 @@ export default function ServicesPage() {
     setShowForm(true);
   };
 
-  const handleDeleteService = async (serviceId: string) => {
-    if (window.confirm('Are you sure you want to delete this service? This cannot be undone.')) {
+  const handleDeleteService = async (service: ServiceType) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${service.name}"? This cannot be undone.`
+      )
+    ) {
       try {
-        const response = await fetch(`/api/service-types/${serviceId}`, {
+        const response = await fetch(`/api/service-types/${service.id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-          }
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+          },
         });
 
         if (!response.ok) {
@@ -96,7 +106,6 @@ export default function ServicesPage() {
           throw new Error(result.message || 'Failed to delete service');
         }
 
-        // Refresh list after delete
         await fetchServices();
       } catch (err) {
         console.error('Failed to delete service:', err);
@@ -105,16 +114,13 @@ export default function ServicesPage() {
     }
   };
 
-  const handleToggleActive = async (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
-    if (!service) return;
-
+  const handleToggleActive = async (service: ServiceType) => {
     try {
-      const response = await fetch(`/api/service-types/${serviceId}`, {
+      const response = await fetch(`/api/service-types/${service.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
         },
         body: JSON.stringify({ active: !service.active }),
       });
@@ -123,7 +129,6 @@ export default function ServicesPage() {
         throw new Error('Failed to update service');
       }
 
-      // Refresh list after toggle
       await fetchServices();
     } catch (err) {
       console.error('Failed to toggle service:', err);
@@ -133,7 +138,6 @@ export default function ServicesPage() {
 
   const handleSubmitForm = async (data: any) => {
     try {
-      // Build the formSchema object from form data
       const formSchema = {
         title: `${data.name} Form`,
         description: data.description,
@@ -143,28 +147,26 @@ export default function ServicesPage() {
 
       const payload = {
         name: data.name,
-        displayName: data.name, // Use name as displayName for now
+        displayName: data.name,
         formSchema,
       };
 
       let response;
       if (editingService) {
-        // Update existing service
         response = await fetch(`/api/service-types/${editingService.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
           },
           body: JSON.stringify(payload),
         });
       } else {
-        // Create new service
         response = await fetch('/api/service-types', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
           },
           body: JSON.stringify(payload),
         });
@@ -176,7 +178,6 @@ export default function ServicesPage() {
         throw new Error(result.message || result.error || 'Failed to save service');
       }
 
-      // Refresh list and close form
       await fetchServices();
       setShowForm(false);
       setEditingService(null);
@@ -186,25 +187,107 @@ export default function ServicesPage() {
     }
   };
 
-  const filteredServices = services.filter(service =>
-    service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Table columns
+  const columns: TableColumn<ServiceType>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Service Name',
+        sortable: true,
+        render: (service) => (
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <Layers className="h-4 w-4 text-orange-600" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">{service.name}</div>
+              <div className="text-xs text-gray-500">{service.displayName || service.name}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'active',
+        header: 'Status',
+        sortable: true,
+        render: (service) => (
+          <StatusBadge status={service.active ? 'ACTIVE' : 'INACTIVE'} />
+        ),
+      },
+      {
+        key: 'formFields',
+        header: 'Form Fields',
+        align: 'center',
+        render: (service) => (
+          <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+            {service.formSchema?.fields?.length || 0}
+          </span>
+        ),
+      },
+      {
+        key: 'createdAt',
+        header: 'Created',
+        sortable: true,
+        render: (service) => (
+          <div>
+            <div className="text-sm text-gray-900">
+              {service.createdAt.toLocaleDateString()}
+            </div>
+            <div className="text-xs text-gray-400">
+              {service.createdAt.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'updatedAt',
+        header: 'Updated',
+        sortable: true,
+        render: (service) => (
+          <span className="text-sm text-gray-500">
+            {service.updatedAt.toLocaleDateString()}
+          </span>
+        ),
+      },
+    ],
+    []
   );
 
+  // Row actions
+  const rowActions: RowAction<ServiceType>[] = useMemo(
+    () => [
+      {
+        key: 'edit',
+        icon: <Edit className="h-4 w-4" />,
+        label: 'Edit',
+        onClick: handleEditService,
+      },
+      {
+        key: 'delete',
+        icon: <Trash2 className="h-4 w-4" />,
+        label: 'Delete',
+        onClick: handleDeleteService,
+        variant: 'danger',
+      },
+    ],
+    []
+  );
+
+  // Show form if creating/editing
   if (showForm) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {editingService ? 'Edit Service' : 'Create New Service'}
-            </h1>
-            <p className="text-gray-500">
-              {editingService ? 'Update service configuration and form fields' : 'Add a new service type with custom form fields'}
-            </p>
-          </div>
-        </div>
-
+        <AdminPageHeader
+          title={editingService ? 'Edit Service' : 'Create New Service'}
+          description={
+            editingService
+              ? 'Update service configuration and form fields'
+              : 'Add a new service type with custom form fields'
+          }
+        />
         <ServiceForm
           service={editingService || undefined}
           onSubmit={handleSubmitForm}
@@ -216,172 +299,81 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Service Management</h1>
-          <p className="text-gray-500">Configure service types and form schemas</p>
-        </div>
-        
-        <Button
-          onClick={handleCreateService}
-          className="flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Service</span>
-        </Button>
-      </div>
+      {/* Page Header */}
+      <AdminPageHeader
+        title="Service Management"
+        description="Configure service types and form schemas"
+        lastUpdated={lastRefresh}
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={fetchServices}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={handleCreateService} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Service
+            </Button>
+          </div>
+        }
+      />
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertCircle className="h-5 w-5" />
-            <span>{error}</span>
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center gap-4">
+          <div className="p-2 bg-red-100 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">Error</p>
+            <p className="text-sm text-red-600">{error}</p>
           </div>
           <Button
-            variant="ghost"
-            size="sm"
+            variant="outline"
             onClick={() => setError(null)}
-            className="text-red-700 hover:text-red-800"
+            className="shrink-0 text-red-700 border-red-200 hover:bg-red-100"
           >
             Dismiss
           </Button>
         </div>
       )}
 
-      {/* Search and Refresh */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search services..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <Button
-          variant="outline"
-          onClick={fetchServices}
-          disabled={loading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Services Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredServices.map((service) => (
-            <Card key={service.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="flex items-center space-x-2">
-                      <span>{service.name}</span>
-                      {service.active ? (
-                        <span className="status-indicator status-success">Active</span>
-                      ) : (
-                        <span className="status-indicator status-pending">Inactive</span>
-                      )}
-                    </CardTitle>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {service.description}
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="text-sm text-gray-600">
-                    <strong>Form Fields:</strong> {service.formSchema.fields.length}
-                  </div>
-                  
-                  <div className="text-sm text-gray-600">
-                    <strong>Created:</strong> {service.createdAt.toLocaleDateString()}
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditService(service)}
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteService(service.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleActive(service.id)}
-                      className="flex items-center"
-                    >
-                      {service.active ? (
-                        <ToggleRight className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <ToggleLeft className="h-4 w-4 text-gray-400" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {filteredServices.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <div className="text-gray-500">
-            {searchQuery ? 'No services match your search.' : 'No services configured yet.'}
-          </div>
-          {!searchQuery && (
-            <Button
-              onClick={handleCreateService}
-              className="mt-4"
-              variant="outline"
-            >
-              Create your first service
-            </Button>
-          )}
-        </div>
-      )}
+      {/* Services Table */}
+      <AdminDataTable<ServiceType>
+        data={services}
+        loading={loading}
+        keyField="id"
+        columns={columns}
+        title="Services"
+        searchPlaceholder="Search services..."
+        searchFields={['name', 'displayName']}
+        filters={[
+          {
+            key: 'active',
+            label: 'All Status',
+            options: [
+              { value: 'true', label: 'Active' },
+              { value: 'false', label: 'Inactive' },
+            ],
+          },
+        ]}
+        defaultSortField="name"
+        defaultSortDirection="asc"
+        rowActions={rowActions}
+        onToggleActive={handleToggleActive}
+        activeField="active"
+        emptyMessage="No services configured yet."
+        emptyAction={
+          <Button onClick={handleCreateService} variant="outline" className="mt-2">
+            Create your first service
+          </Button>
+        }
+      />
     </div>
   );
 }

@@ -41,6 +41,7 @@ export const AdminBadge = memo(function AdminBadge({
 
 // Status badge with automatic color mapping
 const statusColorMap: Record<string, AdminBadgeProps['color']> = {
+  // Lead statuses
   PENDING: 'yellow',
   PROCESSING: 'blue',
   AUCTIONED: 'blue',
@@ -53,6 +54,15 @@ const statusColorMap: Record<string, AdminBadgeProps['color']> = {
   DELIVERY_FAILED: 'red',
   SCRUBBED: 'red',
   DUPLICATE: 'orange',
+  // Generic active/inactive
+  ACTIVE: 'green',
+  INACTIVE: 'gray',
+  // Affiliate statuses
+  SUSPENDED: 'red',
+  // Transaction statuses
+  SUCCESS: 'green',
+  TIMEOUT: 'orange',
+  INFO: 'blue',
 };
 
 interface StatusBadgeProps {

@@ -1,61 +1,70 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Transactions Admin Page
+ *
+ * WHY: Monitor all buyer API transactions and responses
+ * WHEN: Admin needs to view transaction logs and debug issues
+ * HOW: Fetches from /api/admin/transactions, displays with real-time updates
+ */
+
+import { useState, useEffect, useMemo } from 'react';
 import { Transaction } from '@/types';
 import { TransactionActionType, TransactionStatus } from '@/types/database';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { 
-  Search, 
-  Filter, 
-  Download,
+import {
+  AdminPageHeader,
+  AdminCard,
+  AdminDataTable,
+  StatusBadge,
+  type TableColumn,
+  type RowAction,
+} from '@/components/admin/ui';
+import {
   Eye,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight
+  ArrowUpDown,
+  Zap,
+  Activity,
 } from 'lucide-react';
 import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'ALL'>('ALL');
-  const [actionFilter, setActionFilter] = useState<'ALL' | 'PING' | 'POST'>('ALL');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const itemsPerPage = 20;
 
   // Real-time updates
   const { updates, isConnected } = useRealTimeUpdates({ enabled: true });
 
   // Fetch real transactions from API
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true);
+  const fetchTransactions = async () => {
+    setLoading(true);
 
-      try {
-        const params = new URLSearchParams({
-          limit: '200', // Fetch more for better filtering
-          page: '1'
-        });
+    try {
+      const params = new URLSearchParams({
+        limit: '200',
+        page: '1',
+      });
 
-        const response = await fetch(`/api/admin/transactions?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-          }
-        });
+      const response = await fetch(`/api/admin/transactions?${params}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch transactions');
-        }
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
 
-        const data = await response.json();
-        const fetchedTransactions: Transaction[] = (data.data?.transactions || []).map((tx: any) => ({
+      const data = await response.json();
+      const fetchedTransactions: Transaction[] = (data.data?.transactions || []).map(
+        (tx: any) => ({
           id: tx.id,
           leadId: tx.leadId,
           buyerId: tx.buyerId,
@@ -64,441 +73,401 @@ export default function TransactionsPage() {
           actionType: tx.actionType as TransactionActionType,
           payload: {
             zipCode: tx.leadZipCode,
-            serviceType: tx.serviceDisplayName || tx.serviceType
+            serviceType: tx.serviceDisplayName || tx.serviceType,
           },
-          response: tx.status === 'SUCCESS' ? {
-            success: true,
-            bidAmount: tx.bidAmount,
-            message: 'Lead processed successfully'
-          } : tx.status === 'FAILED' ? {
-            success: false,
-            error: tx.errorMessage || 'Transaction failed',
-            code: 'ERROR'
-          } : undefined,
+          response:
+            tx.status === 'SUCCESS'
+              ? {
+                  success: true,
+                  bidAmount: tx.bidAmount,
+                  message: 'Lead processed successfully',
+                }
+              : tx.status === 'FAILED'
+              ? {
+                  success: false,
+                  error: tx.errorMessage || 'Transaction failed',
+                  code: 'ERROR',
+                }
+              : undefined,
           status: tx.status as TransactionStatus,
           responseTime: tx.responseTime || 0,
           errorMessage: tx.errorMessage,
           complianceIncluded: tx.complianceIncluded,
           trustedFormPresent: tx.trustedFormPresent,
           jornayaPresent: tx.jornayaPresent,
-          createdAt: new Date(tx.createdAt)
-        }));
+          createdAt: new Date(tx.createdAt),
+        })
+      );
 
-        setTransactions(fetchedTransactions);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
-
-  // Filter transactions
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = searchQuery === '' || 
-      transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.leadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.buyerId.toLowerCase().includes(searchQuery.toLowerCase());
-      
-    const matchesStatus = statusFilter === 'ALL' || transaction.status === statusFilter;
-    const matchesAction = actionFilter === 'ALL' || transaction.actionType === actionFilter;
-    
-    return matchesSearch && matchesStatus && matchesAction;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
-
-  const getStatusIcon = (status: TransactionStatus) => {
-    switch (status) {
-      case 'SUCCESS':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'FAILED':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'PENDING':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'TIMEOUT':
-        return <AlertCircle className="h-4 w-4 text-orange-500" />;
-      case 'INFO':
-        return <AlertCircle className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+      setTransactions(fetchedTransactions);
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusBadge = (status: TransactionStatus) => {
-    const styles: Record<TransactionStatus, string> = {
-      [TransactionStatus.SUCCESS]: 'status-indicator status-success',
-      [TransactionStatus.FAILED]: 'status-indicator status-failed',
-      [TransactionStatus.PENDING]: 'status-indicator status-pending',
-      [TransactionStatus.TIMEOUT]: 'status-indicator status-failed',
-      [TransactionStatus.INFO]: 'status-indicator status-info'
-    };
-
-    return <span className={styles[status]}>{status}</span>;
-  };
-
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
   const handleViewDetails = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
   };
 
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
-  };
-
   const handleExport = () => {
-    console.log('Exporting transactions...');
+    const headers = [
+      'ID',
+      'Timestamp',
+      'Action',
+      'Buyer',
+      'Lead ID',
+      'Status',
+      'Response Time',
+    ];
+    const rows = transactions.map((tx) => [
+      tx.id,
+      tx.createdAt.toISOString(),
+      tx.actionType,
+      tx.buyerDisplayName || tx.buyerName || tx.buyerId,
+      tx.leadId,
+      tx.status,
+      `${tx.responseTime}ms`,
+    ]);
+
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Calculate summary stats
-  const totalTransactions = filteredTransactions.length;
-  const successfulTransactions = filteredTransactions.filter(t => t.status === TransactionStatus.SUCCESS).length;
-  const failedTransactions = filteredTransactions.filter(t => t.status === TransactionStatus.FAILED).length;
-  const avgResponseTime = filteredTransactions.reduce((sum, t) => sum + (t.responseTime ?? 0), 0) / totalTransactions || 0;
+  const stats = useMemo(() => {
+    const total = transactions.length;
+    const successful = transactions.filter(
+      (t) => t.status === TransactionStatus.SUCCESS
+    ).length;
+    const failed = transactions.filter(
+      (t) => t.status === TransactionStatus.FAILED
+    ).length;
+    const avgResponseTime =
+      transactions.reduce((sum, t) => sum + (t.responseTime ?? 0), 0) / total || 0;
+
+    return {
+      total,
+      successful,
+      failed,
+      avgResponseTime: Math.round(avgResponseTime),
+    };
+  }, [transactions]);
+
+  // Table columns
+  const columns: TableColumn<Transaction>[] = useMemo(
+    () => [
+      {
+        key: 'createdAt',
+        header: 'Timestamp',
+        sortable: true,
+        render: (tx) => (
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              {tx.createdAt.toLocaleDateString()}
+            </div>
+            <div className="text-xs text-gray-400">
+              {tx.createdAt.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              })}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'actionType',
+        header: 'Action',
+        sortable: true,
+        render: (tx) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+              tx.actionType === 'PING'
+                ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20'
+                : 'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20'
+            }`}
+          >
+            {tx.actionType}
+          </span>
+        ),
+      },
+      {
+        key: 'buyerId',
+        header: 'Buyer',
+        sortable: true,
+        render: (tx) => (
+          <span className="text-sm font-medium text-gray-900">
+            {tx.buyerDisplayName || tx.buyerName || tx.buyerId}
+          </span>
+        ),
+      },
+      {
+        key: 'leadId',
+        header: 'Lead ID',
+        render: (tx) => (
+          <span className="text-xs font-mono text-gray-600" title={tx.leadId}>
+            {tx.leadId.substring(0, 8)}...
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        sortable: true,
+        render: (tx) => <StatusBadge status={tx.status} />,
+      },
+      {
+        key: 'responseTime',
+        header: 'Response',
+        sortable: true,
+        align: 'right',
+        render: (tx) => {
+          const time = tx.responseTime ?? 0;
+          const color =
+            time < 1000
+              ? 'text-emerald-600'
+              : time < 3000
+              ? 'text-amber-600'
+              : 'text-red-600';
+          return <span className={`text-sm font-semibold ${color}`}>{time}ms</span>;
+        },
+      },
+    ],
+    []
+  );
+
+  // Row actions
+  const rowActions: RowAction<Transaction>[] = useMemo(
+    () => [
+      {
+        key: 'view',
+        icon: <Eye className="h-4 w-4" />,
+        label: 'View Details',
+        onClick: handleViewDetails,
+      },
+    ],
+    []
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Transaction Log</h1>
-          <p className="text-gray-500">Monitor all buyer API transactions and responses</p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-xs text-gray-500">
-              {isConnected ? 'Live' : 'Disconnected'}
-            </span>
+      {/* Page Header */}
+      <AdminPageHeader
+        title="Transaction Log"
+        description="Monitor all buyer API transactions and responses"
+        lastUpdated={lastRefresh}
+        actions={
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                }`}
+              ></div>
+              <span className="text-xs text-gray-600">
+                {isConnected ? 'Live' : 'Disconnected'}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              onClick={fetchTransactions}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={loading}
-            className="flex items-center space-x-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            className="flex items-center space-x-2"
-          >
-            <Download className="h-4 w-4" />
-            <span>Export</span>
-          </Button>
-        </div>
+        }
+      />
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <AdminCard
+          title="Total Transactions"
+          value={stats.total}
+          icon={ArrowUpDown}
+          accent="gray"
+        />
+        <AdminCard
+          title="Successful"
+          value={stats.successful}
+          icon={CheckCircle}
+          accent="green"
+        />
+        <AdminCard
+          title="Failed"
+          value={stats.failed}
+          icon={XCircle}
+          accent="red"
+        />
+        <AdminCard
+          title="Avg Response"
+          value={`${stats.avgResponseTime}ms`}
+          icon={Zap}
+          accent="orange"
+        />
       </div>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Total Transactions</p>
-                <p className="text-2xl font-bold text-gray-900">{totalTransactions}</p>
-              </div>
-              <Filter className="h-8 w-8 text-gray-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Successful</p>
-                <p className="text-2xl font-bold text-green-600">{successfulTransactions}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Failed</p>
-                <p className="text-2xl font-bold text-red-600">{failedTransactions}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Avg Response</p>
-                <p className="text-2xl font-bold text-blue-600">{Math.round(avgResponseTime)}ms</p>
-              </div>
-              <Clock className="h-8 w-8 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by transaction ID, lead ID, or buyer..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <div className="flex space-x-3">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as TransactionStatus | 'ALL')}
-                className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="ALL">All Status</option>
-                <option value="SUCCESS">Success</option>
-                <option value="FAILED">Failed</option>
-                <option value="PENDING">Pending</option>
-                <option value="TIMEOUT">Timeout</option>
-                <option value="INFO">Info</option>
-              </select>
-              
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value as 'ALL' | 'PING' | 'POST')}
-                className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="ALL">All Actions</option>
-                <option value="PING">PING</option>
-                <option value="POST">POST</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Transactions Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Transaction ID</th>
-                  <th>Timestamp</th>
-                  <th>Action</th>
-                  <th>Buyer</th>
-                  <th>Lead ID</th>
-                  <th>Status</th>
-                  <th>Response Time</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array.from({ length: 10 }).map((_, i) => (
-                    <tr key={i}>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                    </tr>
-                  ))
-                ) : (
-                  paginatedTransactions.map((transaction) => (
-                    <tr key={transaction.id}>
-                      <td className="font-mono text-sm">
-                        {transaction.id}
-                      </td>
-                      <td>
-                        {transaction.createdAt.toLocaleDateString()}
-                        <div className="text-xs text-gray-500">
-                          {transaction.createdAt.toLocaleTimeString()}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          transaction.actionType === 'PING' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {transaction.actionType}
-                        </span>
-                      </td>
-                      <td>{transaction.buyerDisplayName || transaction.buyerName || transaction.buyerId}</td>
-                      <td className="font-mono text-sm text-gray-600">
-                        {transaction.leadId}
-                      </td>
-                      <td>
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(transaction.status)}
-                          {getStatusBadge(transaction.status)}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`font-medium ${
-                          (transaction.responseTime ?? 0) < 1000 ? 'text-green-600' :
-                          (transaction.responseTime ?? 0) < 3000 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {transaction.responseTime ?? 0}ms
-                        </span>
-                      </td>
-                      <td>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(transaction)}
-                          className="flex items-center space-x-1"
-                        >
-                          <Eye className="h-3 w-3" />
-                          <span>View</span>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} results
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <span className="text-sm text-gray-700">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <AdminDataTable<Transaction>
+        data={transactions}
+        loading={loading}
+        keyField="id"
+        columns={columns}
+        title="Transactions"
+        searchPlaceholder="Search by ID, lead ID, or buyer..."
+        searchFields={['id', 'leadId', 'buyerId', 'buyerName', 'buyerDisplayName']}
+        filters={[
+          {
+            key: 'status',
+            label: 'All Status',
+            options: [
+              { value: 'SUCCESS', label: 'Success' },
+              { value: 'FAILED', label: 'Failed' },
+              { value: 'PENDING', label: 'Pending' },
+              { value: 'TIMEOUT', label: 'Timeout' },
+              { value: 'INFO', label: 'Info' },
+            ],
+          },
+          {
+            key: 'actionType',
+            label: 'All Actions',
+            options: [
+              { value: 'PING', label: 'Ping' },
+              { value: 'POST', label: 'Post' },
+            ],
+          },
+        ]}
+        defaultSortField="createdAt"
+        defaultSortDirection="desc"
+        itemsPerPage={20}
+        rowActions={rowActions}
+        onExport={handleExport}
+        emptyMessage="No transactions found."
+      />
 
       {/* Transaction Details Modal */}
       {selectedTransaction && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Transaction Details</h3>
-                <Button
-                  variant="ghost"
-                  onClick={() => setSelectedTransaction(null)}
-                >
-                  ×
-                </Button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Transaction Details
+                </h3>
+                <p className="text-sm text-gray-500 font-mono mt-1">
+                  {selectedTransaction.id}
+                </p>
               </div>
+              <Button variant="ghost" onClick={() => setSelectedTransaction(null)}>
+                <XCircle className="h-5 w-5" />
+              </Button>
             </div>
-            
+
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-900">Basic Information</h4>
-                  <dl className="mt-2 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="text-gray-500">Transaction ID:</dt>
-                      <dd className="font-mono">{selectedTransaction.id}</dd>
-                    </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Basic Information</h4>
+                  <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Lead ID:</dt>
-                      <dd className="font-mono">{selectedTransaction.leadId}</dd>
+                      <dd className="font-mono text-gray-900">
+                        {selectedTransaction.leadId}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Buyer:</dt>
-                      <dd>{selectedTransaction.buyerDisplayName || selectedTransaction.buyerName || selectedTransaction.buyerId}</dd>
+                      <dd className="text-gray-900">
+                        {selectedTransaction.buyerDisplayName ||
+                          selectedTransaction.buyerName ||
+                          selectedTransaction.buyerId}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Action:</dt>
-                      <dd>{selectedTransaction.actionType}</dd>
+                      <dd>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            selectedTransaction.actionType === 'PING'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {selectedTransaction.actionType}
+                        </span>
+                      </dd>
                     </div>
                   </dl>
                 </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900">Performance</h4>
-                  <dl className="mt-2 space-y-1 text-sm">
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Performance</h4>
+                  <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Status:</dt>
-                      <dd>{getStatusBadge(selectedTransaction.status)}</dd>
+                      <dd>
+                        <StatusBadge status={selectedTransaction.status} />
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Response Time:</dt>
-                      <dd>{selectedTransaction.responseTime}ms</dd>
+                      <dd
+                        className={`font-semibold ${
+                          (selectedTransaction.responseTime ?? 0) < 1000
+                            ? 'text-emerald-600'
+                            : (selectedTransaction.responseTime ?? 0) < 3000
+                            ? 'text-amber-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {selectedTransaction.responseTime}ms
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Timestamp:</dt>
-                      <dd>{selectedTransaction.createdAt.toLocaleString()}</dd>
+                      <dd className="text-gray-900">
+                        {selectedTransaction.createdAt.toLocaleString()}
+                      </dd>
                     </div>
                   </dl>
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Request Payload</h4>
-                <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
                   {JSON.stringify(selectedTransaction.payload, null, 2)}
                 </pre>
               </div>
-              
+
               {selectedTransaction.response && (
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Response Data</h4>
-                  <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
                     {JSON.stringify(selectedTransaction.response, null, 2)}
                   </pre>
                 </div>
               )}
-              
+
               {selectedTransaction.errorMessage && (
                 <div>
                   <h4 className="font-medium text-red-900 mb-2">Error Details</h4>
-                  <div className="bg-red-50 border border-red-200 p-4 rounded text-sm text-red-700">
+                  <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-sm text-red-700">
                     {selectedTransaction.errorMessage}
                   </div>
                 </div>

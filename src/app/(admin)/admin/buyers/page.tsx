@@ -1,111 +1,135 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Buyers Admin Page
+ *
+ * WHY: Manage lead buyers and their service configurations
+ * WHEN: Admin needs to create/edit/delete buyers or configure bid settings
+ * HOW: Fetches from /api/admin/buyers, displays in modern table view
+ */
+
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { BuyerForm } from '@/components/admin/BuyerForm';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import {
+  AdminPageHeader,
+  AdminDataTable,
+  StatusBadge,
+  type TableColumn,
+  type RowAction,
+} from '@/components/admin/ui';
 import { Buyer, BuyerServiceConfig, ServiceType } from '@/types';
 import { BuyerType } from '@/types/database';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  ToggleLeft, 
-  ToggleRight,
-  Search,
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  RefreshCw,
+  AlertCircle,
+  Building2,
   Globe,
-  Clock,
+  MapPin,
   DollarSign,
-  MapPin
+  Settings,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+
+// Extended buyer type with additional API fields
+interface ExtendedBuyer extends Buyer {
+  contactName?: string;
+  contactEmail?: string;
+  serviceConfigCount?: number;
+  zipCodeCount?: number;
+}
 
 export default function BuyersPage() {
   const router = useRouter();
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [buyers, setBuyers] = useState<ExtendedBuyer[]>([]);
   const [buyerConfigs, setBuyerConfigs] = useState<BuyerServiceConfig[]>([]);
   const [services, setServices] = useState<ServiceType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
   // Fetch buyers and services from API
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        // Fetch buyers and services in parallel
-        const [buyersResponse, servicesResponse] = await Promise.all([
-          fetch('/api/admin/buyers?includeInactive=true', {
-            headers: {
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-            }
-          }),
-          fetch('/api/admin/services', {
-            headers: {
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-            }
-          })
-        ]);
+    try {
+      const [buyersResponse, servicesResponse] = await Promise.all([
+        fetch('/api/admin/buyers?includeInactive=true', {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+          },
+        }),
+        fetch('/api/admin/services', {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+          },
+        }),
+      ]);
 
-        if (!buyersResponse.ok) {
-          throw new Error('Failed to fetch buyers');
-        }
+      if (!buyersResponse.ok) {
+        throw new Error('Failed to fetch buyers');
+      }
 
-        const buyersData = await buyersResponse.json();
+      const buyersData = await buyersResponse.json();
 
-        // Transform API response to match Buyer type
-        const fetchedBuyers: Buyer[] = (buyersData.data?.buyers || []).map((b: any) => ({
+      const fetchedBuyers: ExtendedBuyer[] = (buyersData.data?.buyers || []).map(
+        (b: any) => ({
           id: b.id,
           name: b.name,
           displayName: b.displayName,
           type: b.type as BuyerType,
           apiUrl: b.apiUrl,
-          authConfig: null, // Auth config is not returned for security
+          authConfig: null,
           pingTimeout: 5000,
           postTimeout: 10000,
           active: b.active,
           createdAt: new Date(b.createdAt),
           updatedAt: new Date(b.updatedAt),
-          // Include additional fields from API
           contactName: b.contactName,
           contactEmail: b.contactEmail,
           serviceConfigCount: b.serviceConfigCount || 0,
-          zipCodeCount: b.zipCodeCount || 0
+          zipCodeCount: b.zipCodeCount || 0,
+        })
+      );
+
+      setBuyers(fetchedBuyers);
+
+      if (servicesResponse.ok) {
+        const servicesData = await servicesResponse.json();
+        const fetchedServices: ServiceType[] = (
+          servicesData.data?.services || []
+        ).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          displayName: s.displayName,
+          formSchema: s.formSchema || { title: '', fields: [], validationRules: [] },
+          active: s.active,
+          createdAt: new Date(s.createdAt),
+          updatedAt: new Date(s.updatedAt),
         }));
-
-        setBuyers(fetchedBuyers);
-
-        // Fetch services if response is ok
-        if (servicesResponse.ok) {
-          const servicesData = await servicesResponse.json();
-          const fetchedServices: ServiceType[] = (servicesData.data?.services || []).map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            displayName: s.displayName,
-            formSchema: s.formSchema || { title: '', fields: [], validationRules: [] },
-            active: s.active,
-            createdAt: new Date(s.createdAt),
-            updatedAt: new Date(s.updatedAt)
-          }));
-          setServices(fetchedServices);
-        }
-
-        // Note: buyerConfigs will be fetched when editing a specific buyer
-        setBuyerConfigs([]);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        // Keep empty arrays on error
-        setBuyers([]);
-        setServices([]);
-      } finally {
-        setLoading(false);
+        setServices(fetchedServices);
       }
-    };
 
+      setBuyerConfigs([]);
+      setLastRefresh(new Date());
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      setBuyers([]);
+      setServices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -114,57 +138,69 @@ export default function BuyersPage() {
     setShowForm(true);
   };
 
-  const handleEditBuyer = async (buyer: Buyer) => {
-    // Fetch buyer details with service configs
+  const handleEditBuyer = async (buyer: ExtendedBuyer) => {
     try {
       const response = await fetch(`/api/admin/buyers/${buyer.id}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-        }
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data.serviceConfigs) {
-          // Transform service configs to match BuyerServiceConfig type
-          const configs: BuyerServiceConfig[] = result.data.serviceConfigs.map((config: any) => ({
-            id: config.id,
-            buyerId: buyer.id,
-            serviceTypeId: config.serviceTypeId,
-            pingTemplate: null,
-            postTemplate: null,
-            fieldMappings: null,
-            requiresTrustedForm: config.requiresTrustedForm,
-            requiresJornaya: config.requiresJornaya,
-            minBid: config.minBid,
-            maxBid: config.maxBid,
-            active: config.active,
-            priority: 1,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }));
+          const configs: BuyerServiceConfig[] = result.data.serviceConfigs.map(
+            (config: any) => ({
+              id: config.id,
+              buyerId: buyer.id,
+              serviceTypeId: config.serviceTypeId,
+              pingTemplate: null,
+              postTemplate: null,
+              fieldMappings: null,
+              requiresTrustedForm: config.requiresTrustedForm,
+              requiresJornaya: config.requiresJornaya,
+              minBid: config.minBid,
+              maxBid: config.maxBid,
+              active: config.active,
+              priority: 1,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+          );
           setBuyerConfigs(configs);
         }
       }
-    } catch (error) {
-      console.error('Error fetching buyer configs:', error);
+    } catch (err) {
+      console.error('Error fetching buyer configs:', err);
     }
 
     setEditingBuyer(buyer);
     setShowForm(true);
   };
 
-  const handleDeleteBuyer = async (buyerId: string) => {
-    if (!window.confirm('Are you sure you want to delete this buyer? This will also remove all associated service configurations.')) {
+  const handleViewBuyer = (buyer: ExtendedBuyer) => {
+    router.push(`/admin/buyers/${buyer.id}`);
+  };
+
+  const handleManageZipCodes = (buyer: ExtendedBuyer) => {
+    router.push(`/admin/buyers/${buyer.id}/zip-codes`);
+  };
+
+  const handleDeleteBuyer = async (buyer: ExtendedBuyer) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${buyer.name}"? This will also remove all associated service configurations.`
+      )
+    ) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/admin/buyers/${buyerId}`, {
+      const response = await fetch(`/api/admin/buyers/${buyer.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-        }
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
       });
 
       if (!response.ok) {
@@ -172,34 +208,30 @@ export default function BuyersPage() {
         throw new Error(result.error?.message || 'Failed to delete buyer');
       }
 
-      // Remove from local state on success
-      setBuyers(prev => prev.filter(b => b.id !== buyerId));
-      setBuyerConfigs(prev => prev.filter(c => c.buyerId !== buyerId));
-    } catch (error) {
-      console.error('Error deleting buyer:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete buyer. Please try again.');
+      setBuyers((prev) => prev.filter((b) => b.id !== buyer.id));
+      setBuyerConfigs((prev) => prev.filter((c) => c.buyerId !== buyer.id));
+    } catch (err) {
+      console.error('Error deleting buyer:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete buyer');
     }
   };
 
-  const handleToggleActive = async (buyerId: string) => {
-    const buyer = buyers.find(b => b.id === buyerId);
-    if (!buyer) return;
-
+  const handleToggleActive = async (buyer: ExtendedBuyer) => {
     const newActiveState = !buyer.active;
 
-    // Optimistically update UI
-    setBuyers(prev => prev.map(b =>
-      b.id === buyerId ? { ...b, active: newActiveState } : b
-    ));
+    // Optimistic update
+    setBuyers((prev) =>
+      prev.map((b) => (b.id === buyer.id ? { ...b, active: newActiveState } : b))
+    );
 
     try {
-      const response = await fetch(`/api/admin/buyers/${buyerId}`, {
+      const response = await fetch(`/api/admin/buyers/${buyer.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
         },
-        body: JSON.stringify({ active: newActiveState })
+        body: JSON.stringify({ active: newActiveState }),
       });
 
       if (!response.ok) {
@@ -210,19 +242,18 @@ export default function BuyersPage() {
       if (!result.success) {
         throw new Error(result.error?.message || 'Update failed');
       }
-    } catch (error) {
+    } catch (err) {
       // Revert on error
-      console.error('Error toggling buyer active status:', error);
-      setBuyers(prev => prev.map(b =>
-        b.id === buyerId ? { ...b, active: !newActiveState } : b
-      ));
-      alert('Failed to update buyer status. Please try again.');
+      console.error('Error toggling buyer active status:', err);
+      setBuyers((prev) =>
+        prev.map((b) => (b.id === buyer.id ? { ...b, active: !newActiveState } : b))
+      );
+      setError(err instanceof Error ? err.message : 'Failed to update buyer');
     }
   };
 
   const handleSubmitForm = async (data: any) => {
     try {
-      // Transform form data to match API expectations
       const apiData = {
         name: data.name,
         displayName: data.displayName,
@@ -230,30 +261,33 @@ export default function BuyersPage() {
         authConfig: {
           type: data.authConfig.type,
           credentials: {
-            ...(data.authConfig.type === 'bearer' && { bearerToken: data.authConfig.token }),
+            ...(data.authConfig.type === 'bearer' && {
+              bearerToken: data.authConfig.token,
+            }),
             ...(data.authConfig.type === 'basic' && {
               username: data.authConfig.username,
-              password: data.authConfig.password
+              password: data.authConfig.password,
             }),
-            ...(data.authConfig.type === 'custom' && { customHeaders: data.authConfig.headers })
-          }
+            ...(data.authConfig.type === 'custom' && {
+              customHeaders: data.authConfig.headers,
+            }),
+          },
         },
         active: data.active,
         pingTimeout: data.pingTimeout,
         postTimeout: data.postTimeout,
         complianceFieldMappings: data.complianceFieldMappings,
-        responseMappingConfig: data.responseMappingConfig
+        responseMappingConfig: data.responseMappingConfig,
       };
 
       if (editingBuyer) {
-        // Update existing buyer
         const response = await fetch(`/api/admin/buyers/${editingBuyer.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
           },
-          body: JSON.stringify(apiData)
+          body: JSON.stringify(apiData),
         });
 
         if (!response.ok) {
@@ -266,26 +300,26 @@ export default function BuyersPage() {
           throw new Error(result.error?.message || 'Update failed');
         }
 
-        // Update local state with response data
-        setBuyers(prev => prev.map(b =>
-          b.id === editingBuyer.id
-            ? {
-                ...b,
-                ...result.data,
-                createdAt: new Date(result.data.createdAt),
-                updatedAt: new Date(result.data.updatedAt)
-              }
-            : b
-        ));
+        setBuyers((prev) =>
+          prev.map((b) =>
+            b.id === editingBuyer.id
+              ? {
+                  ...b,
+                  ...result.data,
+                  createdAt: new Date(result.data.createdAt),
+                  updatedAt: new Date(result.data.updatedAt),
+                }
+              : b
+          )
+        );
       } else {
-        // Create new buyer
         const response = await fetch('/api/admin/buyers', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
           },
-          body: JSON.stringify(apiData)
+          body: JSON.stringify(apiData),
         });
 
         if (!response.ok) {
@@ -298,8 +332,7 @@ export default function BuyersPage() {
           throw new Error(result.error?.message || 'Creation failed');
         }
 
-        // Add new buyer to local state
-        const newBuyer: Buyer = {
+        const newBuyer: ExtendedBuyer = {
           id: result.data.id,
           name: result.data.name,
           displayName: result.data.displayName,
@@ -310,52 +343,168 @@ export default function BuyersPage() {
           postTimeout: result.data.postTimeout || 10000,
           active: result.data.active,
           createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt)
+          updatedAt: new Date(result.data.updatedAt),
+          serviceConfigCount: 0,
+          zipCodeCount: 0,
         };
-        setBuyers(prev => [newBuyer, ...prev]);
+        setBuyers((prev) => [newBuyer, ...prev]);
 
-        // Show webhook secret if returned (only on creation)
         if (result.data.webhookSecret) {
-          alert(`Buyer created successfully!\n\nWebhook Secret (save this - it won't be shown again):\n${result.data.webhookSecret}`);
+          alert(
+            `Buyer created successfully!\n\nWebhook Secret (save this - it won't be shown again):\n${result.data.webhookSecret}`
+          );
         }
       }
 
       setShowForm(false);
       setEditingBuyer(null);
-    } catch (error) {
-      console.error('Error saving buyer:', error);
-      alert(error instanceof Error ? error.message : 'Failed to save buyer. Please try again.');
+    } catch (err) {
+      console.error('Error saving buyer:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save buyer');
     }
   };
 
   const getBuyerConfigs = (buyerId: string) => {
-    return buyerConfigs.filter(config => config.buyerId === buyerId);
+    return buyerConfigs.filter((config) => config.buyerId === buyerId);
   };
 
-  const filteredBuyers = buyers.filter(buyer => {
-    const query = searchQuery.toLowerCase();
-    return (
-      buyer.name.toLowerCase().includes(query) ||
-      (buyer.displayName?.toLowerCase().includes(query)) ||
-      (buyer.contactName?.toLowerCase().includes(query)) ||
-      (buyer.contactEmail?.toLowerCase().includes(query))
-    );
-  });
+  // Table columns
+  const columns: TableColumn<ExtendedBuyer>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Buyer',
+        sortable: true,
+        render: (buyer) => (
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <Building2 className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">{buyer.name}</div>
+              <div className="text-xs text-gray-500">
+                {buyer.displayName || buyer.name}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'type',
+        header: 'Type',
+        sortable: true,
+        render: (buyer) => (
+          <span
+            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+              buyer.type === 'CONTRACTOR'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-blue-100 text-blue-700'
+            }`}
+          >
+            {buyer.type}
+          </span>
+        ),
+      },
+      {
+        key: 'active',
+        header: 'Status',
+        sortable: true,
+        render: (buyer) => (
+          <StatusBadge status={buyer.active ? 'ACTIVE' : 'INACTIVE'} />
+        ),
+      },
+      {
+        key: 'serviceConfigCount',
+        header: 'Services',
+        align: 'center',
+        sortable: true,
+        render: (buyer) => (
+          <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700">
+            {buyer.serviceConfigCount || 0}
+          </span>
+        ),
+      },
+      {
+        key: 'zipCodeCount',
+        header: 'Zip Codes',
+        align: 'center',
+        sortable: true,
+        render: (buyer) => (
+          <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-700">
+            {buyer.zipCodeCount || 0}
+          </span>
+        ),
+      },
+      {
+        key: 'apiUrl',
+        header: 'API Endpoint',
+        render: (buyer) => (
+          <div className="flex items-center gap-2 max-w-[200px]">
+            <Globe className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+            <span className="text-xs text-gray-500 truncate" title={buyer.apiUrl}>
+              {buyer.apiUrl}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: 'createdAt',
+        header: 'Created',
+        sortable: true,
+        render: (buyer) => (
+          <span className="text-sm text-gray-500">
+            {buyer.createdAt.toLocaleDateString()}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
+  // Row actions
+  const rowActions: RowAction<ExtendedBuyer>[] = useMemo(
+    () => [
+      {
+        key: 'view',
+        icon: <Eye className="h-4 w-4" />,
+        label: 'View Details',
+        onClick: handleViewBuyer,
+      },
+      {
+        key: 'edit',
+        icon: <Edit className="h-4 w-4" />,
+        label: 'Edit',
+        onClick: handleEditBuyer,
+      },
+      {
+        key: 'zipcodes',
+        icon: <MapPin className="h-4 w-4" />,
+        label: 'Manage Zip Codes',
+        onClick: handleManageZipCodes,
+      },
+      {
+        key: 'delete',
+        icon: <Trash2 className="h-4 w-4" />,
+        label: 'Delete',
+        onClick: handleDeleteBuyer,
+        variant: 'danger',
+      },
+    ],
+    []
+  );
+
+  // Show form if creating/editing
   if (showForm) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {editingBuyer ? 'Edit Buyer' : 'Create New Buyer'}
-            </h1>
-            <p className="text-gray-500">
-              {editingBuyer ? 'Update buyer configuration and service mappings' : 'Add a new lead buyer with service configurations'}
-            </p>
-          </div>
-        </div>
-
+        <AdminPageHeader
+          title={editingBuyer ? 'Edit Buyer' : 'Create New Buyer'}
+          description={
+            editingBuyer
+              ? 'Update buyer configuration and service mappings'
+              : 'Add a new lead buyer with service configurations'
+          }
+        />
         <BuyerForm
           buyer={editingBuyer || undefined}
           buyerConfigs={editingBuyer ? getBuyerConfigs(editingBuyer.id) : []}
@@ -369,204 +518,90 @@ export default function BuyersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Buyer Management</h1>
-          <p className="text-gray-500">Configure lead buyers and their service mappings</p>
-        </div>
-        
-        <Button
-          onClick={handleCreateBuyer}
-          className="flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Buyer</span>
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search buyers..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      {/* Buyers Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredBuyers.map((buyer) => {
-            const configs = getBuyerConfigs(buyer.id);
-            const activeConfigs = configs.filter(c => c.active);
-            
-            return (
-              <Card key={buyer.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center space-x-2">
-                        <span>{buyer.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          buyer.type === 'CONTRACTOR'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {buyer.type}
-                        </span>
-                        {buyer.active ? (
-                          <span className="status-indicator status-success">Active</span>
-                        ) : (
-                          <span className="status-indicator status-pending">Inactive</span>
-                        )}
-                      </CardTitle>
-                      {/* Show contact info for contractors */}
-                      {buyer.contactName && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          Contact: {buyer.contactName}
-                          {buyer.contactEmail && ` • ${buyer.contactEmail}`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* API Info */}
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Globe className="h-4 w-4" />
-                      <span className="truncate">{buyer.apiUrl}</span>
-                    </div>
-                    
-                    {/* Service Configs */}
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium text-gray-700">
-                        Service Configurations: {configs.length} total, {activeConfigs.length} active
-                      </div>
-                      {configs.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {configs.map(config => {
-                            const service = services.find(s => s.id === config.serviceTypeId);
-                            return (
-                              <div
-                                key={config.id}
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                  config.active
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                <span>{service?.name || 'Unknown'}</span>
-                                <div className="ml-1 flex items-center space-x-1">
-                                  <DollarSign className="h-3 w-3" />
-                                  <span>{config.minBid}-{config.maxBid}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Created Date */}
-                    <div className="text-sm text-gray-500">
-                      Created: {buyer.createdAt.toLocaleDateString()}
-                    </div>
-                    
-                    {/* Action Buttons */}
-                    <div className="pt-3 border-t border-gray-200 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditBuyer(buyer)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteBuyer(buyer.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleActive(buyer.id)}
-                          className="flex items-center"
-                        >
-                          {buyer.active ? (
-                            <ToggleRight className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <ToggleLeft className="h-4 w-4 text-gray-400" />
-                          )}
-                        </Button>
-                      </div>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/admin/buyers/${buyer.id}/zip-codes`)}
-                        className="w-full flex items-center justify-center space-x-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <MapPin className="h-4 w-4" />
-                        <span>Manage Zip Codes</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {filteredBuyers.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <div className="text-gray-500">
-            {searchQuery ? 'No buyers match your search.' : 'No buyers configured yet.'}
-          </div>
-          {!searchQuery && (
+      {/* Page Header */}
+      <AdminPageHeader
+        title="Buyer Management"
+        description="Configure lead buyers and their service mappings"
+        lastUpdated={lastRefresh}
+        actions={
+          <div className="flex items-center gap-3">
             <Button
-              onClick={handleCreateBuyer}
-              className="mt-4"
               variant="outline"
+              onClick={fetchData}
+              disabled={loading}
+              className="gap-2"
             >
-              Create your first buyer
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
+            <Button onClick={handleCreateBuyer} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Buyer
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center gap-4">
+          <div className="p-2 bg-red-100 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">Error</p>
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setError(null)}
+            className="shrink-0 text-red-700 border-red-200 hover:bg-red-100"
+          >
+            Dismiss
+          </Button>
         </div>
       )}
+
+      {/* Buyers Table */}
+      <AdminDataTable<ExtendedBuyer>
+        data={buyers}
+        loading={loading}
+        keyField="id"
+        columns={columns}
+        title="Buyers"
+        searchPlaceholder="Search buyers by name, contact..."
+        searchFields={['name', 'displayName', 'contactName', 'contactEmail']}
+        filters={[
+          {
+            key: 'type',
+            label: 'All Types',
+            options: [
+              { value: 'AGGREGATOR', label: 'Aggregator' },
+              { value: 'CONTRACTOR', label: 'Contractor' },
+            ],
+          },
+          {
+            key: 'active',
+            label: 'All Status',
+            options: [
+              { value: 'true', label: 'Active' },
+              { value: 'false', label: 'Inactive' },
+            ],
+          },
+        ]}
+        defaultSortField="name"
+        defaultSortDirection="asc"
+        onRowClick={handleViewBuyer}
+        rowActions={rowActions}
+        onToggleActive={handleToggleActive}
+        activeField="active"
+        emptyMessage="No buyers configured yet."
+        emptyAction={
+          <Button onClick={handleCreateBuyer} variant="outline" className="mt-2">
+            Create your first buyer
+          </Button>
+        }
+      />
     </div>
   );
 }

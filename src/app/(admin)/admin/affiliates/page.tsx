@@ -5,13 +5,27 @@
  *
  * WHY: Provides admin oversight of all affiliates in the program.
  * WHEN: Admin needs to view, approve, or manage affiliates.
- * HOW: Fetches affiliates from API, displays in filterable table with actions.
+ * HOW: Fetches affiliates from API, displays using AdminDataTable with actions.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { RefreshCw, Search, CheckCircle, XCircle, Eye } from 'lucide-react';
+import {
+  AdminPageHeader,
+  AdminDataTable,
+  StatusBadge,
+  type TableColumn,
+  type RowAction,
+} from '@/components/admin/ui';
+import {
+  RefreshCw,
+  Eye,
+  CheckCircle,
+  XCircle,
+  Users,
+  DollarSign,
+} from 'lucide-react';
 
 interface Affiliate {
   id: string;
@@ -24,306 +38,237 @@ interface Affiliate {
   createdAt: string;
 }
 
-interface Pagination {
-  page: number;
-  totalPages: number;
-  total: number;
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  ACTIVE: 'bg-green-100 text-green-800',
-  SUSPENDED: 'bg-red-100 text-red-800',
-};
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'All Statuses' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'SUSPENDED', label: 'Suspended' },
-];
-
 export default function AdminAffiliatesPage() {
+  const router = useRouter();
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  const fetchAffiliates = useCallback(async (page = 1) => {
+  const fetchAffiliates = useCallback(async () => {
     setLoading(true);
 
     try {
-      const params = new URLSearchParams({ page: page.toString(), limit: '20' });
-      if (search) params.set('search', search);
-      if (statusFilter) params.set('status', statusFilter);
-
+      const params = new URLSearchParams({ page: '1', limit: '200' });
       const response = await fetch(`/api/admin/affiliates?${params}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-        }
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
       });
       const data = await response.json();
 
       if (data.success) {
-        setAffiliates(data.data);
-        setPagination(data.pagination);
+        setAffiliates(data.data || []);
+        setLastRefresh(new Date());
       }
     } catch (error) {
       console.error('Error fetching affiliates:', error);
+      setAffiliates([]);
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter]);
+  }, []);
 
   useEffect(() => {
     fetchAffiliates();
   }, [fetchAffiliates]);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (affiliate: Affiliate) => {
     try {
-      const response = await fetch(`/api/admin/affiliates/${id}/approve`, {
+      const response = await fetch(`/api/admin/affiliates/${affiliate.id}/approve`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-        }
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
       });
       const data = await response.json();
 
       if (data.success) {
-        fetchAffiliates(pagination.page);
+        fetchAffiliates();
       }
     } catch (error) {
       console.error('Error approving affiliate:', error);
     }
   };
 
-  const handleSuspend = async (id: string) => {
+  const handleSuspend = async (affiliate: Affiliate) => {
     if (!confirm('Are you sure you want to suspend this affiliate?')) return;
 
     try {
-      const response = await fetch(`/api/admin/affiliates/${id}/suspend`, {
+      const response = await fetch(`/api/admin/affiliates/${affiliate.id}/suspend`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
-        }
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`,
+        },
       });
       const data = await response.json();
 
       if (data.success) {
-        fetchAffiliates(pagination.page);
+        fetchAffiliates();
       }
     } catch (error) {
       console.error('Error suspending affiliate:', error);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  const handleViewDetails = (affiliate: Affiliate) => {
+    router.push(`/admin/affiliates/${affiliate.id}`);
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'USD',
     }).format(amount);
   };
 
+  // Table columns
+  const columns: TableColumn<Affiliate>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Affiliate',
+        sortable: true,
+        render: (affiliate) => (
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <Users className="h-4 w-4 text-orange-600" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                {affiliate.firstName} {affiliate.lastName}
+              </div>
+              <div className="text-xs text-gray-500">{affiliate.email}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        sortable: true,
+        render: (affiliate) => <StatusBadge status={affiliate.status} />,
+      },
+      {
+        key: 'commissionRate',
+        header: 'Commission',
+        sortable: true,
+        align: 'center',
+        render: (affiliate) => (
+          <span className="inline-flex items-center justify-center min-w-[48px] px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700">
+            {(affiliate.commissionRate * 100).toFixed(0)}%
+          </span>
+        ),
+      },
+      {
+        key: 'totalEarnings',
+        header: 'Total Earnings',
+        sortable: true,
+        align: 'right',
+        render: (affiliate) => (
+          <span className="text-sm font-medium text-emerald-600">
+            {formatCurrency(affiliate.totalEarnings)}
+          </span>
+        ),
+      },
+      {
+        key: 'createdAt',
+        header: 'Joined',
+        sortable: true,
+        render: (affiliate) => {
+          const date = new Date(affiliate.createdAt);
+          return (
+            <div>
+              <div className="text-sm text-gray-900">{date.toLocaleDateString()}</div>
+              <div className="text-xs text-gray-400">
+                {date.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </div>
+            </div>
+          );
+        },
+      },
+    ],
+    []
+  );
+
+  // Row actions with conditional display
+  const rowActions: RowAction<Affiliate>[] = useMemo(
+    () => [
+      {
+        key: 'view',
+        icon: <Eye className="h-4 w-4" />,
+        label: 'View Details',
+        onClick: handleViewDetails,
+      },
+      {
+        key: 'approve',
+        icon: <CheckCircle className="h-4 w-4" />,
+        label: 'Approve',
+        onClick: handleApprove,
+        variant: 'success',
+        show: (affiliate) => affiliate.status === 'PENDING',
+      },
+      {
+        key: 'suspend',
+        icon: <XCircle className="h-4 w-4" />,
+        label: 'Suspend',
+        onClick: handleSuspend,
+        variant: 'danger',
+        show: (affiliate) => affiliate.status === 'ACTIVE',
+      },
+    ],
+    []
+  );
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Affiliates</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage affiliate program members
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => fetchAffiliates(1)}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name or email..."
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              {STATUS_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Page Header */}
+      <AdminPageHeader
+        title="Affiliates"
+        description="Manage affiliate program members"
+        lastUpdated={lastRefresh}
+        actions={
+          <Button
+            variant="outline"
+            onClick={fetchAffiliates}
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Affiliates Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-500">Loading affiliates...</p>
-          </div>
-        ) : affiliates.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-gray-500">No affiliates found</p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Affiliate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Commission Rate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Earnings
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Joined
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {affiliates.map((affiliate) => (
-                    <tr key={affiliate.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {affiliate.firstName} {affiliate.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {affiliate.email}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[affiliate.status] || 'bg-gray-100 text-gray-800'}`}>
-                          {affiliate.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {(affiliate.commissionRate * 100).toFixed(0)}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(affiliate.totalEarnings)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(affiliate.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Link href={`/admin/affiliates/${affiliate.id}`}>
-                            <Button variant="ghost" size="sm" title="View details">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          {affiliate.status === 'PENDING' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleApprove(affiliate.id)}
-                              title="Approve"
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {affiliate.status === 'ACTIVE' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSuspend(affiliate.id)}
-                              title="Suspend"
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                  <p className="text-sm text-gray-700">
-                    Page <span className="font-medium">{pagination.page}</span> of{' '}
-                    <span className="font-medium">{pagination.totalPages}</span>
-                    {' '}({pagination.total} total)
-                  </p>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchAffiliates(pagination.page - 1)}
-                      disabled={pagination.page <= 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchAffiliates(pagination.page + 1)}
-                      disabled={pagination.page >= pagination.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      <AdminDataTable<Affiliate>
+        data={affiliates}
+        loading={loading}
+        keyField="id"
+        columns={columns}
+        title="Affiliates"
+        searchPlaceholder="Search by name or email..."
+        searchFields={['firstName', 'lastName', 'email']}
+        filters={[
+          {
+            key: 'status',
+            label: 'All Status',
+            options: [
+              { value: 'PENDING', label: 'Pending' },
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+            ],
+          },
+        ]}
+        defaultSortField="createdAt"
+        defaultSortDirection="desc"
+        itemsPerPage={20}
+        rowActions={rowActions}
+        onRowClick={handleViewDetails}
+        emptyMessage="No affiliates found."
+      />
     </div>
   );
 }

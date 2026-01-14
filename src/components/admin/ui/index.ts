@@ -9,3 +9,5 @@ export { AdminCard } from './AdminCard';
 export { AdminPageHeader } from './AdminPageHeader';
 export { AdminBadge, StatusBadge, DispositionBadge } from './AdminBadge';
 export { AdminSearch, AdminSelect, AdminFilterBar } from './AdminSearch';
+export { AdminDataTable } from './AdminDataTable';
+export type { TableColumn, FilterOption, RowAction } from './AdminDataTable';
