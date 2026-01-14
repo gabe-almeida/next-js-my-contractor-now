@@ -127,7 +127,8 @@ function buildEmailSubject(data: AuctionEmailData): string {
     ? 'DELIVERY FAILED'
     : 'NOT SOLD';
 
-  return `${statusEmoji} Lead ${statusText} | ${data.serviceType} | ${data.zipCode}`;
+  const customerDisplay = data.customerName || 'Unknown';
+  return `${statusEmoji} Lead ${statusText} | ${data.serviceType} | ${customerDisplay}`;
 }
 
 /**
