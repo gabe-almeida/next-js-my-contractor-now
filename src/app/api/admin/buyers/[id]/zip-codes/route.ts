@@ -133,6 +133,11 @@ export async function GET(
       )
     }
 
+    // Parse pagination params
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+    const limit = Math.min(500, Math.max(1, parseInt(url.searchParams.get('limit') || '50')));
+    const skip = (page - 1) * limit;
+
     // Build query filters
     const whereClause: Prisma.BuyerServiceZipCodeWhereInput = {
       buyerId,
@@ -140,7 +145,10 @@ export async function GET(
       ...(includeInactive ? {} : { active: true })
     }
 
-    // Fetch ZIP codes with relations
+    // Get total count for pagination
+    const totalCount = await prisma.buyerServiceZipCode.count({ where: whereClause });
+
+    // Fetch ZIP codes with pagination
     const zipCodes = await prisma.buyerServiceZipCode.findMany({
       where: whereClause,
       include: {
@@ -156,8 +164,12 @@ export async function GET(
         { serviceTypeId: 'asc' },
         { priority: 'desc' },
         { zipCode: 'asc' }
-      ]
+      ],
+      skip,
+      take: limit
     })
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     // Group by service type
     const groupedData = zipCodes.reduce((acc, zip) => {
@@ -190,9 +202,15 @@ export async function GET(
       success: true,
       data: Object.values(groupedData),
       meta: {
-        totalZipCodes: zipCodes.length,
+        totalZipCodes: totalCount,
         activeZipCodes: zipCodes.filter(z => z.active).length,
-        serviceTypes: Object.keys(groupedData).length
+        serviceTypes: Object.keys(groupedData).length,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: totalPages
+        }
       }
     })
 
