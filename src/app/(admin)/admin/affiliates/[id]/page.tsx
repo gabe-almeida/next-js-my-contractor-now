@@ -207,25 +207,25 @@ export default function AdminAffiliateDetailPage() {
       label: 'Total Earnings',
       value: formatCurrency(stats.totalEarnings),
       icon: DollarSign,
-      accentColor: 'emerald' as const,
+      accent: 'green' as const,
     },
     {
       label: 'Pending',
       value: formatCurrency(stats.pendingEarnings),
       icon: DollarSign,
-      accentColor: 'amber' as const,
+      accent: 'yellow' as const,
     },
     {
       label: 'Available',
       value: formatCurrency(stats.availableBalance),
       icon: DollarSign,
-      accentColor: 'blue' as const,
+      accent: 'blue' as const,
     },
     {
       label: 'Links',
       value: stats.totalLinks.toString(),
       icon: LinkIcon,
-      accentColor: 'orange' as const,
+      accent: 'orange' as const,
     },
     {
       label: 'Clicks',
@@ -236,7 +236,7 @@ export default function AdminAffiliateDetailPage() {
       label: 'Conversions',
       value: stats.totalConversions.toLocaleString(),
       icon: Award,
-      accentColor: 'emerald' as const,
+      accent: 'green' as const,
     },
   ] : [];
 
@@ -271,7 +271,11 @@ export default function AdminAffiliateDetailPage() {
 
   // Prepare badges for the detail header
   const badges = [
-    <StatusBadge key="status" status={mapStatus(affiliate.status)} />
+    {
+      label: affiliate.status,
+      variant: affiliate.status === 'ACTIVE' ? 'green' as const :
+               affiliate.status === 'PENDING' ? 'yellow' as const : 'gray' as const
+    }
   ];
 
   // Header actions
@@ -318,10 +322,7 @@ export default function AdminAffiliateDetailPage() {
       {stats && <AdminStatGrid stats={statItems} columns={6} />}
 
       {/* Profile Details */}
-      <AdminSection
-        title="Profile Details"
-        icon={<User className="h-5 w-5 text-orange-600" />}
-      >
+      <AdminSection title="Profile Details">
         <AdminInfoGrid items={profileInfoItems} columns={2} />
       </AdminSection>
     </div>

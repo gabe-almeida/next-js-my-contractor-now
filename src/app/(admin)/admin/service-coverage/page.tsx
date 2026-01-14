@@ -186,29 +186,25 @@ export default function ServiceCoveragePage() {
     {
       label: 'Total Coverage',
       value: totalServiceZipPairs.toLocaleString(),
-      description: 'Service-zip combinations',
       icon: MapPin,
     },
     {
       label: 'Active Coverage',
       value: totalActiveServiceZipPairs.toLocaleString(),
-      description: `${avgCoverageRate}% active rate`,
       icon: CheckCircle2,
-      accentColor: 'emerald' as const,
+      accent: 'green' as const,
     },
     {
       label: 'Unique Zip Codes',
       value: totalUniqueZipCodes.toLocaleString(),
-      description: 'Geographic areas served',
       icon: Target,
-      accentColor: 'orange' as const,
+      accent: 'orange' as const,
     },
     {
       label: 'Active Buyers',
       value: buyerCoverageData.length.toString(),
-      description: 'Lead buyer partners',
       icon: Building,
-      accentColor: 'blue' as const,
+      accent: 'blue' as const,
     },
   ];
 

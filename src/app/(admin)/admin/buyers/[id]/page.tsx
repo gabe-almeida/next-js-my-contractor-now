@@ -123,9 +123,9 @@ export default function BuyerDetailPage() {
   }, [buyerId, fetchBuyer]);
 
   const tabs = [
-    { id: 'details' as TabType, label: 'Details', icon: Building2 },
-    { id: 'activity' as TabType, label: 'Activity', icon: Activity },
-    { id: 'coverage' as TabType, label: 'ZIP Coverage', icon: MapPin }
+    { id: 'details' as TabType, label: 'Details', icon: <Building2 className="h-4 w-4" /> },
+    { id: 'activity' as TabType, label: 'Activity', icon: <Activity className="h-4 w-4" /> },
+    { id: 'coverage' as TabType, label: 'ZIP Coverage', icon: <MapPin className="h-4 w-4" /> }
   ];
 
   if (loading) {
@@ -213,17 +213,14 @@ export default function BuyerDetailPage() {
 
   // Prepare badges for the detail header
   const badges = [
-    <span
-      key="type"
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        buyer.type === 'NETWORK'
-          ? 'bg-purple-100 text-purple-800'
-          : 'bg-orange-100 text-orange-800'
-      }`}
-    >
-      {buyer.type}
-    </span>,
-    <StatusBadge key="status" status={buyer.active ? 'ACTIVE' : 'INACTIVE'} />
+    {
+      label: buyer.type,
+      variant: buyer.type === 'NETWORK' ? 'purple' as const : 'orange' as const
+    },
+    {
+      label: buyer.active ? 'Active' : 'Inactive',
+      variant: buyer.active ? 'green' as const : 'gray' as const
+    }
   ];
 
   return (
@@ -304,19 +301,19 @@ function BuyerDetailsContent({ buyer }: { buyer: BuyerData }) {
       label: 'Leads Won',
       value: buyer.stats.leadsWon.toLocaleString(),
       icon: Award,
-      accentColor: 'emerald' as const,
+      accent: 'green' as const,
     },
     {
       label: 'ZIP Codes',
       value: buyer.stats.zipCodeCount.toLocaleString(),
       icon: MapPin,
-      accentColor: 'orange' as const,
+      accent: 'orange' as const,
     },
     {
       label: 'Service Configs',
       value: buyer.serviceConfigs.length.toString(),
       icon: Shield,
-      accentColor: 'blue' as const,
+      accent: 'blue' as const,
     },
   ];
 
@@ -343,28 +340,19 @@ function BuyerDetailsContent({ buyer }: { buyer: BuyerData }) {
       <AdminStatGrid stats={stats} />
 
       {/* API Configuration */}
-      <AdminSection
-        title="API Configuration"
-        icon={<Globe className="h-5 w-5 text-orange-600" />}
-      >
+      <AdminSection title="API Configuration">
         <AdminInfoGrid items={apiInfoItems} columns={2} />
       </AdminSection>
 
       {/* Contact Information */}
       {contactInfoItems.length > 0 && (
-        <AdminSection
-          title="Contact Information"
-          icon={<User className="h-5 w-5 text-orange-600" />}
-        >
+        <AdminSection title="Contact Information">
           <AdminInfoGrid items={contactInfoItems} columns={3} />
         </AdminSection>
       )}
 
       {/* Service Configurations */}
-      <AdminSection
-        title="Service Configurations"
-        icon={<Shield className="h-5 w-5 text-orange-600" />}
-      >
+      <AdminSection title="Service Configurations">
         {buyer.serviceConfigs.length === 0 ? (
           <div className="text-center py-8 text-sm text-gray-500">
             No service configurations found
