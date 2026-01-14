@@ -88,7 +88,12 @@ export function BuyerActivityTab({ buyerId, buyerName }: BuyerActivityTabProps) 
 
       const currentPage = reset ? 1 : page;
       const response = await fetch(
-        `/api/admin/buyers/${buyerId}/activity?timeframe=${timeframe}&page=${currentPage}&limit=20`
+        `/api/admin/buyers/${buyerId}/activity?timeframe=${timeframe}&page=${currentPage}&limit=20`,
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+          }
+        }
       );
 
       if (!response.ok) {
