@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import DynamicForm from '@/components/DynamicForm';
 import type { QuestionFlow } from '@/lib/questions';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 /**
  * Loading spinner component
@@ -99,6 +100,13 @@ export default function DynamicServicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  // Track page view for analytics
+  usePageTracking({
+    pageType: 'SERVICE',
+    pagePath: `/services/${slug}`,
+    serviceSlug: slug
+  });
 
   /**
    * Fetch the question flow from API

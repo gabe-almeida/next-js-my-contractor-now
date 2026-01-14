@@ -23,7 +23,11 @@ import {
   Target,
   Activity,
   Download,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  MousePointer,
+  FileText,
+  ArrowRight
 } from 'lucide-react';
 
 // Helper to format percentages to 2 decimal places max
@@ -41,6 +45,7 @@ export default function AnalyticsPage() {
   const [complianceData, setComplianceData] = useState<any[]>([]);
   const [buyerPerformance, setBuyerPerformance] = useState<any[]>([]);
   const [qualityScores, setQualityScores] = useState<any[]>([]);
+  const [conversionFunnel, setConversionFunnel] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   const fetchAnalytics = useCallback(async () => {
@@ -67,6 +72,7 @@ export default function AnalyticsPage() {
       setComplianceData(analytics.complianceData);
       setBuyerPerformance(analytics.buyerPerformance);
       setQualityScores(analytics.qualityScores);
+      setConversionFunnel(analytics.conversionFunnel);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -77,6 +83,7 @@ export default function AnalyticsPage() {
       setComplianceData([]);
       setBuyerPerformance([]);
       setQualityScores([]);
+      setConversionFunnel(null);
     } finally {
       setLoading(false);
     }
@@ -145,6 +152,97 @@ export default function AnalyticsPage() {
           </div>
         }
       />
+
+      {/* Conversion Funnel */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Conversion Funnel</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <MetricCard
+            title="Homepage Views"
+            value={conversionFunnel?.totalHomePageViews || 0}
+            description={`${conversionFunnel?.uniqueHomeVisitors || 0} unique visitors`}
+            icon={<Eye className="h-4 w-4" />}
+            loading={loading}
+          />
+
+          <MetricCard
+            title="Service Page Views"
+            value={conversionFunnel?.totalServicePageViews || 0}
+            description={`${conversionFunnel?.uniqueServiceVisitors || 0} unique visitors`}
+            icon={<MousePointer className="h-4 w-4" />}
+            loading={loading}
+          />
+
+          <MetricCard
+            title="Leads Generated"
+            value={conversionFunnel?.totalLeads || 0}
+            description="Form submissions"
+            icon={<FileText className="h-4 w-4" />}
+            loading={loading}
+          />
+
+          <MetricCard
+            title="Overall Conversion"
+            value={`${formatPercent(conversionFunnel?.overallConversionRate)}%`}
+            description="Home → Lead"
+            icon={<TrendingUp className="h-4 w-4" />}
+            loading={loading}
+          />
+        </div>
+
+        {/* Funnel Visualization */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+          <h3 className="text-sm font-medium text-gray-700 mb-4">Funnel Breakdown</h3>
+          {loading ? (
+            <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
+          ) : (
+            <div className="flex items-center justify-between">
+              {/* Homepage */}
+              <div className="flex-1 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-2">
+                  <Eye className="h-8 w-8 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{conversionFunnel?.uniqueHomeVisitors || 0}</div>
+                <div className="text-sm text-gray-500">Homepage Visitors</div>
+              </div>
+
+              {/* Arrow with conversion rate */}
+              <div className="flex-shrink-0 px-4">
+                <div className="flex items-center gap-2">
+                  <ArrowRight className="h-6 w-6 text-gray-400" />
+                  <span className="text-sm font-medium text-emerald-600">{formatPercent(conversionFunnel?.homeToServiceRate)}%</span>
+                </div>
+              </div>
+
+              {/* Service Pages */}
+              <div className="flex-1 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-2">
+                  <MousePointer className="h-8 w-8 text-orange-600" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{conversionFunnel?.uniqueServiceVisitors || 0}</div>
+                <div className="text-sm text-gray-500">Service Page Visitors</div>
+              </div>
+
+              {/* Arrow with conversion rate */}
+              <div className="flex-shrink-0 px-4">
+                <div className="flex items-center gap-2">
+                  <ArrowRight className="h-6 w-6 text-gray-400" />
+                  <span className="text-sm font-medium text-emerald-600">{formatPercent(conversionFunnel?.serviceToLeadRate)}%</span>
+                </div>
+              </div>
+
+              {/* Leads */}
+              <div className="flex-1 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-2">
+                  <FileText className="h-8 w-8 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{conversionFunnel?.totalLeads || 0}</div>
+                <div className="text-sm text-gray-500">Leads Generated</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Compliance Metrics */}
       <div>

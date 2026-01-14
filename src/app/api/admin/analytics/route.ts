@@ -44,7 +44,8 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
     const [
       leads,
       transactions,
-      buyers
+      buyers,
+      pageViews
     ] = await Promise.all([
       // All leads in period
       prisma.lead.findMany({
@@ -96,6 +97,20 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
           id: true,
           name: true,
           displayName: true
+        }
+      }),
+      // Page views in period
+      prisma.pageView.findMany({
+        where: {
+          createdAt: { gte: startDate }
+        },
+        select: {
+          id: true,
+          sessionId: true,
+          pageType: true,
+          pagePath: true,
+          serviceSlug: true,
+          createdAt: true
         }
       })
     ]);
@@ -283,6 +298,91 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10); // Top 10 services
 
+    // Calculate page view & conversion funnel metrics
+    const homePageViews = pageViews.filter(pv => pv.pageType === 'HOME');
+    const servicePageViews = pageViews.filter(pv => pv.pageType === 'SERVICE');
+
+    // Unique visitors (unique session IDs)
+    const uniqueHomeSessions = new Set(homePageViews.map(pv => pv.sessionId));
+    const uniqueServiceSessions = new Set(servicePageViews.map(pv => pv.sessionId));
+
+    // Conversion rates
+    const homeToServiceRate = uniqueHomeSessions.size > 0
+      ? (uniqueServiceSessions.size / uniqueHomeSessions.size) * 100
+      : 0;
+    const serviceToLeadRate = uniqueServiceSessions.size > 0
+      ? (totalLeads / uniqueServiceSessions.size) * 100
+      : 0;
+    const overallConversionRate = uniqueHomeSessions.size > 0
+      ? (totalLeads / uniqueHomeSessions.size) * 100
+      : 0;
+
+    // Build page view timeline
+    const pageViewsByDate = new Map<string, { homeViews: number; serviceViews: number; uniqueHome: Set<string>; uniqueService: Set<string> }>();
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      pageViewsByDate.set(dateStr, { homeViews: 0, serviceViews: 0, uniqueHome: new Set(), uniqueService: new Set() });
+    }
+
+    pageViews.forEach(pv => {
+      const dateStr = new Date(pv.createdAt).toISOString().split('T')[0];
+      const existing = pageViewsByDate.get(dateStr);
+      if (existing) {
+        if (pv.pageType === 'HOME') {
+          existing.homeViews += 1;
+          existing.uniqueHome.add(pv.sessionId);
+        } else if (pv.pageType === 'SERVICE') {
+          existing.serviceViews += 1;
+          existing.uniqueService.add(pv.sessionId);
+        }
+      }
+    });
+
+    const pageViewData = Array.from(pageViewsByDate.entries())
+      .map(([date, data]) => ({
+        date,
+        homeViews: data.homeViews,
+        serviceViews: data.serviceViews,
+        uniqueHomeVisitors: data.uniqueHome.size,
+        uniqueServiceVisitors: data.uniqueService.size
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Service page breakdown
+    const servicePageBreakdown = new Map<string, { views: number; uniqueVisitors: Set<string> }>();
+    servicePageViews.forEach(pv => {
+      const slug = pv.serviceSlug || 'unknown';
+      if (!servicePageBreakdown.has(slug)) {
+        servicePageBreakdown.set(slug, { views: 0, uniqueVisitors: new Set() });
+      }
+      const data = servicePageBreakdown.get(slug)!;
+      data.views += 1;
+      data.uniqueVisitors.add(pv.sessionId);
+    });
+
+    const servicePageStats = Array.from(servicePageBreakdown.entries())
+      .map(([slug, data]) => ({
+        service: slug,
+        views: data.views,
+        uniqueVisitors: data.uniqueVisitors.size
+      }))
+      .sort((a, b) => b.views - a.views);
+
+    const conversionFunnel = {
+      totalHomePageViews: homePageViews.length,
+      uniqueHomeVisitors: uniqueHomeSessions.size,
+      totalServicePageViews: servicePageViews.length,
+      uniqueServiceVisitors: uniqueServiceSessions.size,
+      totalLeads,
+      homeToServiceRate: Math.round(homeToServiceRate * 100) / 100,
+      serviceToLeadRate: Math.round(serviceToLeadRate * 100) / 100,
+      overallConversionRate: Math.round(overallConversionRate * 100) / 100,
+      pageViewData,
+      servicePageStats
+    };
+
     const response = successResponse(
       {
         period,
@@ -291,7 +391,8 @@ async function handleGetAnalytics(req: EnhancedRequest): Promise<NextResponse> {
         revenueData,
         complianceData,
         buyerPerformance,
-        qualityScores
+        qualityScores,
+        conversionFunnel
       },
       requestId
     );
