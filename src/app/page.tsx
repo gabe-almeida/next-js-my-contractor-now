@@ -13,11 +13,15 @@ import Image from 'next/image';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PortalDropdown from '@/components/ui/PortalDropdown';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 export default function HomePage() {
   const [selectedService, setSelectedService] = useState('');
   const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Track page view for analytics
+  usePageTracking({ pageType: 'HOME', pagePath: '/' });
 
   // Fetch active services from database
   useEffect(() => {

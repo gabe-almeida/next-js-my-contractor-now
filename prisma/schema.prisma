@@ -385,3 +385,25 @@ model AffiliateWithdrawal {
   @@index([createdAt])
   @@map("affiliate_withdrawals")
 }
+
+// ============================================
+// PAGE VIEW ANALYTICS
+// ============================================
+
+model PageView {
+  id          String   @id @default(uuid())
+  sessionId   String   @map("session_id")
+  pageType    String   @map("page_type") // HOME, SERVICE
+  pagePath    String   @map("page_path") // e.g., "/", "/services/windows"
+  serviceSlug String?  @map("service_slug") // For service pages
+  referrer    String?
+  userAgent   String?  @map("user_agent")
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([pageType])
+  @@index([serviceSlug])
+  @@index([createdAt])
+  @@map("page_views")
+}

@@ -3,23 +3,13 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { CheckCircleIcon, ClockIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const leadId = searchParams.get('leadId');
-  const [timeRemaining, setTimeRemaining] = useState(30);
-
-  useEffect(() => {
-    if (timeRemaining > 0) {
-      const timer = setTimeout(() => {
-        setTimeRemaining(timeRemaining - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [timeRemaining]);
 
   return (
     <>
@@ -41,33 +31,11 @@ function ThankYouContent() {
             Your project request has been successfully submitted
           </p>
 
-          {/* Processing Information */}
+          {/* Next Steps */}
           <div className="bg-orange-50 rounded-lg p-8 mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <ClockIcon className="w-8 h-8 text-orange-600 mr-3" />
-              <h2 className="text-2xl font-semibold text-gray-800">
-                We're Finding Your Contractors
-              </h2>
-            </div>
-
-            <p className="text-gray-600 mb-6">
-              Our system is currently matching you with qualified contractors in your area.
-              You should expect to hear from contractors within the next 24 hours.
+            <p className="text-lg text-gray-700 mb-4">
+              A contractor will contact you soon to discuss your project.
             </p>
-
-            {timeRemaining > 0 && (
-              <div className="bg-white rounded-lg p-4 mb-6">
-                <p className="text-sm text-gray-600">
-                  Estimated processing time: <span className="font-semibold text-orange-600">{timeRemaining} seconds</span>
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div
-                    className="bg-orange-500 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${((30 - timeRemaining) / 30) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
 
             {leadId && (
               <div className="text-sm text-gray-500">
@@ -82,14 +50,14 @@ function ThankYouContent() {
               What Happens Next?
             </h3>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
               <div className="text-center">
                 <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl font-bold text-white">1</span>
                 </div>
-                <h4 className="font-semibold text-gray-800 mb-2">Contractor Matching</h4>
+                <h4 className="font-semibold text-gray-800 mb-2">Contractor Contact</h4>
                 <p className="text-gray-600 text-sm">
-                  We match your project with qualified contractors in your area
+                  A contractor will reach out to discuss your project details
                 </p>
               </div>
 
@@ -97,19 +65,9 @@ function ThankYouContent() {
                 <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl font-bold text-white">2</span>
                 </div>
-                <h4 className="font-semibold text-gray-800 mb-2">Contact from Pros</h4>
+                <h4 className="font-semibold text-gray-800 mb-2">Get Your Quote</h4>
                 <p className="text-gray-600 text-sm">
-                  Contractors will contact you directly to discuss your project
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl font-bold text-white">3</span>
-                </div>
-                <h4 className="font-semibold text-gray-800 mb-2">Get Quotes</h4>
-                <p className="text-gray-600 text-sm">
-                  Compare quotes and choose the best contractor for your project
+                  Receive a quote and schedule your project
                 </p>
               </div>
             </div>

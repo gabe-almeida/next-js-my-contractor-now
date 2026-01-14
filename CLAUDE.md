@@ -267,41 +267,158 @@ DATABASE_URL="postgres://postgres:CgDWlr8Bk9O6DVoX@db.cnogfaqqilmutqhpjhgl.supab
 npx prisma generate
 ```
 
-## 🔄 Buyer Field Mapping System
+## 🔄 Lead Buyer System (PING/POST Auction)
 
-**Dynamic configuration is stored in the database, NOT hardcoded:**
+This system matches leads with buyers through a real-time PING/POST auction. Understanding this is CRITICAL for debugging lead delivery issues.
 
-- Buyer configurations: `Buyer` table
-- Service-specific configs: `BuyerServiceConfig` table
-- Field mappings: `fieldMappings` JSON column in `BuyerServiceConfig`
+### 📊 Database Tables
 
-**FieldMappingConfig JSON structure:**
+| Table | Purpose |
+|-------|---------|
+| `buyers` | Buyer info (name, apiUrl, active, timeouts) |
+| `buyer_service_configs` | Per-service settings (field_mappings, ping/post templates) |
+| `buyer_service_zip_codes` | Which zip codes each buyer accepts for each service |
+| `service_types` | Available services (windows, roofing, hvac, etc.) |
+| `leads` | Submitted leads with formData |
+| `transactions` | PING/POST request/response logs |
+
+### 🔍 Buyer Eligibility Flow
+
+A buyer receives a lead ONLY if ALL conditions are met:
+
+1. **Buyer is active:** `buyers.active = true`
+2. **Service config is active:** `buyer_service_configs.active = true`
+3. **Zip code is covered:** Entry exists in `buyer_service_zip_codes` for that buyer + service + zip
+4. **Service type is active:** `service_types.active = true`
+
+```sql
+-- Check if Modernize would receive a windows lead for zip 90210:
+SELECT b.name, bsz.zip_code, bsc.active
+FROM buyers b
+JOIN buyer_service_configs bsc ON b.id = bsc.buyer_id
+JOIN buyer_service_zip_codes bsz ON b.id = bsz.buyer_id
+  AND bsc.service_type_id = bsz.service_type_id
+WHERE b.name = 'Modernize'
+  AND bsz.zip_code = '90210'
+  AND b.active = true
+  AND bsc.active = true;
+```
+
+### 🔧 Field Mapping Configuration
+
+The `field_mappings` JSON column in `buyer_service_configs` controls how lead data transforms for each buyer:
+
 ```json
 {
   "version": "1.0",
   "mappings": [
     {
-      "id": "unique-id",
+      "id": "map-1",
       "sourceField": "zipCode",
       "targetField": "postalCode",
-      "transform": "none",
+      "required": true,
+      "includeInPing": true,
+      "includeInPost": true
+    },
+    {
+      "id": "map-2",
+      "sourceField": "timeframe",
+      "targetField": "buyTimeframe",
+      "valueMap": {
+        "within_3_months": "Immediately",
+        "3_plus_months": "1-6 months",
+        "not_sure": "Don't know"
+      },
+      "required": true,
+      "includeInPing": true,
+      "includeInPost": true
+    },
+    {
+      "id": "map-3",
+      "sourceField": "ownsHome",
+      "targetField": "ownHome",
+      "transform": "boolean.yesNo",
       "required": true,
       "includeInPing": true,
       "includeInPost": true
     }
   ],
-  "staticFields": {
+  "pingStaticFields": {
     "tagId": "204670250",
-    "service": "WINDOWS"
+    "service": "WINDOWS",
+    "partnerSourceId": "fb"
   },
-  "meta": {
-    "createdAt": "2024-01-01T00:00:00Z",
-    "updatedAt": "2024-01-01T00:00:00Z"
+  "postStaticFields": {
+    "tagId": "204670250",
+    "service": "WINDOWS",
+    "partnerSourceId": "fb",
+    "homePhoneConsentLanguage": "TCPA consent text..."
   }
 }
 ```
 
-**Available transforms:** `boolean.yesNo`, `boolean.trueFalse`, `phone.e164`, `string.titleCase`, `string.uppercase`
+### 🔄 Transformation Order
+
+In `TemplateEngine.processMapping()`:
+
+1. **Get source value** from lead data (e.g., `timeframe = "within_3_months"`)
+2. **Apply valueMap** if specified → `"within_3_months"` becomes `"Immediately"`
+3. **Apply transform** if specified → `boolean.yesNo` converts `true` to `"Yes"`
+4. **Set to targetField** in output payload
+
+### 📡 Webhook URL Configuration
+
+The `ping_template` and `post_template` columns specify URLs:
+
+```json
+// ping_template
+{"url": "https://hsapiservice.quinstage.com/ping-post/pings"}
+
+// post_template
+{"url": "https://hsapiservice.quinstage.com/ping-post/posts"}
+```
+
+If no URL is specified, falls back to: `buyer.api_url + "/ping"` or `"/post"`
+
+### 🧪 Available Transforms
+
+| Transform | Input | Output |
+|-----------|-------|--------|
+| `boolean.yesNo` | `true` / `false` | `"Yes"` / `"No"` |
+| `boolean.trueFalse` | `true` / `false` | `"true"` / `"false"` |
+| `phone.digitsOnly` | `"(555) 123-4567"` | `"5551234567"` |
+| `phone.e164` | `"555-123-4567"` | `"+15551234567"` |
+| `string.titleCase` | `"john doe"` | `"John Doe"` |
+| `string.uppercase` | `"hello"` | `"HELLO"` |
+
+### 🔍 Debugging Lead Delivery
+
+**Check if a lead was sent to buyers:**
+```sql
+SELECT t.action_type, t.status, t.bid_amount, t.error_message,
+       b.name, t.response::text
+FROM transactions t
+JOIN buyers b ON t.buyer_id = b.id
+WHERE t.lead_id = 'your-lead-id'
+ORDER BY t.created_at;
+```
+
+**Check why a buyer didn't receive a lead:**
+1. Is buyer active? → `SELECT active FROM buyers WHERE name = 'Modernize'`
+2. Is service config active? → Check `buyer_service_configs.active`
+3. Is zip code covered? → Check `buyer_service_zip_codes`
+4. Check server logs for eligibility filtering
+
+### 📁 Key Code Files
+
+| File | Purpose |
+|------|---------|
+| `src/app/api/leads/route.ts` | Lead submission, triggers auction |
+| `src/lib/auction/engine.ts` | PING/POST auction logic |
+| `src/lib/services/buyer-eligibility-service.ts` | Filters eligible buyers |
+| `src/lib/field-mapping/database-buyer-loader.ts` | Loads buyer configs from DB |
+| `src/lib/templates/engine.ts` | Transforms lead data using mappings |
+| `src/lib/repositories/service-zone-repository.ts` | Queries zip code coverage |
 
 <!-- END_PROJECT_NOTES -->
 
