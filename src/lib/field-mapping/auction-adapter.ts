@@ -19,35 +19,35 @@ import { TransformError } from "@/types/field-mapping";
 import { logger } from "@/lib/logger";
 
 /**
- * Feature flag to enable database-driven field mappings
+ * Database-driven field mappings are ALWAYS enabled
  *
- * WHY: Gradual rollout, easy rollback if issues arise
- * WHEN: Checked before every payload transformation
- * HOW: Environment variable or runtime toggle
+ * WHY: This is the production system, no need for feature flags
+ * WHEN: All payload transformations use database configs
+ * HOW: Hardcoded to true, no runtime toggle needed
  */
-let useDatabaseMappings = process.env.USE_DATABASE_FIELD_MAPPINGS === "true";
+const useDatabaseMappings = true;
 
 /**
- * Enable database-driven field mappings
+ * Enable database-driven field mappings (no-op, always enabled)
+ * @deprecated Database mappings are always enabled
  */
 export function enableDatabaseMappings(): void {
-  useDatabaseMappings = true;
-  logger.info("Database field mappings ENABLED");
+  logger.info("Database field mappings are always enabled");
 }
 
 /**
- * Disable database-driven field mappings (use hardcoded configs)
+ * Disable database-driven field mappings (no-op, always enabled)
+ * @deprecated Database mappings are always enabled
  */
 export function disableDatabaseMappings(): void {
-  useDatabaseMappings = false;
-  logger.info("Database field mappings DISABLED (using hardcoded configs)");
+  logger.warn("Cannot disable database field mappings - they are always enabled");
 }
 
 /**
- * Check if database mappings are enabled
+ * Check if database mappings are enabled (always true)
  */
 export function isDatabaseMappingsEnabled(): boolean {
-  return useDatabaseMappings;
+  return true;
 }
 
 /**
