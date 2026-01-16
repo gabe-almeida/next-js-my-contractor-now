@@ -12,6 +12,8 @@
  *   1. Verify Twilio signature (security)
  *   2. Check idempotency (prevent duplicate processing)
  *   3. Lookup tracking number to identify affiliate/campaign
+ *      - For PLATFORM numbers: direct lookup by phone
+ *      - For INGRESS numbers: parse SIP headers/URL params for affiliate ID
  *   4. Check campaign eligibility (active, hours, caps)
  *   5. Create call record in database (status: RINGING)
  *   6. Return appropriate TwiML (IVR or proceed to auction)
@@ -21,6 +23,8 @@
  * |  Caller dials tracking number                                           |
  * |      |                                                                  |
  * |  Twilio sends webhook to /api/calls/incoming  <- YOU ARE HERE           |
+ * |      |                                                                  |
+ * |  [If INGRESS] Parse SIP headers/URL params for affiliate/campaign       |
  * |      |                                                                  |
  * |  [If IVR] Return IVR TwiML -> /api/calls/ivr handles response           |
  * |  [If no IVR] Return hold TwiML -> /api/calls/auction                    |
@@ -50,6 +54,8 @@ import {
   CampaignForEligibility,
 } from '@/lib/services/call-eligibility-service';
 import { maskPhone, formatPhoneDisplay, HoursOfOperation } from '@/lib/call/call-helpers';
+import { isIngressNumber } from '@/lib/services/ingress-number-service';
+import { parseForwardingIdentification, ForwardingMetadata } from '@/lib/call/forwarding-parser';
 
 // =====================================
 // TYPE DEFINITIONS
@@ -70,6 +76,22 @@ interface TwilioIncomingPayload {
   AccountSid: string; // Twilio account
   Direction: string; // 'inbound'
   CallStatus: string; // 'ringing'
+  // SIP headers are prefixed with SipHeader_
+  [key: string]: string | undefined;
+}
+
+/**
+ * Resolved tracking info (either from direct lookup or forwarding identification)
+ */
+interface ResolvedTrackingInfo {
+  trackingNumberId: string | null;
+  affiliateId: string | null;
+  campaignId: string | null;
+  serviceTypeId: string | null;
+  ivrFlowId: string | null;
+  campaign: { id: string; name: string; serviceTypeId: string } | null;
+  isForwarded: boolean;
+  forwardingMetadata: ForwardingMetadata | null;
 }
 
 // =====================================
@@ -112,57 +134,88 @@ export async function POST(request: NextRequest) {
       }
 
       // ─────────────────────────────────────────────────────────────
-      // Step 2: Lookup tracking number
+      // Step 2: Check if this is an ingress number (forwarded call)
       // ─────────────────────────────────────────────────────────────
-      const trackingNumber = await getTrackingNumberByPhone(payload.To);
+      const isIngress = await isIngressNumber(payload.To);
+      let resolvedInfo: ResolvedTrackingInfo;
 
-      if (!trackingNumber) {
-        logger.warn({
-          event: 'call.incoming.unknown_number',
-          message: 'Incoming call to unknown tracking number',
-          calledNumber: payload.To,
-          callerPhone: maskPhone(payload.From),
-        });
+      if (isIngress) {
+        // Handle forwarded call - parse SIP headers/URL params
+        resolvedInfo = await handleForwardedCall(payload);
 
-        await markWebhookProcessed(callSid, 'call_incoming', undefined, {
-          result: 'rejected',
-          reason: 'unknown_number',
-        });
+        if (!resolvedInfo.affiliateId || !resolvedInfo.campaignId) {
+          logger.warn({
+            event: 'call.incoming.forwarding_failed',
+            message: 'Could not identify affiliate/campaign from forwarded call',
+            calledNumber: payload.To,
+            callerPhone: maskPhone(payload.From),
+            forwardingMetadata: resolvedInfo.forwardingMetadata,
+          });
 
-        return createTwimlResponse(
-          buildRejection(
-            "We're sorry, this number is no longer in service. Please visit our website for assistance."
-          )
-        );
+          await markWebhookProcessed(callSid, 'call_incoming', undefined, {
+            result: 'rejected',
+            reason: 'forwarding_identification_failed',
+          });
+
+          return createTwimlResponse(
+            buildRejection(
+              "We're sorry, we could not process your call. Please contact support."
+            )
+          );
+        }
+      } else {
+        // Standard platform-provisioned number lookup
+        resolvedInfo = await handlePlatformCall(payload);
+
+        if (!resolvedInfo.trackingNumberId) {
+          logger.warn({
+            event: 'call.incoming.unknown_number',
+            message: 'Incoming call to unknown tracking number',
+            calledNumber: payload.To,
+            callerPhone: maskPhone(payload.From),
+          });
+
+          await markWebhookProcessed(callSid, 'call_incoming', undefined, {
+            result: 'rejected',
+            reason: 'unknown_number',
+          });
+
+          return createTwimlResponse(
+            buildRejection(
+              "We're sorry, this number is no longer in service. Please visit our website for assistance."
+            )
+          );
+        }
       }
 
       logger.info({
         event: 'call.incoming.identified',
-        message: `Incoming call identified: ${trackingNumber.campaign?.name || 'No campaign'}`,
-        trackingNumberId: trackingNumber.id,
-        affiliateId: trackingNumber.affiliateId,
-        campaignId: trackingNumber.campaignId,
-        serviceTypeId: trackingNumber.serviceTypeId,
+        message: `Incoming call identified: ${resolvedInfo.campaign?.name || 'No campaign'}`,
+        trackingNumberId: resolvedInfo.trackingNumberId,
+        affiliateId: resolvedInfo.affiliateId,
+        campaignId: resolvedInfo.campaignId,
+        serviceTypeId: resolvedInfo.serviceTypeId,
+        isForwarded: resolvedInfo.isForwarded,
         callerPhone: maskPhone(payload.From),
       });
 
       // ─────────────────────────────────────────────────────────────
       // Step 3: Check campaign eligibility
       // ─────────────────────────────────────────────────────────────
-      if (trackingNumber.campaign) {
+      if (resolvedInfo.campaign) {
         const campaignData: CampaignForEligibility = {
-          id: trackingNumber.campaign.id,
-          name: trackingNumber.campaign.name,
-          active: trackingNumber.campaignId !== null, // If linked to campaign, assume active
-          hoursOfOperation: null, // Will be populated from campaign if exists
-          timezone: 'America/New_York', // Default
+          id: resolvedInfo.campaign.id,
+          name: resolvedInfo.campaign.name,
+          active: true,
+          hoursOfOperation: null,
+          timezone: 'America/New_York',
           dailyCallCap: null,
-          serviceTypeId: trackingNumber.campaign.serviceTypeId,
+          serviceTypeId: resolvedInfo.campaign.serviceTypeId,
         };
 
         // Fetch full campaign data for eligibility check
         const fullCampaign = await prisma.campaign.findUnique({
-          where: { id: trackingNumber.campaign.id },
+          where: { id: resolvedInfo.campaign.id },
           select: {
             id: true,
             name: true,
@@ -209,10 +262,10 @@ export async function POST(request: NextRequest) {
       const call = await prisma.call.create({
         data: {
           twilioCallSid: callSid,
-          trackingNumberId: trackingNumber.id,
-          affiliateId: trackingNumber.affiliateId,
-          campaignId: trackingNumber.campaignId,
-          serviceTypeId: trackingNumber.serviceTypeId,
+          trackingNumberId: resolvedInfo.trackingNumberId,
+          affiliateId: resolvedInfo.affiliateId,
+          campaignId: resolvedInfo.campaignId,
+          serviceTypeId: resolvedInfo.serviceTypeId,
           callerPhone: payload.From,
           callerPhoneDisplay: formatPhoneDisplay(payload.From),
           callerCity: payload.FromCity || null,
@@ -221,6 +274,7 @@ export async function POST(request: NextRequest) {
           callerName: payload.CallerName || null,
           status: 'RINGING',
           ivrResponses: {},
+          forwardingMetadata: resolvedInfo.forwardingMetadata || undefined,
           createdAt: new Date(),
         },
       });
@@ -231,24 +285,30 @@ export async function POST(request: NextRequest) {
         callId: call.id,
         callSid,
         status: 'RINGING',
+        isForwarded: resolvedInfo.isForwarded,
       });
 
       // Log call activity (visible to affiliate)
-      await createCallActivityLog(call.id, 'call.received', `Call received from ${maskPhone(payload.From)}`, {
+      const activityMessage = resolvedInfo.isForwarded
+        ? `Forwarded call received from ${maskPhone(payload.From)}`
+        : `Call received from ${maskPhone(payload.From)}`;
+
+      await createCallActivityLog(call.id, 'call.received', activityMessage, {
         level: 'info',
         details: {
           trackingNumber: payload.To,
           callerCity: payload.FromCity,
           callerState: payload.FromState,
           callerZip: payload.FromZip,
+          isForwarded: resolvedInfo.isForwarded,
         },
         visibleToAffiliate: true,
         visibleToAdmin: true,
       });
 
       // Increment call counter for campaign cap tracking
-      if (trackingNumber.campaignId) {
-        await incrementCallCounter(trackingNumber.campaignId);
+      if (resolvedInfo.campaignId) {
+        await incrementCallCounter(resolvedInfo.campaignId);
       }
 
       // ─────────────────────────────────────────────────────────────
@@ -256,18 +316,18 @@ export async function POST(request: NextRequest) {
       // ─────────────────────────────────────────────────────────────
 
       // Check if campaign requires IVR qualification
-      const campaign = trackingNumber.campaign
-        ? await prisma.campaign.findUnique({
-            where: { id: trackingNumber.campaign.id },
-            select: {
-              requireIvrQualification: true,
-              ivrFlowId: true,
-            },
-          })
-        : null;
+      let ivrFlowId = resolvedInfo.ivrFlowId;
 
-      // Also check tracking number's own IVR config
-      const ivrFlowId = trackingNumber.ivrFlowId || campaign?.ivrFlowId;
+      if (!ivrFlowId && resolvedInfo.campaignId) {
+        const campaign = await prisma.campaign.findUnique({
+          where: { id: resolvedInfo.campaignId },
+          select: {
+            requireIvrQualification: true,
+            ivrFlowId: true,
+          },
+        });
+        ivrFlowId = campaign?.ivrFlowId || null;
+      }
 
       if (ivrFlowId) {
         // ───────────────────────────────────────────────────────────
@@ -336,7 +396,7 @@ export async function POST(request: NextRequest) {
 
       await createCallActivityLog(call.id, 'call.auction_started', 'Finding available service providers', {
         level: 'info',
-        details: { skipIvr: true },
+        details: { skipIvr: true, isForwarded: resolvedInfo.isForwarded },
         visibleToAffiliate: true,
       });
 
@@ -380,6 +440,124 @@ export async function POST(request: NextRequest) {
       );
     }
   });
+}
+
+// =====================================
+// HELPER FUNCTIONS
+// =====================================
+
+/**
+ * Handle platform-provisioned number lookup
+ *
+ * WHY: Standard tracking numbers are directly linked to affiliate/campaign.
+ * WHEN: Call arrives on a PLATFORM type tracking number.
+ * HOW: Direct database lookup by phone number.
+ */
+async function handlePlatformCall(payload: TwilioIncomingPayload): Promise<ResolvedTrackingInfo> {
+  const trackingNumber = await getTrackingNumberByPhone(payload.To);
+
+  if (!trackingNumber) {
+    return {
+      trackingNumberId: null,
+      affiliateId: null,
+      campaignId: null,
+      serviceTypeId: null,
+      ivrFlowId: null,
+      campaign: null,
+      isForwarded: false,
+      forwardingMetadata: null,
+    };
+  }
+
+  return {
+    trackingNumberId: trackingNumber.id,
+    affiliateId: trackingNumber.affiliateId,
+    campaignId: trackingNumber.campaignId,
+    serviceTypeId: trackingNumber.serviceTypeId,
+    ivrFlowId: trackingNumber.ivrFlowId,
+    campaign: trackingNumber.campaign
+      ? {
+          id: trackingNumber.campaign.id,
+          name: trackingNumber.campaign.name,
+          serviceTypeId: trackingNumber.campaign.serviceTypeId,
+        }
+      : null,
+    isForwarded: false,
+    forwardingMetadata: null,
+  };
+}
+
+/**
+ * Handle forwarded call from ingress number
+ *
+ * WHY: Affiliates using external call tracking forward to shared ingress numbers.
+ * WHEN: Call arrives on an INGRESS type tracking number.
+ * HOW: Parse SIP headers or URL params to identify affiliate/campaign.
+ */
+async function handleForwardedCall(payload: TwilioIncomingPayload): Promise<ResolvedTrackingInfo> {
+  // Parse forwarding identification from SIP headers or URL params
+  const identification = await parseForwardingIdentification(
+    payload as unknown as Record<string, string | undefined>,
+    payload.To
+  );
+
+  if (!identification.success) {
+    logger.warn({
+      event: 'call.incoming.forwarding_parse_failed',
+      message: identification.error || 'Failed to parse forwarding identification',
+      source: identification.source,
+      rawMetadata: identification.rawMetadata,
+    });
+
+    return {
+      trackingNumberId: null,
+      affiliateId: identification.affiliateId,
+      campaignId: identification.campaignId,
+      serviceTypeId: identification.serviceTypeId,
+      ivrFlowId: null,
+      campaign: null,
+      isForwarded: true,
+      forwardingMetadata: identification.rawMetadata,
+    };
+  }
+
+  // Look up the forwarding configuration to get full details
+  const forwardingConfig = await prisma.trackingNumber.findFirst({
+    where: {
+      affiliateId: identification.affiliateId!,
+      campaignId: identification.campaignId!,
+      provisioningType: 'FORWARDING',
+      provisioningStatus: 'ACTIVE',
+      active: true,
+    },
+    include: {
+      campaign: {
+        select: {
+          id: true,
+          name: true,
+          serviceTypeId: true,
+          ivrFlowId: true,
+        },
+      },
+    },
+  });
+
+  return {
+    trackingNumberId: forwardingConfig?.id || null,
+    affiliateId: identification.affiliateId,
+    campaignId: identification.campaignId,
+    serviceTypeId: identification.serviceTypeId || forwardingConfig?.serviceTypeId || null,
+    ivrFlowId: forwardingConfig?.ivrFlowId || forwardingConfig?.campaign?.ivrFlowId || null,
+    campaign: forwardingConfig?.campaign
+      ? {
+          id: forwardingConfig.campaign.id,
+          name: forwardingConfig.campaign.name,
+          serviceTypeId: forwardingConfig.campaign.serviceTypeId,
+        }
+      : null,
+    isForwarded: true,
+    forwardingMetadata: identification.rawMetadata,
+  };
 }
 
 /**

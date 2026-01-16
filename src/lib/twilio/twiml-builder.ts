@@ -81,6 +81,202 @@ export function buildIvrGather(
   return twimlString;
 }
 
+// ============================================
+// SPEECH INPUT SUPPORT (P3-IVR-4)
+// ============================================
+
+/**
+ * Speech recognition model options
+ */
+export type SpeechModel = 'default' | 'phone_call' | 'numbers_and_commands';
+
+/**
+ * Extended options for IVR gather with speech support
+ */
+export interface SpeechGatherOptions extends IvrGatherOptions {
+  /** Input type: 'dtmf', 'speech', or 'dtmf speech' */
+  inputType?: 'dtmf' | 'speech' | 'dtmf speech';
+  /** Speech recognition model */
+  speechModel?: SpeechModel;
+  /** Speech timeout ('auto' or seconds as string) */
+  speechTimeout?: string;
+  /** Hints for speech recognition (e.g., ZIP codes, yes/no) */
+  hints?: string[];
+  /** Language for speech recognition (e.g., 'en-US') */
+  language?: string;
+  /** Profanity filter (default: true) */
+  profanityFilter?: boolean;
+  /** Enhanced recognition for certain inputs */
+  enhanced?: boolean;
+}
+
+/**
+ * WHY: Build IVR gather with speech recognition support.
+ * WHEN: Used for voice input collection (ZIP codes, yes/no responses).
+ * HOW: Configures Twilio's speech-to-text with appropriate hints.
+ *
+ * @param prompt - Text to speak before gathering input
+ * @param actionUrl - URL to receive the gather results
+ * @param options - Speech and gather configuration
+ * @returns TwiML string
+ */
+export function buildSpeechGather(
+  prompt: string,
+  actionUrl: string,
+  options: SpeechGatherOptions = {}
+): string {
+  const response = new twiml.VoiceResponse();
+  const voice = (options.voice || DEFAULT_VOICE) as typeof DEFAULT_VOICE;
+
+  const gatherOptions: Record<string, unknown> = {
+    action: actionUrl,
+    method: 'POST',
+    timeout: options.timeout || 10,
+  };
+
+  // Configure input type
+  if (options.inputType) {
+    gatherOptions.input = options.inputType;
+  } else {
+    gatherOptions.input = 'dtmf'; // Default to DTMF only
+  }
+
+  // DTMF-specific options
+  if (options.inputType === 'dtmf' || !options.inputType) {
+    if (options.numDigits) {
+      gatherOptions.numDigits = options.numDigits;
+    }
+    if (options.finishOnKey) {
+      gatherOptions.finishOnKey = options.finishOnKey;
+    }
+  }
+
+  // Speech-specific options
+  if (options.inputType === 'speech' || options.inputType === 'dtmf speech') {
+    // Speech model for better recognition
+    if (options.speechModel) {
+      gatherOptions.speechModel = options.speechModel;
+    }
+
+    // Speech timeout
+    if (options.speechTimeout) {
+      gatherOptions.speechTimeout = options.speechTimeout;
+    }
+
+    // Hints improve recognition accuracy
+    if (options.hints && options.hints.length > 0) {
+      gatherOptions.hints = options.hints.join(', ');
+    }
+
+    // Language
+    if (options.language) {
+      gatherOptions.language = options.language;
+    }
+
+    // Profanity filter
+    if (options.profanityFilter !== undefined) {
+      gatherOptions.profanityFilter = options.profanityFilter;
+    }
+
+    // Enhanced recognition
+    if (options.enhanced) {
+      gatherOptions.enhanced = options.enhanced;
+    }
+  }
+
+  const gather = response.gather(gatherOptions);
+  gather.say({ voice }, prompt);
+
+  // Fallback if no input received
+  response.say({ voice }, "We didn't receive a response. Goodbye.");
+  response.hangup();
+
+  const twimlString = response.toString();
+  logTwimlGenerated({
+    twimlType: 'speechGather',
+    twiml: twimlString,
+  });
+
+  return twimlString;
+}
+
+/**
+ * WHY: Build gather optimized for ZIP code collection via speech.
+ * WHEN: Caller needs to provide their ZIP code by voice.
+ * HOW: Uses numbers_and_commands model with digit hints.
+ *
+ * @param prompt - Text prompt (e.g., "Please say or enter your 5-digit ZIP code")
+ * @param actionUrl - URL to receive results
+ * @param options - Additional options
+ * @returns TwiML string
+ */
+export function buildZipCodeGather(
+  prompt: string,
+  actionUrl: string,
+  options: Partial<SpeechGatherOptions> = {}
+): string {
+  // Generate ZIP code hints (common patterns)
+  const zipHints = [
+    // Single digits
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    // Common prefixes
+    '100', '200', '300', '400', '500', '600', '700', '800', '900',
+    // Spelled out numbers
+    'zero', 'one', 'two', 'three', 'four', 'five',
+    'six', 'seven', 'eight', 'nine',
+  ];
+
+  return buildSpeechGather(prompt, actionUrl, {
+    inputType: 'dtmf speech',
+    numDigits: 5,
+    finishOnKey: '#',
+    speechModel: 'numbers_and_commands',
+    speechTimeout: 'auto',
+    hints: [...zipHints, ...(options.hints || [])],
+    timeout: options.timeout || 15,
+    voice: options.voice,
+    language: options.language || 'en-US',
+  });
+}
+
+/**
+ * WHY: Build gather optimized for yes/no responses.
+ * WHEN: Caller needs to confirm something (homeowner, appointment).
+ * HOW: Uses speech with yes/no hints and DTMF 1/2 fallback.
+ *
+ * @param prompt - Text prompt
+ * @param actionUrl - URL to receive results
+ * @param options - Additional options
+ * @returns TwiML string
+ */
+export function buildYesNoGather(
+  prompt: string,
+  actionUrl: string,
+  options: Partial<SpeechGatherOptions> = {}
+): string {
+  const yesNoHints = [
+    'yes', 'no', 'yeah', 'nope', 'yep', 'nah',
+    'correct', 'incorrect', 'right', 'wrong',
+    'affirmative', 'negative',
+    'one', 'two', '1', '2',
+  ];
+
+  return buildSpeechGather(prompt, actionUrl, {
+    inputType: 'dtmf speech',
+    numDigits: 1,
+    speechModel: 'phone_call',
+    speechTimeout: 'auto',
+    hints: [...yesNoHints, ...(options.hints || [])],
+    timeout: options.timeout || 10,
+    voice: options.voice,
+    language: options.language || 'en-US',
+  });
+}
+
+// ============================================
+// EXISTING FUNCTIONS
+// ============================================
+
 /**
  * Options for call transfer
  */

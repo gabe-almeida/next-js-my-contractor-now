@@ -3,14 +3,27 @@
 /**
  * Affiliate Settings Page
  *
- * WHY: Allows affiliates to manage their profile and payment settings.
- * WHEN: Affiliate needs to update contact info or payment preferences.
- * HOW: Fetches current profile, provides forms for profile and password update.
+ * WHY: Allows affiliates to manage their profile, security, API access,
+ *      and postback notification settings.
+ *
+ * WHEN: Affiliate needs to update any account settings.
+ *
+ * HOW: Organized into sections for profile, password, API access, and postbacks.
  */
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { User, Mail, Phone, Globe, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Phone,
+  Globe,
+  Lock,
+  AlertCircle,
+  CheckCircle
+} from 'lucide-react';
+import ApiAccessSettings from '@/components/affiliate/ApiAccessSettings';
+import PostbackSettings from '@/components/affiliate/PostbackSettings';
 
 interface Profile {
   id: string;
@@ -32,6 +45,7 @@ export default function AffiliateSettingsPage() {
   const [success, setSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [token, setToken] = useState<string | null>(null);
 
   // Profile form state
   const [firstName, setFirstName] = useState('');
@@ -45,13 +59,15 @@ export default function AffiliateSettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
+    const storedToken = localStorage.getItem('affiliate_token');
+    setToken(storedToken);
+
     const fetchProfile = async () => {
-      const token = localStorage.getItem('affiliate_token');
-      if (!token) return;
+      if (!storedToken) return;
 
       try {
         const response = await fetch('/api/affiliates/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${storedToken}` }
         });
         const data = await response.json();
 
@@ -79,11 +95,10 @@ export default function AffiliateSettingsPage() {
     setSaving(true);
 
     try {
-      const token = localStorage.getItem('affiliate_token');
       const response = await fetch('/api/affiliates/me', {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -127,11 +142,10 @@ export default function AffiliateSettingsPage() {
     setChangingPassword(true);
 
     try {
-      const token = localStorage.getItem('affiliate_token');
       const response = await fetch('/api/affiliates/me', {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -151,7 +165,9 @@ export default function AffiliateSettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : 'Failed to change password');
+      setPasswordError(
+        err instanceof Error ? err.message : 'Failed to change password'
+      );
     } finally {
       setChangingPassword(false);
     }
@@ -174,11 +190,14 @@ export default function AffiliateSettingsPage() {
         </p>
       </div>
 
+      {/* Profile and Password Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profile Settings */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Profile Information</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Profile Information
+            </h3>
           </div>
           <div className="px-4 py-5 sm:p-6">
             {error && (
@@ -211,7 +230,9 @@ export default function AffiliateSettingsPage() {
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Email cannot be changed
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -226,7 +247,7 @@ export default function AffiliateSettingsPage() {
                     <input
                       type="text"
                       value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
+                      onChange={e => setFirstName(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                     />
                   </div>
@@ -238,7 +259,7 @@ export default function AffiliateSettingsPage() {
                   <input
                     type="text"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={e => setLastName(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                   />
                 </div>
@@ -255,7 +276,7 @@ export default function AffiliateSettingsPage() {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={e => setPhone(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                   />
                 </div>
@@ -272,7 +293,7 @@ export default function AffiliateSettingsPage() {
                   <input
                     type="url"
                     value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
+                    onChange={e => setWebsite(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="https://"
                   />
@@ -293,7 +314,9 @@ export default function AffiliateSettingsPage() {
         {/* Password Change */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Change Password</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Change Password
+            </h3>
           </div>
           <div className="px-4 py-5 sm:p-6">
             {passwordError && (
@@ -322,7 +345,7 @@ export default function AffiliateSettingsPage() {
                   <input
                     type="password"
                     value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    onChange={e => setCurrentPassword(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                   />
                 </div>
@@ -339,7 +362,7 @@ export default function AffiliateSettingsPage() {
                   <input
                     type="password"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={e => setNewPassword(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="At least 8 characters"
                   />
@@ -357,7 +380,7 @@ export default function AffiliateSettingsPage() {
                   <input
                     type="password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={e => setConfirmPassword(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                   />
                 </div>
@@ -374,6 +397,14 @@ export default function AffiliateSettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* API Access and Postback Row */}
+      {token && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ApiAccessSettings token={token} />
+          <PostbackSettings token={token} />
+        </div>
+      )}
     </div>
   );
 }

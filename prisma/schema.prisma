@@ -544,9 +544,10 @@ model AffiliateCampaign {
 }
 
 // P1-DB-4: TrackingNumber model - Phone numbers assigned to affiliates
+// P3-FW-2: Updated for forwarding type support (PLATFORM, FORWARDING, INGRESS)
 model TrackingNumber {
   id                   String    @id @default(uuid())
-  phoneNumber          String    @unique @map("phone_number") // E.164: +18445551234
+  phoneNumber          String    @unique @map("phone_number") // E.164: +18445551234 or FWD:+18449990001:aff:camp for forwarding
   phoneNumberDisplay   String?   @map("phone_number_display") // (844) 555-1234
   twilioSid            String?   @map("twilio_sid")
 
@@ -554,8 +555,17 @@ model TrackingNumber {
   campaignId           String?   @map("campaign_id")
   serviceTypeId        String?   @map("service_type_id")
 
-  provisioningType     String    @map("provisioning_type") // PLATFORM or FORWARDING
-  forwardingIdentifier String?   @map("forwarding_identifier")
+  // Provisioning type: PLATFORM (we provision), FORWARDING (affiliate forwards to us), INGRESS (shared pool number)
+  provisioningType     String    @map("provisioning_type") // PLATFORM, FORWARDING, INGRESS
+  forwardingIdentifier String?   @map("forwarding_identifier") // Format: INGRESS_PHONE:AFF_ID:CAMP_ID
+
+  // P3-FW-6: SIP credentials for forwarding authentication
+  sipUsername          String?   @map("sip_username")
+  sipPasswordHash      String?   @map("sip_password_hash") // Hashed SIP password
+  sipRealm             String?   @map("sip_realm")
+
+  // P3-FW-2: Reference to parent ingress number for FORWARDING types
+  ingressNumberId      String?   @map("ingress_number_id")
 
   ivrFlowId            String?   @map("ivr_flow_id")
 
@@ -582,6 +592,8 @@ model TrackingNumber {
   @@index([phoneNumber])
   @@index([forwardingIdentifier])
   @@index([provisioningStatus])
+  @@index([provisioningType])
+  @@index([ingressNumberId])
   @@map("tracking_numbers")
 }
 
@@ -673,6 +685,9 @@ model Call {
   disputeStatus           String?   @map("dispute_status") // OPEN, UNDER_REVIEW, RESOLVED, REJECTED
   billingStatus           String    @default("PENDING") @map("billing_status") // PENDING, PENDING_RECORDING, FINALIZED
   billingFinalizedAt      DateTime? @map("billing_finalized_at")
+
+  // P3-FW-3: Forwarding metadata - stores SIP headers from forwarded calls
+  forwardingMetadata      Json?     @map("forwarding_metadata")
 
   // Optimistic locking
   version                 Int       @default(1)
