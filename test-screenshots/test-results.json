@@ -1,0 +1,19 @@
+{
+  "passed": [
+    "✅ Dashboard: Dashboard title/header found",
+    "✅ Calls page loaded",
+    "✅ Campaign page: Direct navigation succeeded"
+  ],
+  "failed": [
+    "❌ Dashboard: Affiliate name not found",
+    "❌ Dashboard: Call statistics not found",
+    "❌ Dashboard: Campaign section not found",
+    "❌ Dashboard: Navigation/header not found",
+    "❌ Calls table: No table headers found",
+    "❌ Calls table: No call records found",
+    "❌ Campaign: Tracking number not found"
+  ],
+  "errors": [
+    "Login Flow Error: Login form inputs not found"
+  ]
+}

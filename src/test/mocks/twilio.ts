@@ -241,6 +241,23 @@ export const createCompletionPayload = (overrides: Record<string, string> = {}) 
 });
 
 /**
+ * Creates a mock Twilio cascade (dial action) callback payload.
+ * Used when first buyer doesn't answer and system cascades to next buyer.
+ */
+export const createCascadePayload = (overrides: Record<string, string | undefined> = {}) => ({
+  CallSid: `CA${Math.random().toString(36).substring(2, 15)}`,
+  DialCallSid: `CA${Math.random().toString(36).substring(2, 15)}`,
+  DialCallStatus: 'no-answer',
+  DialCallDuration: undefined as any,
+  DialBridged: 'false',
+  AccountSid: 'AC123456789',
+  From: '+15551234567',
+  To: '+18445551234',
+  CallStatus: 'in-progress',
+  ...overrides,
+});
+
+/**
  * Creates a mock Twilio recording status callback payload.
  */
 export const createRecordingPayload = (overrides: Record<string, string> = {}) => ({
