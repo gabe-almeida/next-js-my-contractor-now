@@ -24,7 +24,8 @@ import {
   LogOut,
   User,
   Megaphone,
-  Phone
+  Phone,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -45,6 +46,11 @@ const navigationItems = [
     name: 'Dashboard',
     href: '/affiliate/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    name: 'Analytics',
+    href: '/affiliate/analytics',
+    icon: BarChart3,
   },
   {
     name: 'Links',
