@@ -1,0 +1,202 @@
+# Pay-Per-Call System - Execution Batches
+# Generated: 2025-01-15
+# Phase: 1 (MVP)
+
+execution_plan:
+  total_batches: 7
+  total_task_groups: 12
+  estimated_time: "4-6 weeks"
+
+  # Existing code to extend (not replace):
+  existing_code:
+    - src/lib/services/affiliate-service.ts  # Extend with call tracking
+    - src/lib/services/buyer-eligibility-service.ts  # Extend for call type filter
+    - src/lib/auction/engine.ts  # Extract base, create call-specific
+    - src/app/(affiliate)/affiliate/  # Extend dashboard with call stats
+
+batches:
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 1: FOUNDATION (Database + Twilio)
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 1
+    name: "Foundation - Database & Twilio Setup"
+    can_run_parallel: true
+    max_parallel: 2
+    tasks:
+      - task_group: "1.1 Database Schema"
+        task_ids: P1-DB-1 through P1-DB-10
+        dependencies: None
+        files_created:
+          - prisma/schema.prisma (modify)
+          - prisma/seed.ts (modify)
+        reason: "Database is foundation for all other features"
+
+      - task_group: "1.2 Twilio Integration"
+        task_ids: P1-TW-1 through P1-TW-10
+        dependencies: None
+        files_created:
+          - src/lib/twilio/client.ts (new)
+          - src/lib/twilio/twiml-builder.ts (new)
+          - src/lib/twilio/webhook-middleware.ts (new)
+        reason: "Twilio SDK needed for all call handling"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 2: CORE SERVICES
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 2
+    name: "Core Services Layer"
+    can_run_parallel: true
+    max_parallel: 3
+    tasks:
+      - task_group: "1.5 Call Auction Engine"
+        task_ids: P1-AE-1 through P1-AE-8
+        dependencies: "Batch 1 (database tables)"
+        files_created:
+          - src/lib/auction/base-engine.ts (new - extract from engine.ts)
+          - src/lib/auction/call-engine.ts (new)
+        reason: "Depends on calls table existing"
+
+      - task_group: "1.9 Affiliate Services"
+        task_ids: P1-AS-1 through P1-AS-10
+        dependencies: "Batch 1 (database tables)"
+        files_created:
+          - src/lib/services/affiliate-service.ts (extend existing)
+          - src/lib/services/campaign-service.ts (new)
+          - src/lib/services/tracking-number-service.ts (new)
+        reason: "Depends on tracking_numbers, campaigns tables"
+
+      - task_group: "1.11 Admin - Buyer Call Settings"
+        task_ids: P1-AD-1 through P1-AD-7
+        dependencies: "Batch 1 (database tables)"
+        files_created:
+          - src/app/(admin)/admin/buyers/[id]/call-settings/page.tsx (new)
+          - src/components/admin/BuyerCallSettings.tsx (new)
+        reason: "Depends on buyer_service_configs call fields"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 3: INCOMING CALL FLOW
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 3
+    name: "Incoming Call Webhook Handler"
+    can_run_parallel: false
+    tasks:
+      - task_group: "1.3 Call Flow - Incoming"
+        task_ids: P1-CF-1 through P1-CF-7
+        dependencies: "Batches 1-2 (Twilio client, database, services)"
+        files_created:
+          - src/app/api/calls/incoming/route.ts (new)
+        reason: "Entry point for all calls, needs Twilio + DB + services"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 4: IVR AND TRANSFER
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 4
+    name: "IVR System & Call Transfer"
+    can_run_parallel: true
+    max_parallel: 2
+    tasks:
+      - task_group: "1.4 Call Flow - IVR"
+        task_ids: P1-IVR-1 through P1-IVR-6
+        dependencies: "Batch 3 (incoming call creates call record)"
+        files_created:
+          - src/app/api/calls/ivr/route.ts (new)
+        reason: "IVR handler called after incoming webhook"
+
+      - task_group: "1.6 Call Flow - Transfer"
+        task_ids: P1-TR-1 through P1-TR-6
+        dependencies: "Batches 1-2 (Twilio TwiML, auction engine)"
+        files_created:
+          - src/app/api/calls/transfer/route.ts (new) or integrated in auction
+        reason: "Transfer happens after auction selects winner"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 5: COMPLETION AND RECORDING
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 5
+    name: "Call Completion & Recording"
+    can_run_parallel: true
+    max_parallel: 2
+    tasks:
+      - task_group: "1.7 Call Flow - Completion"
+        task_ids: P1-CP-1 through P1-CP-7
+        dependencies: "Batch 4 (transfer sets up completion callback)"
+        files_created:
+          - src/app/api/calls/completed/route.ts (new)
+        reason: "Called by Twilio when call ends"
+
+      - task_group: "1.8 Call Recording"
+        task_ids: P1-REC-1 through P1-REC-5
+        dependencies: "Batch 4-5 (recording webhook after call ends)"
+        files_created:
+          - src/app/api/calls/recording/route.ts (new)
+          - src/lib/services/recording-service.ts (new)
+        reason: "Recording webhook arrives after/during completion"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 6: FRONTEND (Affiliate Portal)
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 6
+    name: "Affiliate Portal - Call UI"
+    can_run_parallel: false
+    tasks:
+      - task_group: "1.10 Affiliate Portal - Pages"
+        task_ids: P1-AP-1 through P1-AP-10
+        dependencies: "Batches 2, 5 (services, recording)"
+        files_created:
+          - src/app/(affiliate)/affiliate/dashboard/page.tsx (extend)
+          - src/app/(affiliate)/affiliate/campaigns/page.tsx (new)
+          - src/app/(affiliate)/affiliate/calls/page.tsx (new)
+          - src/app/(affiliate)/affiliate/calls/[id]/page.tsx (new)
+          - src/components/affiliate/RecordingPlayer.tsx (new)
+          - src/components/affiliate/CallsTable.tsx (new)
+        reason: "UI needs all backend services and APIs complete"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # BATCH 7: TESTING & QA
+  # ═══════════════════════════════════════════════════════════════════════
+  - batch_number: 7
+    name: "Testing & Quality Assurance"
+    can_run_parallel: false
+    tasks:
+      - task_group: "1.12 Testing & QA"
+        task_ids: P1-QA-1 through P1-QA-8
+        dependencies: "ALL previous batches"
+        files_created:
+          - tests/calls/ (new directory)
+          - tests/calls/incoming.test.ts
+          - tests/calls/ivr.test.ts
+          - tests/calls/auction.test.ts
+          - tests/calls/transfer.test.ts
+          - tests/calls/recording.test.ts
+        reason: "Integration tests require full system"
+
+# ═══════════════════════════════════════════════════════════════════════
+# DEPENDENCY GRAPH
+# ═══════════════════════════════════════════════════════════════════════
+#
+#  BATCH 1: Foundation
+#  ├── 1.1 Database Schema ─────┬───────────────────────────────────┐
+#  └── 1.2 Twilio Integration ──┤                                   │
+#                               ↓                                   │
+#  BATCH 2: Core Services                                          │
+#  ├── 1.5 Call Auction ────────┤                                   │
+#  ├── 1.9 Affiliate Services ──┤                                   │
+#  └── 1.11 Admin Buyer ────────┘                                   │
+#                               ↓                                   │
+#  BATCH 3: Incoming ───────────┬───────────────────────────────────┤
+#  └── 1.3 Incoming Handler     │                                   │
+#                               ↓                                   │
+#  BATCH 4: IVR & Transfer                                         │
+#  ├── 1.4 IVR ─────────────────┤                                   │
+#  └── 1.6 Transfer ────────────┘                                   │
+#                               ↓                                   │
+#  BATCH 5: Completion                                              │
+#  ├── 1.7 Completion ──────────┤                                   │
+#  └── 1.8 Recording ───────────┘                                   │
+#                               ↓                                   │
+#  BATCH 6: Frontend ───────────┤                                   │
+#  └── 1.10 Affiliate Portal ───┘                                   │
+#                               ↓                                   │
+#  BATCH 7: Testing ────────────────────────────────────────────────┘
+#  └── 1.12 QA (depends on ALL)
+#

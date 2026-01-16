@@ -4,26 +4,47 @@
  * Affiliate Dashboard Stats Component
  *
  * WHY: Provides visual summary of affiliate performance metrics.
+ *      Includes both lead and call stats for unified earnings view.
+ *
  * WHEN: Displayed on affiliate dashboard for quick performance overview.
- * HOW: Fetches stats from API, displays as card grid with icons and values.
+ *
+ * HOW: Receives stats from parent, displays as card grid with icons and values.
+ *      Supports both lead-only and combined lead+call stats.
  */
 
-import { DollarSign, Clock, Wallet, MousePointerClick, Users } from 'lucide-react';
+import { DollarSign, Clock, Wallet, MousePointerClick, Users, Phone, CheckCircle } from 'lucide-react';
 
 interface StatsData {
+  // Lead stats
   totalEarnings: number;
   pendingEarnings: number;
   availableBalance: number;
   totalClicks: number;
   totalConversions: number;
   conversionRate: number;
+  // Call stats (optional for backward compatibility)
+  callsToday?: number;
+  callsThisWeek?: number;
+  callsThisMonth?: number;
+  callEarningsToday?: number;
+  callEarningsThisWeek?: number;
+  callEarningsThisMonth?: number;
+  qualifiedCallsToday?: number;
+  qualifiedCallsThisWeek?: number;
+  qualifiedCallsThisMonth?: number;
 }
 
 interface DashboardStatsProps {
   stats: StatsData | null;
   loading?: boolean;
+  showCallStats?: boolean;
 }
 
+/**
+ * WHY: Format currency for display.
+ * WHEN: Displaying monetary amounts.
+ * HOW: Use Intl.NumberFormat for consistent USD formatting.
+ */
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -31,12 +52,18 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/**
+ * WHY: Format number for display.
+ * WHEN: Displaying count metrics.
+ * HOW: Use Intl.NumberFormat for consistent number formatting.
+ */
 function formatNumber(num: number): string {
   return new Intl.NumberFormat('en-US').format(num);
 }
 
-export function DashboardStats({ stats, loading }: DashboardStatsProps) {
-  const statCards = [
+export function DashboardStats({ stats, loading, showCallStats = false }: DashboardStatsProps) {
+  // Build stat cards based on whether call stats are included
+  const leadStatCards = [
     {
       name: 'Total Earnings',
       value: stats ? formatCurrency(stats.totalEarnings) : '$0.00',
@@ -74,10 +101,33 @@ export function DashboardStats({ stats, loading }: DashboardStatsProps) {
     },
   ];
 
+  // If showing call stats, add call-specific cards
+  const callStatCards = showCallStats ? [
+    {
+      name: "Today's Calls",
+      value: stats?.callsToday !== undefined ? formatNumber(stats.callsToday) : '0',
+      icon: Phone,
+      color: 'bg-orange-500',
+      description: `${stats?.qualifiedCallsToday || 0} qualified`,
+    },
+    {
+      name: "Today's Call Earnings",
+      value: stats?.callEarningsToday !== undefined
+        ? formatCurrency(stats.callEarningsToday)
+        : '$0.00',
+      icon: CheckCircle,
+      color: 'bg-teal-500',
+      description: 'From qualified calls',
+    },
+  ] : [];
+
+  const statCards = [...leadStatCards, ...callStatCards];
+  const gridCols = showCallStats ? 'lg:grid-cols-7' : 'lg:grid-cols-5';
+
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-        {[...Array(5)].map((_, i) => (
+      <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${gridCols}`}>
+        {[...Array(showCallStats ? 7 : 5)].map((_, i) => (
           <div key={i} className="bg-white overflow-hidden shadow rounded-lg animate-pulse">
             <div className="p-5">
               <div className="flex items-center">
@@ -95,7 +145,7 @@ export function DashboardStats({ stats, loading }: DashboardStatsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+    <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${gridCols}`}>
       {statCards.map((stat) => {
         const Icon = stat.icon;
         return (

@@ -20,7 +20,9 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.970.0",
     "@aws-sdk/client-ses": "^3.968.0",
+    "@aws-sdk/s3-request-presigner": "^3.970.0",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.3.2",
     "@prisma/client": "^5.6.0",
@@ -32,9 +34,12 @@
     "@sentry/nextjs": "^10.33.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "autoprefixer": "^10.4.23",
     "axios": "^1.6.0",
     "bcryptjs": "^3.0.3",
+    "bottleneck": "^2.19.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "decimal.js": "^10.6.0",
@@ -44,6 +49,7 @@
     "lucide-react": "^0.292.0",
     "maplibre-gl": "^5.6.2",
     "next": "^14.2.0",
+    "opossum": "^9.0.0",
     "pg": "^8.16.3",
     "postcss": "^8.5.6",
     "prisma": "^5.6.0",
@@ -57,12 +63,11 @@
     "recharts": "^3.1.2",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.19",
+    "twilio": "^5.11.2",
     "typescript": "^5.9.3",
     "winston": "^3.17.0",
     "xlsx": "^0.18.5",
-    "zod": "^3.22.4",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/bcryptjs": "^2.4.6"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -70,6 +75,7 @@
     "@types/jest": "^29.5.14",
     "@types/maplibre-gl": "^1.13.2",
     "@types/node": "^20.8.0",
+    "@types/opossum": "^8.1.9",
     "@types/react": "^18.2.25",
     "@types/react-dom": "^18.2.11",
     "@types/react-simple-maps": "^3.0.6",

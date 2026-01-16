@@ -1,6 +1,8 @@
 # Auction System Flow
 
-This document explains how the lead auction system determines buyer eligibility and selects winners.
+> **See also:** [LEAD-DELIVERY-SYSTEM.md](./LEAD-DELIVERY-SYSTEM.md) for the complete end-to-end lead flow from form submission to buyer delivery.
+
+This document provides detailed technical reference for the auction mechanics, including eligibility queries, winner selection, field mappings, API endpoints, status transitions, and caching strategies.
 
 ## Overview
 

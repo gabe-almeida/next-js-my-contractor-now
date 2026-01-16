@@ -498,3 +498,289 @@ function mapPrismaAffiliateToAffiliate(prismaAffiliate: any): Affiliate {
     withdrawals: prismaAffiliate.withdrawals
   };
 }
+
+// =====================================
+// CALL TRACKING TYPES
+// =====================================
+
+export interface AffiliateCampaignWithDetails {
+  id: string;
+  affiliateId: string;
+  campaignId: string;
+  status: string;
+  customCallPayout: number | null;
+  customLeadPayout: number | null;
+  dailyCallCap: number | null;
+  dailyLeadCap: number | null;
+  approvedAt: Date | null;
+  createdAt: Date;
+  campaign: {
+    id: string;
+    name: string;
+    description: string | null;
+    callPayoutType: string;
+    callBasePayout: number | null;
+    minCallDuration: number;
+    serviceType: {
+      id: string;
+      name: string;
+      displayName: string;
+    };
+  };
+  trackingNumbers: {
+    id: string;
+    phoneNumber: string;
+    phoneNumberDisplay: string | null;
+    provisioningStatus: string;
+    totalCalls: number;
+    totalQualifiedCalls: number;
+  }[];
+}
+
+export interface AffiliateCallStats {
+  totalCalls: number;
+  qualifiedCalls: number;
+  totalEarnings: number;
+  period: 'today' | 'week' | 'month' | 'all';
+}
+
+// =====================================
+// CALL TRACKING METHODS
+// =====================================
+
+/**
+ * Get affiliate campaigns with tracking numbers (for call tracking)
+ *
+ * WHY: Affiliates need to see which campaigns they have access to and their
+ *      associated tracking numbers for call attribution.
+ * WHEN: Loading affiliate dashboard, campaigns page, or when provisioning numbers.
+ * HOW: Query AffiliateCampaign junction table with Campaign and TrackingNumber
+ *      includes. Returns only campaigns with ACTIVE or PENDING status.
+ */
+export async function getAffiliateCampaigns(affiliateId: string): Promise<{
+  campaigns: AffiliateCampaignWithDetails[];
+  total: number;
+}> {
+  try {
+    const affiliateCampaigns = await prisma.affiliateCampaign.findMany({
+      where: { affiliateId },
+      include: {
+        campaign: {
+          include: {
+            serviceType: {
+              select: { id: true, name: true, displayName: true }
+            }
+          }
+        }
+      }
+    });
+
+    // Fetch tracking numbers separately to get affiliate-specific numbers
+    const trackingNumbers = await prisma.trackingNumber.findMany({
+      where: {
+        affiliateId,
+        provisioningStatus: { in: ['ACTIVE', 'PENDING'] }
+      },
+      select: {
+        id: true,
+        phoneNumber: true,
+        phoneNumberDisplay: true,
+        provisioningStatus: true,
+        totalCalls: true,
+        totalQualifiedCalls: true,
+        campaignId: true
+      }
+    });
+
+    // Map tracking numbers to campaigns
+    const trackingNumbersByCampaign = trackingNumbers.reduce((acc, tn) => {
+      if (tn.campaignId) {
+        if (!acc[tn.campaignId]) acc[tn.campaignId] = [];
+        acc[tn.campaignId].push(tn);
+      }
+      return acc;
+    }, {} as Record<string, typeof trackingNumbers>);
+
+    const campaigns: AffiliateCampaignWithDetails[] = affiliateCampaigns.map(ac => ({
+      id: ac.id,
+      affiliateId: ac.affiliateId,
+      campaignId: ac.campaignId,
+      status: ac.status,
+      customCallPayout: ac.customCallPayout ? Number(ac.customCallPayout) : null,
+      customLeadPayout: ac.customLeadPayout ? Number(ac.customLeadPayout) : null,
+      dailyCallCap: ac.dailyCallCap,
+      dailyLeadCap: ac.dailyLeadCap,
+      approvedAt: ac.approvedAt,
+      createdAt: ac.createdAt,
+      campaign: {
+        id: ac.campaign.id,
+        name: ac.campaign.name,
+        description: ac.campaign.description,
+        callPayoutType: ac.campaign.callPayoutType,
+        callBasePayout: ac.campaign.callBasePayout
+          ? Number(ac.campaign.callBasePayout)
+          : null,
+        minCallDuration: ac.campaign.minCallDuration,
+        serviceType: ac.campaign.serviceType
+      },
+      trackingNumbers: trackingNumbersByCampaign[ac.campaignId] || []
+    }));
+
+    logger.info('Fetched affiliate campaigns', {
+      affiliateId,
+      campaignCount: campaigns.length
+    });
+
+    return {
+      campaigns,
+      total: campaigns.length
+    };
+  } catch (error) {
+    logger.error('Failed to fetch affiliate campaigns', {
+      affiliateId,
+      error: (error as Error).message
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get affiliate's call statistics for dashboard
+ *
+ * WHY: Dashboard needs to show call earnings alongside lead earnings.
+ *      Provides quick summary metrics for affiliate performance.
+ * WHEN: Loading affiliate dashboard, earnings summary, or analytics page.
+ * HOW: Aggregate from calls table with date filters. Uses Prisma's aggregate
+ *      functions for efficient database queries.
+ */
+export async function getAffiliateCallStats(
+  affiliateId: string,
+  period: 'today' | 'week' | 'month' | 'all' = 'today'
+): Promise<AffiliateCallStats> {
+  try {
+    // Calculate date range based on period
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      default:
+        startDate = new Date(0); // All time
+    }
+
+    // Aggregate call statistics
+    const stats = await prisma.call.aggregate({
+      where: {
+        affiliateId,
+        createdAt: { gte: startDate }
+      },
+      _count: { id: true },
+      _sum: { affiliatePayout: true }
+    });
+
+    // Count qualified (billable) calls separately
+    const qualifiedCalls = await prisma.call.count({
+      where: {
+        affiliateId,
+        createdAt: { gte: startDate },
+        isBillable: true
+      }
+    });
+
+    const result: AffiliateCallStats = {
+      totalCalls: stats._count.id,
+      qualifiedCalls,
+      totalEarnings: stats._sum.affiliatePayout
+        ? Number(stats._sum.affiliatePayout)
+        : 0,
+      period
+    };
+
+    logger.info('Fetched affiliate call stats', {
+      affiliateId,
+      period,
+      totalCalls: result.totalCalls
+    });
+
+    return result;
+  } catch (error) {
+    logger.error('Failed to fetch affiliate call stats', {
+      affiliateId,
+      period,
+      error: (error as Error).message
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get combined affiliate statistics (leads + calls)
+ *
+ * WHY: Dashboard needs unified view of all affiliate earnings and performance.
+ * WHEN: Loading main affiliate dashboard.
+ * HOW: Combines lead commission data with call statistics for complete picture.
+ */
+export async function getAffiliateCombinedStats(affiliateId: string): Promise<{
+  leads: {
+    totalEarned: number;
+    pendingCommissions: number;
+    approvedCommissions: number;
+  };
+  calls: AffiliateCallStats;
+  totals: {
+    totalEarned: number;
+    pendingEarnings: number;
+  };
+}> {
+  try {
+    // Get lead commission stats
+    const commissionStats = await prisma.affiliateCommission.groupBy({
+      by: ['status'],
+      where: { affiliateId },
+      _sum: { amount: true }
+    });
+
+    const leadStats = {
+      totalEarned: 0,
+      pendingCommissions: 0,
+      approvedCommissions: 0
+    };
+
+    for (const stat of commissionStats) {
+      const amount = stat._sum.amount ? Number(stat._sum.amount) : 0;
+      if (stat.status === 'PAID') {
+        leadStats.totalEarned += amount;
+      } else if (stat.status === 'PENDING') {
+        leadStats.pendingCommissions += amount;
+      } else if (stat.status === 'APPROVED') {
+        leadStats.approvedCommissions += amount;
+      }
+    }
+
+    // Get call stats for all time
+    const callStats = await getAffiliateCallStats(affiliateId, 'all');
+
+    return {
+      leads: leadStats,
+      calls: callStats,
+      totals: {
+        totalEarned: leadStats.totalEarned + callStats.totalEarnings,
+        pendingEarnings: leadStats.pendingCommissions + leadStats.approvedCommissions
+      }
+    };
+  } catch (error) {
+    logger.error('Failed to fetch combined affiliate stats', {
+      affiliateId,
+      error: (error as Error).message
+    });
+    throw error;
+  }
+}

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { generateWebhookSecret } from '../src/lib/security/webhook-signatures.js'
 import { encrypt } from '../src/lib/security/encryption.js'
 import { DEFAULT_TCPA_TEXT_PLAIN } from '../src/config/tcpa'
@@ -10,6 +10,21 @@ async function main() {
 
   // Clear existing data (in development only)
   console.log('🗑️  Clearing existing data...')
+  // Pay-per-call tables (new)
+  await prisma.callActivityLog.deleteMany()
+  await prisma.callFeedback.deleteMany()
+  await prisma.callDispute.deleteMany()
+  await prisma.callBid.deleteMany()
+  await prisma.call.deleteMany()
+  await prisma.trackingNumber.deleteMany()
+  await prisma.affiliateCampaign.deleteMany()
+  await prisma.campaign.deleteMany()
+  await prisma.ivrFlow.deleteMany()
+  await prisma.webhookEvent.deleteMany()
+  await prisma.dailyCounter.deleteMany()
+  await prisma.dailyMetric.deleteMany()
+  await prisma.affiliatePayment.deleteMany()
+  // Existing tables
   await prisma.leadStatusHistory.deleteMany()
   await prisma.complianceAuditLog.deleteMany()
   await prisma.transaction.deleteMany()
@@ -20,6 +35,10 @@ async function main() {
   await prisma.zipCodeMetadata.deleteMany()
   await prisma.serviceType.deleteMany()
   await prisma.adminUser.deleteMany()
+  await prisma.affiliateCommission.deleteMany()
+  await prisma.affiliateWithdrawal.deleteMany()
+  await prisma.affiliateLink.deleteMany()
+  await prisma.affiliate.deleteMany()
   console.log('✅ Cleared existing data\n')
 
   // ==========================================
@@ -300,6 +319,20 @@ async function main() {
       businessEmail: 'business@homeadvisor.com',
       businessPhone: '1-800-555-0101',
       active: true,
+      // Pay-per-call fields
+      acceptsCalls: true,
+      callForwardingNumber: '+18005550100',
+      callBackupNumber: '+18005550101',
+      callHoursOfOperation: {
+        mon: { start: '08:00', end: '20:00' },
+        tue: { start: '08:00', end: '20:00' },
+        wed: { start: '08:00', end: '20:00' },
+        thu: { start: '08:00', end: '20:00' },
+        fri: { start: '08:00', end: '20:00' },
+        sat: { start: '09:00', end: '17:00' },
+        sun: { start: '10:00', end: '16:00' }
+      },
+      callRingTimeout: 30,
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['tf_cert_url', 'certificate_url', 'trustedform_url'],
@@ -344,6 +377,20 @@ async function main() {
       businessEmail: 'partners@modernize.com',
       businessPhone: '1-800-555-0201',
       active: true,
+      // Pay-per-call fields
+      acceptsCalls: true,
+      callForwardingNumber: '+18005550200',
+      callBackupNumber: null,
+      callHoursOfOperation: {
+        mon: { start: '07:00', end: '21:00' },
+        tue: { start: '07:00', end: '21:00' },
+        wed: { start: '07:00', end: '21:00' },
+        thu: { start: '07:00', end: '21:00' },
+        fri: { start: '07:00', end: '21:00' },
+        sat: { start: '08:00', end: '18:00' },
+        sun: null // Closed
+      },
+      callRingTimeout: 25,
       notes: 'API Docs: https://apidoc.modernize.com/publishers/ping-post.html#ping-post-v3-api | Ping: https://hsapiservice.quinstage.com/ping-post/pings | Post: https://hsapiservice.quinstage.com/ping-post/posts | TagId: 204670250',
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
@@ -397,6 +444,20 @@ async function main() {
       notifyEmail: true,
       notifyWebhook: true, // Has CRM integration
       notifyDashboard: true,
+      // Pay-per-call fields
+      acceptsCalls: true,
+      callForwardingNumber: '+15551234567',
+      callBackupNumber: '+15551234568',
+      callHoursOfOperation: {
+        mon: { start: '07:00', end: '19:00' },
+        tue: { start: '07:00', end: '19:00' },
+        wed: { start: '07:00', end: '19:00' },
+        thu: { start: '07:00', end: '19:00' },
+        fri: { start: '07:00', end: '19:00' },
+        sat: { start: '08:00', end: '14:00' },
+        sun: null // Closed
+      },
+      callRingTimeout: 20,
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['cert_url', 'trustedform_cert'],
@@ -449,6 +510,20 @@ async function main() {
       notifyEmail: true,
       notifyWebhook: false, // No CRM integration
       notifyDashboard: true,
+      // Pay-per-call fields
+      acceptsCalls: true,
+      callForwardingNumber: '+15559876543',
+      callBackupNumber: null,
+      callHoursOfOperation: {
+        mon: { start: '08:00', end: '18:00' },
+        tue: { start: '08:00', end: '18:00' },
+        wed: { start: '08:00', end: '18:00' },
+        thu: { start: '08:00', end: '18:00' },
+        fri: { start: '08:00', end: '18:00' },
+        sat: { start: '09:00', end: '15:00' },
+        sun: null // Closed
+      },
+      callRingTimeout: 25,
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['tf_url', 'cert_link'],
@@ -503,6 +578,12 @@ async function main() {
       notifyEmail: true,
       notifyWebhook: false,
       notifyDashboard: true,
+      // Pay-per-call fields - does NOT accept calls
+      acceptsCalls: false,
+      callForwardingNumber: null,
+      callBackupNumber: null,
+      callHoursOfOperation: Prisma.JsonNull,
+      callRingTimeout: 25,
       complianceFieldMappings: JSON.stringify({
         trustedForm: { certUrl: ['cert_url'], certId: ['cert_id'] },
         jornaya: { leadId: ['leadid'] },
@@ -530,6 +611,20 @@ async function main() {
       businessEmail: 'api@angi.com',
       businessPhone: '1-800-555-0301',
       active: true,
+      // Pay-per-call fields
+      acceptsCalls: true,
+      callForwardingNumber: '+18005550300',
+      callBackupNumber: '+18005550301',
+      callHoursOfOperation: {
+        mon: { start: '06:00', end: '22:00' },
+        tue: { start: '06:00', end: '22:00' },
+        wed: { start: '06:00', end: '22:00' },
+        thu: { start: '06:00', end: '22:00' },
+        fri: { start: '06:00', end: '22:00' },
+        sat: { start: '07:00', end: '20:00' },
+        sun: { start: '08:00', end: '18:00' }
+      },
+      callRingTimeout: 30,
       complianceFieldMappings: JSON.stringify({
         trustedForm: {
           certUrl: ['cert_url'],
@@ -721,7 +816,20 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: true,
         minBid: 15.00,
-        maxBid: 60.00
+        maxBid: 60.00,
+        // Pay-per-call fields
+        callBidAmount: 45.00,
+        callMinBid: 30.00,
+        callMaxBid: 75.00,
+        callDailyCap: 50,
+        callPingUrl: 'https://api.homeadvisor.com/calls/ping',
+        callFieldMappings: {
+          callerPhone: 'phone',
+          callerZip: 'zip_code',
+          callerState: 'state',
+          serviceType: 'project_type'
+        },
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -734,7 +842,14 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: true,
         minBid: 20.00,
-        maxBid: 80.00
+        maxBid: 80.00,
+        // Pay-per-call fields
+        callBidAmount: 55.00,
+        callMinBid: 40.00,
+        callMaxBid: 90.00,
+        callDailyCap: 40,
+        callPingUrl: 'https://api.homeadvisor.com/calls/ping',
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -747,7 +862,13 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: false,
         minBid: 25.00,
-        maxBid: 100.00
+        maxBid: 100.00,
+        // Pay-per-call fields
+        callBidAmount: 65.00,
+        callMinBid: 50.00,
+        callMaxBid: 100.00,
+        callDailyCap: 30,
+        requireIvrQualification: false
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -760,7 +881,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 18.00,
-        maxBid: 75.00
+        maxBid: 75.00,
+        // Pay-per-call fields
+        callBidAmount: 50.00,
+        callMinBid: 35.00,
+        callMaxBid: 80.00,
+        callDailyCap: 45,
+        requireIvrQualification: true
       }
     })
   )
@@ -936,7 +1063,14 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: true,
         minBid: 0.01,
-        maxBid: 99999.99
+        maxBid: 99999.99,
+        // Pay-per-call fields
+        callBidAmount: 42.00,
+        callMinBid: 25.00,
+        callMaxBid: 70.00,
+        callDailyCap: 60,
+        callPingUrl: 'https://hsapiservice.quinstage.com/ping-post/call-pings',
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1084,7 +1218,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 0.01,
-        maxBid: 99999.99
+        maxBid: 99999.99,
+        // Pay-per-call fields
+        callBidAmount: 52.00,
+        callMinBid: 35.00,
+        callMaxBid: 85.00,
+        callDailyCap: 45,
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1247,7 +1387,13 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: false,
         minBid: 0.01,
-        maxBid: 99999.99
+        maxBid: 99999.99,
+        // Pay-per-call fields
+        callBidAmount: 60.00,
+        callMinBid: 45.00,
+        callMaxBid: 95.00,
+        callDailyCap: 35,
+        requireIvrQualification: false
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1411,7 +1557,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 0.01,
-        maxBid: 99999.99
+        maxBid: 99999.99,
+        // Pay-per-call fields
+        callBidAmount: 48.00,
+        callMinBid: 30.00,
+        callMaxBid: 75.00,
+        callDailyCap: 50,
+        requireIvrQualification: true
       }
     })
   )
@@ -1428,7 +1580,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: false,
         minBid: 30.00,
-        maxBid: 120.00
+        maxBid: 120.00,
+        // Pay-per-call fields
+        callBidAmount: 55.00,
+        callMinBid: 40.00,
+        callMaxBid: 85.00,
+        callDailyCap: 20,
+        requireIvrQualification: false
       }
     })
   )
@@ -1445,7 +1603,13 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: false,
         minBid: 20.00,
-        maxBid: 85.00
+        maxBid: 85.00,
+        // Pay-per-call fields
+        callBidAmount: 40.00,
+        callMinBid: 25.00,
+        callMaxBid: 65.00,
+        callDailyCap: 25,
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1458,12 +1622,18 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: false,
         minBid: 12.00,
-        maxBid: 50.00
+        maxBid: 50.00,
+        // Pay-per-call fields
+        callBidAmount: 35.00,
+        callMinBid: 20.00,
+        callMaxBid: 55.00,
+        callDailyCap: 30,
+        requireIvrQualification: false
       }
     })
   )
 
-  // Quality Bath Pros - Bathrooms only (CONTRACTOR with SHARED delivery)
+  // Quality Bath Pros - Bathrooms only (CONTRACTOR with SHARED delivery) - NO CALLS
   buyerServiceConfigs.push(
     await prisma.buyerServiceConfig.create({
       data: {
@@ -1475,7 +1645,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: false,
         minBid: 25.00, // Fixed price
-        maxBid: 25.00
+        maxBid: 25.00,
+        // No call settings - does not accept calls
+        callBidAmount: null,
+        callMinBid: null,
+        callMaxBid: null,
+        callDailyCap: null,
+        requireIvrQualification: false
       }
     })
   )
@@ -1492,7 +1668,14 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 10.00,
-        maxBid: 50.00
+        maxBid: 50.00,
+        // Pay-per-call fields
+        callBidAmount: 38.00,
+        callMinBid: 22.00,
+        callMaxBid: 60.00,
+        callDailyCap: 70,
+        callPingUrl: 'https://api.angi.com/calls/ping',
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1505,7 +1688,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 16.00,
-        maxBid: 65.00
+        maxBid: 65.00,
+        // Pay-per-call fields
+        callBidAmount: 48.00,
+        callMinBid: 32.00,
+        callMaxBid: 75.00,
+        callDailyCap: 55,
+        requireIvrQualification: true
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1518,7 +1707,13 @@ async function main() {
         requiresTrustedForm: true,
         requiresJornaya: false,
         minBid: 20.00,
-        maxBid: 85.00
+        maxBid: 85.00,
+        // Pay-per-call fields
+        callBidAmount: 58.00,
+        callMinBid: 42.00,
+        callMaxBid: 90.00,
+        callDailyCap: 40,
+        requireIvrQualification: false
       }
     }),
     await prisma.buyerServiceConfig.create({
@@ -1531,7 +1726,13 @@ async function main() {
         requiresTrustedForm: false,
         requiresJornaya: true,
         minBid: 14.00,
-        maxBid: 60.00
+        maxBid: 60.00,
+        // Pay-per-call fields
+        callBidAmount: 44.00,
+        callMinBid: 28.00,
+        callMaxBid: 70.00,
+        callDailyCap: 60,
+        requireIvrQualification: true
       }
     })
   )
@@ -1825,7 +2026,7 @@ async function main() {
   for (let i = 0; i < 10; i++) {
     const lead = createdLeads[i]
     const buyers = [homeadvisor, modernize, angi]
-    
+
     // Create compliance audit log
     await prisma.complianceAuditLog.create({
       data: {
@@ -1903,7 +2104,214 @@ async function main() {
   console.log(`✅ Created ${transactionCount} transactions`)
   console.log(`✅ Created ${auditLogCount} compliance audit logs\n`)
 
-  console.log('=' .repeat(50))
+  // ==========================================
+  // 8. PAY-PER-CALL SYSTEM SEED DATA
+  // ==========================================
+  console.log('📞 Creating pay-per-call system seed data...')
+
+  // 8.1 Create test affiliate with pay-per-call fields
+  const testAffiliate = await prisma.affiliate.create({
+    data: {
+      email: 'testaffiliate@example.com',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Test',
+      lastName: 'Affiliate',
+      companyName: 'Test Affiliate LLC',
+      phone: '555-TEST-AFF',
+      commissionRate: 0.15,
+      status: 'ACTIVE',
+      emailVerified: true,
+      // Pay-per-call fields
+      apiKey: 'test_api_key_' + Date.now(),
+      apiSecret: '$2b$12$testhashedsecret', // Hashed secret
+      postbackUrl: 'https://affiliate.example.com/postback',
+      postbackMethod: 'POST',
+      paymentMethod: 'wire',
+      paymentDetails: {
+        bankName: 'Test Bank',
+        accountType: 'checking',
+        routingNumber: '123456789',
+        accountNumber: '***masked***',
+        accountHolder: 'Test Affiliate LLC'
+      },
+      paymentTerms: 'net15',
+      minimumPayout: 50.00,
+      approvedAt: new Date(),
+      approvedBy: superAdmin.id,
+      notes: 'Test affiliate for pay-per-call development'
+    }
+  })
+
+  console.log(`✅ Created test affiliate: ${testAffiliate.email}`)
+
+  // 8.2 Create IVR Flow for Windows service
+  const windowsIvrFlow = await prisma.ivrFlow.create({
+    data: {
+      name: 'Windows Qualification IVR',
+      description: 'Pre-qualifies callers for windows service by confirming homeownership and project readiness',
+      serviceTypeId: windows.id,
+      steps: [
+        {
+          id: 'welcome',
+          type: 'say',
+          text: 'Thank you for calling about window replacement services. Please answer a few quick questions to connect you with a specialist.',
+          voice: 'Polly.Joanna',
+          next: 'homeowner_check'
+        },
+        {
+          id: 'homeowner_check',
+          type: 'gather',
+          text: 'Are you the homeowner? Press 1 for yes, or 2 for no.',
+          numDigits: 1,
+          timeout: 10,
+          validInputs: ['1', '2'],
+          inputMapping: {
+            '1': { value: true, field: 'isHomeowner', next: 'project_timeline' },
+            '2': { value: false, field: 'isHomeowner', next: 'not_homeowner' }
+          },
+          invalidNext: 'homeowner_check_retry'
+        },
+        {
+          id: 'homeowner_check_retry',
+          type: 'say',
+          text: 'I didn\'t catch that. Let\'s try again.',
+          next: 'homeowner_check'
+        },
+        {
+          id: 'not_homeowner',
+          type: 'say',
+          text: 'We\'re sorry, but we can only assist homeowners at this time. Thank you for calling.',
+          next: 'hangup',
+          qualifies: false
+        },
+        {
+          id: 'project_timeline',
+          type: 'gather',
+          text: 'Are you looking to start your window project within the next 3 months? Press 1 for yes, or 2 for no.',
+          numDigits: 1,
+          timeout: 10,
+          validInputs: ['1', '2'],
+          inputMapping: {
+            '1': { value: 'within_3_months', field: 'timeline', next: 'qualified' },
+            '2': { value: 'later', field: 'timeline', next: 'qualified' } // Still qualified, just lower priority
+          },
+          invalidNext: 'project_timeline'
+        },
+        {
+          id: 'qualified',
+          type: 'say',
+          text: 'Great! Please hold while we connect you with a window specialist.',
+          next: 'transfer',
+          qualifies: true
+        },
+        {
+          id: 'transfer',
+          type: 'transfer',
+          action: 'auction' // Triggers the auction engine
+        },
+        {
+          id: 'hangup',
+          type: 'hangup'
+        }
+      ],
+      defaultTimeout: 10,
+      maxRetries: 2,
+      active: true
+    }
+  })
+
+  console.log(`✅ Created IVR flow: ${windowsIvrFlow.name}`)
+
+  // 8.3 Create Test Campaign for Windows
+  const windowsCampaign = await prisma.campaign.create({
+    data: {
+      name: 'Windows - National Campaign',
+      description: 'National campaign for windows replacement leads and calls',
+      serviceTypeId: windows.id,
+      // Call payout structure
+      callPayoutType: 'FIXED',
+      callBasePayout: 35.00,
+      callRevenueSharePct: null,
+      // Lead payout structure
+      leadPayoutType: 'REVENUE_SHARE',
+      leadBasePayout: null,
+      leadRevenueSharePct: 20.00, // 20% of winning bid
+      // Call qualification
+      minCallDuration: 90, // 90 seconds minimum for qualified call
+      requireIvrQualification: true,
+      ivrFlowId: windowsIvrFlow.id,
+      // Caps
+      dailyCallCap: 500, // Max 500 calls per day total
+      dailyLeadCap: 1000, // Max 1000 leads per day total
+      affiliateDailyCallCap: 50, // Max 50 calls per affiliate per day
+      affiliateDailyLeadCap: 100, // Max 100 leads per affiliate per day
+      // Scheduling (Eastern time)
+      hoursOfOperation: {
+        mon: { start: '08:00', end: '21:00' },
+        tue: { start: '08:00', end: '21:00' },
+        wed: { start: '08:00', end: '21:00' },
+        thu: { start: '08:00', end: '21:00' },
+        fri: { start: '08:00', end: '21:00' },
+        sat: { start: '09:00', end: '18:00' },
+        sun: { start: '10:00', end: '17:00' }
+      },
+      timezone: 'America/New_York',
+      active: true
+    }
+  })
+
+  console.log(`✅ Created campaign: ${windowsCampaign.name}`)
+
+  // 8.4 Create AffiliateCampaign junction (approve test affiliate for windows campaign)
+  const affiliateCampaign = await prisma.affiliateCampaign.create({
+    data: {
+      affiliateId: testAffiliate.id,
+      campaignId: windowsCampaign.id,
+      // Custom payout overrides for top affiliate
+      customCallPayout: 38.00, // $3 bonus per call
+      customLeadPayout: null, // Use campaign default
+      // Per-affiliate caps
+      dailyCallCap: 75, // Higher than default due to good performance
+      dailyLeadCap: 150,
+      status: 'APPROVED',
+      approvedAt: new Date()
+    }
+  })
+
+  console.log(`✅ Approved affiliate for campaign: ${affiliateCampaign.id}`)
+
+  // 8.5 Create test tracking number for the affiliate
+  const testTrackingNumber = await prisma.trackingNumber.create({
+    data: {
+      phoneNumber: '+18445551234',
+      phoneNumberDisplay: '(844) 555-1234',
+      twilioSid: 'PN_test_' + Date.now(), // Would be real Twilio SID
+      affiliateId: testAffiliate.id,
+      campaignId: windowsCampaign.id,
+      serviceTypeId: windows.id,
+      provisioningType: 'PLATFORM',
+      forwardingIdentifier: null,
+      ivrFlowId: windowsIvrFlow.id,
+      active: true,
+      provisioningStatus: 'ACTIVE',
+      version: 1,
+      configChangedAt: null,
+      totalCalls: 0,
+      totalQualifiedCalls: 0
+    }
+  })
+
+  console.log(`✅ Created tracking number: ${testTrackingNumber.phoneNumberDisplay}`)
+
+  // Summary counts for pay-per-call
+  console.log(`\n✅ Pay-per-call seed data complete:`)
+  console.log(`   - Test Affiliate: 1`)
+  console.log(`   - IVR Flows: 1`)
+  console.log(`   - Campaigns: 1`)
+  console.log(`   - Affiliate Campaigns: 1`)
+  console.log(`   - Tracking Numbers: 1`)
+
+  console.log('\n' + '=' .repeat(50))
   console.log('🎉 Database seeding completed successfully!\n')
   console.log('Summary:')
   console.log(`- Admin Users: 3`)
@@ -1915,6 +2323,10 @@ async function main() {
   console.log(`- Leads: ${createdLeads.length}`)
   console.log(`- Transactions: ${transactionCount}`)
   console.log(`- Compliance Logs: ${auditLogCount}`)
+  console.log(`- Affiliates (with pay-per-call fields): 1`)
+  console.log(`- IVR Flows: 1`)
+  console.log(`- Campaigns: 1`)
+  console.log(`- Tracking Numbers: 1`)
   console.log('=' .repeat(50))
 }
 

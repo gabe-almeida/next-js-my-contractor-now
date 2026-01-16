@@ -3,7 +3,7 @@
 /**
  * Buyer Detail Page
  *
- * WHY: Central view for buyer configuration, activity history, and coverage
+ * WHY: Central view for buyer configuration, activity history, coverage, and call settings
  * WHEN: Admin clicks on a buyer from the list or navigates directly
  * HOW: Fetch buyer data from API, render tabbed interface with sub-components
  */
@@ -21,6 +21,7 @@ import {
 } from '@/components/admin/ui';
 import { BuyerActivityTab } from '@/components/admin/BuyerActivityTab';
 import { BuyerServiceCoverageTab } from '@/components/admin/BuyerServiceCoverageTab';
+import { BuyerCallSettingsTab } from '@/components/admin/BuyerCallSettingsTab';
 import {
   AlertCircle,
   RefreshCw,
@@ -37,7 +38,7 @@ import {
   Award
 } from 'lucide-react';
 
-type TabType = 'details' | 'activity' | 'coverage';
+type TabType = 'details' | 'activity' | 'coverage' | 'call-settings';
 
 interface BuyerData {
   id: string;
@@ -125,7 +126,8 @@ export default function BuyerDetailPage() {
   const tabs = [
     { id: 'details' as TabType, label: 'Details', icon: <Building2 className="h-4 w-4" /> },
     { id: 'activity' as TabType, label: 'Activity', icon: <Activity className="h-4 w-4" /> },
-    { id: 'coverage' as TabType, label: 'ZIP Coverage', icon: <MapPin className="h-4 w-4" /> }
+    { id: 'coverage' as TabType, label: 'ZIP Coverage', icon: <MapPin className="h-4 w-4" /> },
+    { id: 'call-settings' as TabType, label: 'Call Settings', icon: <Phone className="h-4 w-4" /> }
   ];
 
   if (loading) {
@@ -138,7 +140,7 @@ export default function BuyerDetailPage() {
           </div>
 
           <div className="flex gap-2 mb-6">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-10 w-24 bg-gray-200 rounded-lg" />
             ))}
           </div>
@@ -271,6 +273,13 @@ export default function BuyerDetailPage() {
             buyerType={buyer.type}
           />
         </div>
+      )}
+
+      {activeTab === 'call-settings' && (
+        <BuyerCallSettingsTab
+          buyerId={buyer.id}
+          buyerType={buyer.type}
+        />
       )}
     </div>
   );

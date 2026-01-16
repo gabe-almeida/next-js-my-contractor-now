@@ -20,6 +20,13 @@ model ServiceType {
   buyerServiceZipCodes BuyerServiceZipCode[]
   leads                Lead[]
 
+  // Pay-per-call relations
+  campaigns        Campaign[]
+  trackingNumbers  TrackingNumber[]
+  calls            Call[]
+  ivrFlows         IvrFlow[]
+  dailyMetrics     DailyMetric[]
+
   @@map("service_types")
 }
 
@@ -58,12 +65,25 @@ model Buyer {
   notifyWebhook           Boolean               @default(false) @map("notify_webhook")
   notifyDashboard         Boolean               @default(true) @map("notify_dashboard")
 
+  // Pay-per-call fields (P1-DB-7)
+  acceptsCalls           Boolean   @default(false) @map("accepts_calls")
+  callForwardingNumber   String?   @map("call_forwarding_number")
+  callBackupNumber       String?   @map("call_backup_number")
+  callHoursOfOperation   Json?     @map("call_hours_of_operation")
+  callRingTimeout        Int       @default(25) @map("call_ring_timeout")
+
   createdAt               DateTime              @default(now()) @map("created_at")
   updatedAt               DateTime              @updatedAt @map("updated_at")
   serviceConfigs          BuyerServiceConfig[]
   serviceZipCodes         BuyerServiceZipCode[]
   wonLeads                Lead[]
   transactions            Transaction[]
+
+  // Pay-per-call relations
+  wonCalls         Call[]         @relation("WinningBuyer")
+  callBids         CallBid[]
+  callFeedback     CallFeedback[]
+  dailyMetrics     DailyMetric[]
 
   @@index([type])
   @@index([pricingModel])
@@ -86,6 +106,16 @@ model BuyerServiceConfig {
   createdAt           DateTime    @default(now()) @map("created_at")
   lastZipCodeUpdate   DateTime?   @map("last_zip_code_update")
   zipCodeSource       String?     @map("zip_code_source") // Original filename for audit trail
+
+  // Pay-per-call fields (P1-DB-8)
+  callBidAmount            Decimal?  @map("call_bid_amount") @db.Decimal(10, 2)
+  callMinBid               Decimal?  @map("call_min_bid") @db.Decimal(10, 2)
+  callMaxBid               Decimal?  @map("call_max_bid") @db.Decimal(10, 2)
+  callDailyCap             Int?      @map("call_daily_cap")
+  callPingUrl              String?   @map("call_ping_url")
+  callFieldMappings        Json?     @map("call_field_mappings")
+  requireIvrQualification  Boolean   @default(false) @map("require_ivr_qualification")
+
   buyer               Buyer       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   serviceType         ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
 
@@ -108,6 +138,9 @@ model Lead {
   jornayaLeadId      String?              @map("jornaya_lead_id")
   complianceData     String?              @map("compliance_data")
   leadQualityScore   Int?                 @map("lead_quality_score")
+  // Tracking fields
+  ipAddress          String?              @map("ip_address")
+  userAgent          String?              @map("user_agent")
   // Accounting fields
   disposition        String               @default("NEW") @map("disposition") // NEW, DELIVERED, RETURNED, DISPUTED, CREDITED, WRITTEN_OFF
   creditAmount       Decimal?             @map("credit_amount") @db.Decimal(10, 2)
@@ -138,7 +171,7 @@ model Transaction {
   id                 String   @id @default(uuid())
   leadId             String   @map("lead_id")
   buyerId            String   @map("buyer_id")
-  actionType         String   @map("action_type") // PING, POST, DELIVERY
+  actionType         String   @map("action_type") // PING, POST, DELIVERY, CALL_PING, CALL_TRANSFER, CALL_COMPLETE
   payload            String
   response           String?
   status             String   // SUCCESS, FAILED, TIMEOUT, REJECTED
@@ -309,6 +342,20 @@ model Affiliate {
   commissionRate  Decimal         @default(0.10) @map("commission_rate") @db.Decimal(5, 4)
   status          AffiliateStatus @default(PENDING)
   emailVerified   Boolean         @default(false) @map("email_verified")
+
+  // Pay-per-call fields (P1-DB-1 - extending existing Affiliate model)
+  apiKey           String?   @unique @map("api_key")     // For programmatic access
+  apiSecret        String?   @map("api_secret")          // Hashed secret
+  postbackUrl      String?   @map("postback_url")        // Conversion notifications
+  postbackMethod   String    @default("POST") @map("postback_method") // GET or POST
+  paymentMethod    String?   @map("payment_method")      // 'wire', 'paypal', 'check'
+  paymentDetails   Json?     @map("payment_details")     // Encrypted payment info
+  paymentTerms     String    @default("net30") @map("payment_terms") // net7, net15, net30
+  minimumPayout    Decimal   @default(100.00) @map("minimum_payout") @db.Decimal(10, 2)
+  approvedAt       DateTime? @map("approved_at")
+  approvedBy       String?   @map("approved_by")         // admin user ID
+  notes            String?   @db.Text
+
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
@@ -316,8 +363,17 @@ model Affiliate {
   commissions AffiliateCommission[]
   withdrawals AffiliateWithdrawal[]
 
+  // Pay-per-call relations
+  affiliateCampaigns AffiliateCampaign[]
+  trackingNumbers    TrackingNumber[]
+  calls              Call[]
+  callDisputes       CallDispute[]
+  affiliatePayments  AffiliatePayment[]
+  dailyMetrics       DailyMetric[]
+
   @@index([status])
   @@index([email])
+  @@index([apiKey])
   @@map("affiliates")
 }
 
@@ -406,4 +462,479 @@ model PageView {
   @@index([serviceSlug])
   @@index([createdAt])
   @@map("page_views")
+}
+
+// ============================================
+// PAY-PER-CALL SYSTEM MODELS
+// ============================================
+
+// P1-DB-2: Campaign model - What affiliates can promote
+model Campaign {
+  id                    String    @id @default(uuid())
+  name                  String
+  description           String?
+  serviceTypeId         String    @map("service_type_id")
+
+  // Call payout structure
+  callPayoutType        String    @default("FIXED") @map("call_payout_type") // FIXED, REVENUE_SHARE, TIERED
+  callBasePayout        Decimal?  @map("call_base_payout") @db.Decimal(10, 2)
+  callRevenueSharePct   Decimal?  @map("call_revenue_share_pct") @db.Decimal(5, 2)
+
+  // Lead payout structure
+  leadPayoutType        String    @default("FIXED") @map("lead_payout_type")
+  leadBasePayout        Decimal?  @map("lead_base_payout") @db.Decimal(10, 2)
+  leadRevenueSharePct   Decimal?  @map("lead_revenue_share_pct") @db.Decimal(5, 2)
+
+  // Call qualification
+  minCallDuration       Int       @default(90) @map("min_call_duration")
+  requireIvrQualification Boolean @default(false) @map("require_ivr_qualification")
+  ivrFlowId             String?   @map("ivr_flow_id")
+
+  // Caps
+  dailyCallCap          Int?      @map("daily_call_cap")
+  dailyLeadCap          Int?      @map("daily_lead_cap")
+  affiliateDailyCallCap Int?      @map("affiliate_daily_call_cap")
+  affiliateDailyLeadCap Int?      @map("affiliate_daily_lead_cap")
+
+  // Scheduling
+  hoursOfOperation      Json?     @map("hours_of_operation")
+  timezone              String    @default("America/New_York")
+
+  active                Boolean   @default(true)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  serviceType           ServiceType @relation(fields: [serviceTypeId], references: [id])
+  ivrFlow               IvrFlow?    @relation(fields: [ivrFlowId], references: [id])
+  affiliateCampaigns    AffiliateCampaign[]
+  trackingNumbers       TrackingNumber[]
+  calls                 Call[]
+
+  @@index([serviceTypeId])
+  @@index([active])
+  @@map("campaigns")
+}
+
+// P1-DB-3: AffiliateCampaign junction table
+model AffiliateCampaign {
+  id                String    @id @default(uuid())
+  affiliateId       String    @map("affiliate_id")
+  campaignId        String    @map("campaign_id")
+
+  // Custom payout overrides
+  customCallPayout  Decimal?  @map("custom_call_payout") @db.Decimal(10, 2)
+  customLeadPayout  Decimal?  @map("custom_lead_payout") @db.Decimal(10, 2)
+
+  // Per-affiliate caps
+  dailyCallCap      Int?      @map("daily_call_cap")
+  dailyLeadCap      Int?      @map("daily_lead_cap")
+
+  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED, PAUSED
+  approvedAt        DateTime? @map("approved_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  affiliate         Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  campaign          Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([affiliateId, campaignId])
+  @@index([affiliateId])
+  @@index([campaignId])
+  @@map("affiliate_campaigns")
+}
+
+// P1-DB-4: TrackingNumber model - Phone numbers assigned to affiliates
+model TrackingNumber {
+  id                   String    @id @default(uuid())
+  phoneNumber          String    @unique @map("phone_number") // E.164: +18445551234
+  phoneNumberDisplay   String?   @map("phone_number_display") // (844) 555-1234
+  twilioSid            String?   @map("twilio_sid")
+
+  affiliateId          String?   @map("affiliate_id")
+  campaignId           String?   @map("campaign_id")
+  serviceTypeId        String?   @map("service_type_id")
+
+  provisioningType     String    @map("provisioning_type") // PLATFORM or FORWARDING
+  forwardingIdentifier String?   @map("forwarding_identifier")
+
+  ivrFlowId            String?   @map("ivr_flow_id")
+
+  active               Boolean   @default(true)
+  provisioningStatus   String    @default("PENDING") @map("provisioning_status") // PENDING, PROVISIONING, ACTIVE, RELEASING, RELEASED, FAILED
+  version              Int       @default(1)
+  configChangedAt      DateTime? @map("config_changed_at")
+
+  // Denormalized stats
+  totalCalls           Int       @default(0) @map("total_calls")
+  totalQualifiedCalls  Int       @default(0) @map("total_qualified_calls")
+
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  affiliate            Affiliate?   @relation(fields: [affiliateId], references: [id])
+  campaign             Campaign?    @relation(fields: [campaignId], references: [id])
+  serviceType          ServiceType? @relation(fields: [serviceTypeId], references: [id])
+  ivrFlow              IvrFlow?     @relation(fields: [ivrFlowId], references: [id])
+  calls                Call[]
+
+  @@index([affiliateId])
+  @@index([campaignId])
+  @@index([phoneNumber])
+  @@index([forwardingIdentifier])
+  @@index([provisioningStatus])
+  @@map("tracking_numbers")
+}
+
+// P1-DB-5: Call model - Individual call records (CRITICAL - main call record)
+model Call {
+  id                      String    @id @default(uuid())
+  twilioCallSid           String    @unique @map("twilio_call_sid")
+
+  // Source
+  trackingNumberId        String?   @map("tracking_number_id")
+  affiliateId             String?   @map("affiliate_id")
+  campaignId              String?   @map("campaign_id")
+  serviceTypeId           String?   @map("service_type_id")
+
+  // Caller info
+  callerPhone             String    @map("caller_phone")
+  callerPhoneDisplay      String?   @map("caller_phone_display")
+  callerCity              String?   @map("caller_city")
+  callerState             String?   @map("caller_state")
+  callerZip               String?   @map("caller_zip")
+  callerName              String?   @map("caller_name") // CNAM
+
+  // IVR
+  ivrResponses            Json?     @map("ivr_responses")
+  isQualified             Boolean   @default(false) @map("is_qualified")
+
+  // Auction
+  auctionStartedAt        DateTime? @map("auction_started_at")
+  auctionCompletedAt      DateTime? @map("auction_completed_at")
+  auctionDurationMs       Int?      @map("auction_duration_ms")
+  eligibleBuyersCount     Int?      @map("eligible_buyers_count")
+  bidsReceived            Json?     @map("bids_received") // Legacy, use CallBid table
+
+  // Status - CRITICAL enum values
+  status                  String    @default("RINGING") // RINGING, IVR, BIDDING, CONNECTING, CASCADING, CONNECTED, COMPLETED, FAILED, REJECTED, CALLER_HANGUP, NO_BIDS, NO_ANSWER
+  previousStatus          String?   @map("previous_status")
+  statusChangedAt         DateTime? @map("status_changed_at")
+
+  // Winner
+  winningBuyerId          String?   @map("winning_buyer_id")
+  winningBid              Decimal?  @map("winning_bid") @db.Decimal(10, 2)
+  transferPhoneNumber     String?   @map("transfer_phone_number")
+
+  // Timing
+  answeredAt              DateTime? @map("answered_at")
+  ivrCompletedAt          DateTime? @map("ivr_completed_at")
+  connectedAt             DateTime? @map("connected_at")
+  endedAt                 DateTime? @map("ended_at")
+
+  // Duration
+  totalDurationSeconds    Int?      @map("total_duration_seconds")
+  connectedDurationSeconds Int?     @map("connected_duration_seconds")
+
+  // Outcome
+  disposition             String?   // ANSWERED, NO_ANSWER, BUSY, FAILED, CALLER_HANGUP
+  hangupReason            String?   @map("hangup_reason")
+
+  // Recording
+  recordingSid            String?   @map("recording_sid")
+  recordingUrl            String?   @map("recording_url")
+  recordingDurationSeconds Int?     @map("recording_duration_seconds")
+  recordingStatus         String    @default("PENDING") @map("recording_status") // PENDING, RECORDING, PROCESSING, DOWNLOAD_FAILED, UPLOAD_FAILED, AVAILABLE, DELETED
+
+  // Financials
+  isBillable              Boolean   @default(false) @map("is_billable")
+  affiliatePayout         Decimal?  @map("affiliate_payout") @db.Decimal(10, 2)
+  buyerCharge             Decimal?  @map("buyer_charge") @db.Decimal(10, 2)
+  platformMargin          Decimal?  @map("platform_margin") @db.Decimal(10, 2)
+
+  // Postback
+  postbackSent            Boolean   @default(false) @map("postback_sent")
+  postbackSentAt          DateTime? @map("postback_sent_at")
+  postbackResponse        String?   @map("postback_response")
+
+  // Cascade tracking
+  cascadePosition         Int       @default(0) @map("cascade_position")
+  cascadeAttempts         Int       @default(0) @map("cascade_attempts")
+  maxCascadeDepth         Int       @default(3) @map("max_cascade_depth")
+
+  // Buyer response tracking
+  buyerAnsweredAt         DateTime? @map("buyer_answered_at")
+  buyerRingDurationSeconds Int?     @map("buyer_ring_duration_seconds")
+
+  // Abandonment tracking
+  abandonmentPhase        String?   @map("abandonment_phase")
+  abandonmentReason       String?   @map("abandonment_reason")
+
+  // Billing/Dispute
+  disputeStatus           String?   @map("dispute_status") // OPEN, UNDER_REVIEW, RESOLVED, REJECTED
+  billingStatus           String    @default("PENDING") @map("billing_status") // PENDING, PENDING_RECORDING, FINALIZED
+  billingFinalizedAt      DateTime? @map("billing_finalized_at")
+
+  // Optimistic locking
+  version                 Int       @default(1)
+
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  trackingNumber          TrackingNumber? @relation(fields: [trackingNumberId], references: [id])
+  affiliate               Affiliate?      @relation(fields: [affiliateId], references: [id])
+  campaign                Campaign?       @relation(fields: [campaignId], references: [id])
+  serviceType             ServiceType?    @relation(fields: [serviceTypeId], references: [id])
+  winningBuyer            Buyer?          @relation("WinningBuyer", fields: [winningBuyerId], references: [id])
+  bids                    CallBid[]
+  activityLogs            CallActivityLog[]
+  disputes                CallDispute[]
+  feedback                CallFeedback[]
+
+  @@index([twilioCallSid])
+  @@index([affiliateId])
+  @@index([campaignId])
+  @@index([serviceTypeId])
+  @@index([status])
+  @@index([winningBuyerId])
+  @@index([createdAt])
+  @@index([callerPhone])
+  @@index([isBillable, createdAt])
+  @@index([billingStatus])
+  @@index([recordingStatus])
+  @@index([createdAt, serviceTypeId])
+  @@index([affiliateId, createdAt])
+  @@map("calls")
+}
+
+// P1-DB-6: IvrFlow model - Pre-qualification scripts
+model IvrFlow {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  serviceTypeId   String?   @map("service_type_id")
+
+  steps           Json      // Array of IVR steps
+  defaultTimeout  Int       @default(10) @map("default_timeout")
+  maxRetries      Int       @default(2) @map("max_retries")
+
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  serviceType     ServiceType?     @relation(fields: [serviceTypeId], references: [id])
+  campaigns       Campaign[]
+  trackingNumbers TrackingNumber[]
+
+  @@map("ivr_flows")
+}
+
+// P1-DB-11: CallBid model - Atomic bid storage (prevents JSONB race conditions)
+model CallBid {
+  id              String    @id @default(uuid())
+  callId          String    @map("call_id")
+  buyerId         String    @map("buyer_id")
+
+  bidAmount       Decimal   @map("bid_amount") @db.Decimal(10, 2)
+  responseTimeMs  Int?      @map("response_time_ms")
+  bidStatus       String    @default("PENDING") @map("bid_status") // PENDING, ACCEPTED, REJECTED, EXPIRED
+
+  pingResponse    Json?     @map("ping_response")
+  transferNumber  String?   @map("transfer_number")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  call            Call      @relation(fields: [callId], references: [id], onDelete: Cascade)
+  buyer           Buyer     @relation(fields: [buyerId], references: [id])
+
+  @@unique([callId, buyerId])
+  @@index([callId])
+  @@index([buyerId])
+  @@index([bidStatus])
+  @@map("call_bids")
+}
+
+// P1-DB-12: WebhookEvent model - Idempotency tracking (prevents duplicate processing)
+model WebhookEvent {
+  id               String    @id @default(uuid())
+  eventType        String    @map("event_type") // call_incoming, call_completed, recording_ready
+  externalId       String    @map("external_id") // CallSid from Twilio
+  eventKey         String    @unique @map("event_key") // {event_type}:{external_id}:{event_status}
+
+  processedAt      DateTime  @default(now()) @map("processed_at")
+  processingResult String?   @map("processing_result") // SUCCESS, FAILED, SKIPPED
+  errorMessage     String?   @map("error_message")
+
+  payload          Json?
+
+  expiresAt        DateTime  @default(dbgenerated("NOW() + INTERVAL '7 days'")) @map("expires_at")
+
+  @@index([eventKey])
+  @@index([expiresAt])
+  @@map("webhook_events")
+}
+
+// P1-DB-13: DailyCounter model - Atomic cap enforcement
+model DailyCounter {
+  id           String   @id @default(uuid())
+  entityType   String   @map("entity_type") // campaign, affiliate, buyer_service
+  entityId     String   @map("entity_id")
+  counterDate  DateTime @map("counter_date") @db.Date
+
+  callCount    Int      @default(0) @map("call_count")
+  leadCount    Int      @default(0) @map("lead_count")
+  spendAmount  Decimal  @default(0) @map("spend_amount") @db.Decimal(10, 2)
+
+  @@unique([entityType, entityId, counterDate])
+  @@index([entityType, entityId, counterDate])
+  @@map("daily_counters")
+}
+
+// P1-DB-14: CallDispute model - Track disputed call outcomes
+model CallDispute {
+  id               String    @id @default(uuid())
+  callId           String    @map("call_id")
+  affiliateId      String    @map("affiliate_id")
+
+  reason           String    // duration_miscounted, wrong_disposition, etc.
+  description      String?
+  evidenceUrls     String[]  @map("evidence_urls")
+
+  status           String    @default("OPEN") // OPEN, UNDER_REVIEW, RESOLVED, REJECTED
+  resolvedBy       String?   @map("resolved_by")
+  resolutionNotes  String?   @map("resolution_notes")
+  resolutionOutcome String?  @map("resolution_outcome") // CREDITED, REJECTED, PARTIAL
+  creditAmount     Decimal?  @map("credit_amount") @db.Decimal(10, 2)
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  resolvedAt       DateTime? @map("resolved_at")
+
+  call             Call      @relation(fields: [callId], references: [id])
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@unique([callId, affiliateId])
+  @@index([affiliateId])
+  @@index([status])
+  @@map("call_disputes")
+}
+
+// P1-DB-15: CallFeedback model - Buyer feedback on call quality
+model CallFeedback {
+  id              String    @id @default(uuid())
+  callId          String    @map("call_id")
+  buyerId         String    @map("buyer_id")
+
+  rating          Int?      // 1-5
+  feedbackType    String?   @map("feedback_type") // wrong_number, not_interested, excellent
+  notes           String?
+
+  refundRequested Boolean   @default(false) @map("refund_requested")
+  refundGranted   Boolean?  @map("refund_granted")
+  refundAmount    Decimal?  @map("refund_amount") @db.Decimal(10, 2)
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  call            Call      @relation(fields: [callId], references: [id])
+  buyer           Buyer     @relation(fields: [buyerId], references: [id])
+
+  @@unique([callId, buyerId])
+  @@index([buyerId])
+  @@index([callId])
+  @@map("call_feedback")
+}
+
+// P1-DB-16: AffiliatePayment model - Payment tracking
+model AffiliatePayment {
+  id               String    @id @default(uuid())
+  affiliateId      String    @map("affiliate_id")
+
+  periodStart      DateTime  @map("period_start") @db.Date
+  periodEnd        DateTime  @map("period_end") @db.Date
+
+  grossAmount      Decimal   @map("gross_amount") @db.Decimal(10, 2)
+  adjustments      Decimal   @default(0) @db.Decimal(10, 2)
+  netAmount        Decimal   @map("net_amount") @db.Decimal(10, 2)
+
+  paymentMethod    String?   @map("payment_method")
+  paymentReference String?   @map("payment_reference")
+
+  status           String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  scheduledDate    DateTime? @map("scheduled_date") @db.Date
+  paidAt           DateTime? @map("paid_at")
+
+  callCount        Int?      @map("call_count")
+  leadCount        Int?      @map("lead_count")
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@map("affiliate_payments")
+}
+
+// P1-DB-LOG-1: CallActivityLog model - User-facing activity feed (CRITICAL FOR DEBUGGING)
+model CallActivityLog {
+  id                  String   @id @default(uuid())
+  callId              String   @map("call_id")
+
+  timestamp           DateTime @default(now())
+  event               String   // call.received, call.qualified, etc.
+  message             String
+  level               String   @default("info") // debug, info, warn, error
+
+  details             Json?
+
+  visibleToAffiliate  Boolean  @default(false) @map("visible_to_affiliate")
+  visibleToAdmin      Boolean  @default(true) @map("visible_to_admin")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  call                Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId])
+  @@index([event])
+  @@index([timestamp(sort: Desc)])
+  @@index([visibleToAffiliate, timestamp(sort: Desc)])
+  @@index([level])
+  @@map("call_activity_logs")
+}
+
+// P3-DB-1: DailyMetric model - Pre-aggregated analytics (Phase 3, added now for schema completeness)
+model DailyMetric {
+  id                    String    @id @default(uuid())
+  date                  DateTime  @db.Date
+  affiliateId           String?   @map("affiliate_id")
+  serviceTypeId         String?   @map("service_type_id")
+  buyerId               String?   @map("buyer_id")
+
+  totalCalls            Int       @default(0) @map("total_calls")
+  qualifiedCalls        Int       @default(0) @map("qualified_calls")
+  failedCalls           Int       @default(0) @map("failed_calls")
+  totalDurationSeconds  Int       @default(0) @map("total_duration_seconds")
+
+  grossRevenue          Decimal   @default(0) @map("gross_revenue") @db.Decimal(10, 2)
+  affiliatePayouts      Decimal   @default(0) @map("affiliate_payouts") @db.Decimal(10, 2)
+  platformMargin        Decimal   @default(0) @map("platform_margin") @db.Decimal(10, 2)
+
+  avgAuctionTimeMs      Int?      @map("avg_auction_time_ms")
+  avgBidAmount          Decimal?  @map("avg_bid_amount") @db.Decimal(10, 2)
+  cascadeCount          Int       @default(0) @map("cascade_count")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  affiliate             Affiliate?   @relation(fields: [affiliateId], references: [id])
+  serviceType           ServiceType? @relation(fields: [serviceTypeId], references: [id])
+  buyer                 Buyer?       @relation(fields: [buyerId], references: [id])
+
+  @@unique([date, affiliateId, serviceTypeId, buyerId])
+  @@index([date])
+  @@index([affiliateId, date])
+  @@index([serviceTypeId, date])
+  @@map("daily_metrics")
 }

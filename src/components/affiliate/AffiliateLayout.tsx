@@ -22,7 +22,9 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  Megaphone,
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -48,6 +50,16 @@ const navigationItems = [
     name: 'Links',
     href: '/affiliate/links',
     icon: LinkIcon,
+  },
+  {
+    name: 'Campaigns',
+    href: '/affiliate/campaigns',
+    icon: Megaphone,
+  },
+  {
+    name: 'Calls',
+    href: '/affiliate/calls',
+    icon: Phone,
   },
   {
     name: 'Leads',
