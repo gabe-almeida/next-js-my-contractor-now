@@ -264,8 +264,11 @@ export class CallAuctionEngine extends BaseAuctionEngine {
    * WHY: Gets buyers eligible to receive this call.
    * WHEN: At the start of every call auction.
    * HOW: Queries buyers with accepts_calls=true, matching service type,
-   *      covering caller's ZIP code, within daily caps.
+   *      covering caller's ZIP code (or nationwide), within daily caps.
    *      Also loads callFieldMappings for network buyers.
+   *
+   * NOTE: If caller ZIP is unknown, only nationwide buyers (those with no
+   *       ZIP code restrictions) will be eligible.
    *
    * @param call - The call record with service type and caller info
    * @returns Array of eligible buyer configurations
@@ -273,13 +276,21 @@ export class CallAuctionEngine extends BaseAuctionEngine {
   private async getEligibleCallBuyers(
     call: CallWithRelations
   ): Promise<EligibleBuyerWithMappings[]> {
-    if (!call.serviceTypeId || !call.callerZip) {
-      logger.warn('Call missing serviceTypeId or callerZip', {
+    // Service type is required - without it we can't match buyers
+    if (!call.serviceTypeId) {
+      logger.warn('Call missing serviceTypeId', {
         callId: call.id,
         serviceTypeId: call.serviceTypeId,
-        callerZip: call.callerZip,
       });
       return [];
+    }
+
+    // Log if caller ZIP is missing (nationwide buyers may still match)
+    if (!call.callerZip) {
+      logger.info('Call has no caller ZIP - only nationwide buyers will match', {
+        callId: call.id,
+        serviceTypeId: call.serviceTypeId,
+      });
     }
 
     try {
@@ -319,7 +330,7 @@ export class CallAuctionEngine extends BaseAuctionEngine {
       const eligible: EligibleBuyerWithMappings[] = [];
 
       for (const config of eligibleConfigs) {
-        // Check ZIP code coverage
+        // Check ZIP code coverage (handles null callerZip for nationwide buyers)
         const coversZip = await this.buyerCoversZipCode(
           config.buyerId,
           call.serviceTypeId,
@@ -330,7 +341,7 @@ export class CallAuctionEngine extends BaseAuctionEngine {
           logger.debug('Buyer does not cover ZIP', {
             buyerId: config.buyerId,
             buyerName: config.buyer.name,
-            zip: call.callerZip,
+            zip: call.callerZip || 'UNKNOWN',
           });
           continue;
         }
@@ -390,11 +401,20 @@ export class CallAuctionEngine extends BaseAuctionEngine {
    * WHEN: During eligibility filtering.
    * HOW: Queries buyer_service_zip_codes table; if no entries exist,
    *      buyer is considered nationwide (covers all ZIPs).
+   *
+   * NOTE: If zipCode is null/undefined, only nationwide buyers (those with
+   *       no ZIP restrictions) will match. Buyers with specific ZIP
+   *       restrictions will NOT match unknown locations.
+   *
+   * @param buyerId - The buyer to check
+   * @param serviceTypeId - The service type for this call
+   * @param zipCode - The caller's ZIP code (can be null for unknown location)
+   * @returns true if buyer covers this ZIP or is nationwide
    */
   private async buyerCoversZipCode(
     buyerId: string,
     serviceTypeId: string,
-    zipCode: string
+    zipCode: string | null
   ): Promise<boolean> {
     // Check if buyer has ANY zip code entries for this service
     const totalZipEntries = await prisma.buyerServiceZipCode.count({
@@ -404,9 +424,20 @@ export class CallAuctionEngine extends BaseAuctionEngine {
       },
     });
 
-    // If no entries, buyer is nationwide
+    // If no entries, buyer is nationwide - covers all ZIPs (including unknown)
     if (totalZipEntries === 0) {
       return true;
+    }
+
+    // Buyer has ZIP restrictions. If caller ZIP is unknown, don't match.
+    // This prevents routing unknown-location calls to geo-restricted buyers.
+    if (!zipCode) {
+      logger.debug('Buyer has ZIP restrictions but caller ZIP unknown', {
+        buyerId,
+        serviceTypeId,
+        totalZipEntries,
+      });
+      return false;
     }
 
     // Check if specific ZIP is covered
