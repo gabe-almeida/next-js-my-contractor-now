@@ -659,7 +659,7 @@ export function toServiceConfig(
   // Include static fields as additionalFields in the templates
   // Use pingStaticFields for PING and postStaticFields for POST
   // Fallback to legacy staticFields for backward compatibility with old configs
-  const { pingStaticFields, postStaticFields, staticFields } = dbConfig.fieldMappingConfig;
+  const { pingStaticFields, postStaticFields, staticFields, pingTokenConfig } = dbConfig.fieldMappingConfig;
   const pingFields = pingStaticFields || staticFields || {};
   const postFields = postStaticFields || staticFields || {};
 
@@ -697,6 +697,9 @@ export function toServiceConfig(
         maxDelay: 10000,
       },
     },
+    // Pass through pingTokenConfig for auction engine to use
+    // Allows per-buyer configuration of PING response token extraction and POST injection
+    pingTokenConfig: pingTokenConfig,
   };
 }
 

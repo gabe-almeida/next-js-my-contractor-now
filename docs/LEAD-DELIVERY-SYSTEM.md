@@ -749,12 +749,12 @@ Result: "Immediately"  (transform not applied here since no transform specified)
 │    "partnerSourceId": "fb"                                          │
 │  }                                                                   │
 │                                                                      │
-│  Example PING response:                                              │
+│  Example PING response (Modernize):                                  │
 │  {                                                                   │
-│    "status": "accepted",                                            │
-│    "bid_amount": 45.50,                                             │
-│    "ping_token": "abc123",                                          │
-│    "buyer_lead_id": "mod-789"                                       │
+│    "status": "success",                                             │
+│    "pingToken": "abc123def456...",                                  │
+│    "price": 45.50,                                                  │
+│    "message": null                                                  │
 │  }                                                                   │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
@@ -844,6 +844,122 @@ Result: "Immediately"  (transform not applied here since no transform specified)
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### PING Token Flow (Automatic)
+
+The `pingToken` is a critical field that correlates PING and POST requests. This is handled **automatically** by the auction engine for all standard PING/POST buyers.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    PING TOKEN FLOW (AUTOMATIC)                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  STEP 1: PING Response Extraction                                    │
+│  ─────────────────────────────────────────────────────────────────  │
+│  File: src/lib/auction/engine.ts (lines 482-488)                    │
+│                                                                      │
+│  The system automatically extracts these fields from PING response: │
+│                                                                      │
+│  pingToken = responseData.pingToken                                 │
+│           || responseData.ping_token                                │
+│           || null                                                   │
+│                                                                      │
+│  buyerLeadId = responseData.leadId                                  │
+│             || responseData.lead_id                                 │
+│             || responseData.id                                      │
+│             || null                                                 │
+│                                                                      │
+│  pingResponseData = responseData  (full response stored)            │
+│                                                                      │
+│  STEP 2: Storage in Bid Metadata                                     │
+│  ─────────────────────────────────────────────────────────────────  │
+│  Extracted values stored in winning bid metadata:                   │
+│                                                                      │
+│  winningBid.metadata = {                                            │
+│    pingToken: "abc123",                                             │
+│    buyerLeadId: "buyer-ref-456",                                    │
+│    pingResponseData: { ... full response ... }                      │
+│  }                                                                   │
+│                                                                      │
+│  STEP 3: Automatic Injection into POST                               │
+│  ─────────────────────────────────────────────────────────────────  │
+│  File: src/lib/auction/engine.ts (lines 564-578)                    │
+│                                                                      │
+│  if (winningBid?.metadata?.pingToken) {                             │
+│    payload.pingToken = winningBid.metadata.pingToken;               │
+│  }                                                                   │
+│                                                                      │
+│  if (winningBid?.metadata?.buyerLeadId) {                           │
+│    payload.buyerLeadId = winningBid.metadata.buyerLeadId;           │
+│  }                                                                   │
+│                                                                      │
+│  NO CONFIGURATION REQUIRED - this is automatic for all buyers!      │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Default Supported Field Names
+
+When no custom `pingTokenConfig` is set, these defaults are used:
+
+| PING Response Field (checked in order) | Extracted As | POST Payload Field |
+|----------------------------------------|--------------|-------------------|
+| `pingToken`, `ping_token`, `ping_id`, `token` | `metadata.pingToken` | `pingToken` |
+| `leadId`, `lead_id`, `buyerLeadId`, `buyer_lead_id`, `id` | `metadata.buyerLeadId` | `buyerLeadId` |
+
+**For custom configurations**, set `pingTokenConfig` in Admin UI to override these defaults.
+
+#### Industry Standard Compliance
+
+This automatic handling works for all standard PING/POST APIs including:
+- **Modernize** - Returns `pingToken`, expects `pingToken` in POST ✅
+- **HomeAdvisor** - Returns `ping_token`, expects `pingToken` in POST ✅
+- **Angi** - Returns `pingToken`, expects `pingToken` in POST ✅
+
+#### Non-Standard Buyers (Configurable via Admin UI)
+
+Some buyers use non-standard field names. These are now **fully supported** via the
+`pingTokenConfig` configuration in the Admin UI:
+
+| Buyer | PING Response Field | POST Expected Field | Status |
+|-------|--------------------|--------------------|--------|
+| **LeadProsper/Koalaty** | `ping_id` | `lp_ping_id` | ✅ CONFIGURED |
+
+**Configuration via Admin UI:**
+
+Navigate to: **Admin → Buyers → [Buyer Name] → Field Mapping → PING Token Configuration**
+
+```json
+{
+  "pingTokenConfig": {
+    "responseFields": ["ping_id"],
+    "postFieldName": "lp_ping_id",
+    "buyerLeadIdResponseFields": ["lead_id", "id"],
+    "buyerLeadIdPostField": "lead_id"
+  }
+}
+```
+
+**Configuration Options:**
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `responseFields` | Field names to check in PING response (priority order) | `["pingToken", "ping_token", "ping_id", "token"]` |
+| `postFieldName` | Field name to use in POST payload | `"pingToken"` |
+| `buyerLeadIdResponseFields` | Fields to check for buyer's lead ID | `["leadId", "lead_id", "buyerLeadId", "id"]` |
+| `buyerLeadIdPostField` | Field name for buyer lead ID in POST | `"buyerLeadId"` |
+
+**Key Files:**
+- Type definition: `src/types/field-mapping.ts` → `PingTokenConfig`
+- Extraction logic: `src/lib/auction/engine.ts` → `extractPingToken()`
+- Injection logic: `src/lib/auction/engine.ts` → `sendPostToWinner()`
+- Admin UI: `src/components/admin/field-mapping/FieldMappingEditor.tsx`
+
+#### Why This Works
+
+The field names `pingToken` and `ping_token` are **industry standards** for PING/POST
+lead distribution APIs. Most network buyers follow this convention, making automatic
+handling reliable without per-buyer configuration.
 
 ---
 

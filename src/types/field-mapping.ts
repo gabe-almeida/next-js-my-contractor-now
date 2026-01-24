@@ -60,6 +60,58 @@ export interface FieldMapping {
 }
 
 /**
+ * Configuration for PING token extraction from response and injection into POST
+ *
+ * WHY: Different lead buyers use different field names for correlating PING to POST
+ *      - Standard: "pingToken" or "ping_token" in response → "pingToken" in POST
+ *      - LeadProsper: "ping_id" in response → "lp_ping_id" in POST
+ *
+ * WHEN: Used by auction engine during PING response parsing and POST payload building
+ *
+ * HOW: Configurable per buyer-service via admin UI, stored in field_mappings JSON
+ */
+export interface PingTokenConfig {
+  /**
+   * Field names to check in PING response for the token (priority order)
+   * First non-null match wins
+   * Supports dot notation for nested fields (e.g., "data.pingToken")
+   *
+   * Default if not specified: ["pingToken", "ping_token"]
+   */
+  responseFields: string[];
+
+  /**
+   * Field name to use when including token in POST payload
+   *
+   * Default if not specified: "pingToken"
+   */
+  postFieldName: string;
+
+  /**
+   * Optional: Also extract and include buyer's lead ID from PING response
+   * If specified, will look for these fields and include as buyerLeadIdPostField
+   */
+  buyerLeadIdResponseFields?: string[];
+
+  /**
+   * Field name for buyer lead ID in POST payload
+   * Default if not specified: "buyerLeadId"
+   */
+  buyerLeadIdPostField?: string;
+}
+
+/**
+ * Default PING token configuration for standard buyers
+ * Used when pingTokenConfig is not specified
+ */
+export const DEFAULT_PING_TOKEN_CONFIG: PingTokenConfig = {
+  responseFields: ['pingToken', 'ping_token', 'ping_id', 'token'],
+  postFieldName: 'pingToken',
+  buyerLeadIdResponseFields: ['leadId', 'lead_id', 'buyerLeadId', 'buyer_lead_id', 'id'],
+  buyerLeadIdPostField: 'buyerLeadId',
+};
+
+/**
  * Complete configuration for a buyer-service combination
  *
  * WHY: Encapsulates all field mapping settings for a buyer + service type
@@ -92,6 +144,25 @@ export interface FieldMappingConfig {
    * WHEN: Applied when building POST payload
    */
   postStaticFields?: Record<string, string | number | boolean>;
+
+  /**
+   * Configuration for PING token extraction and POST injection
+   *
+   * WHY: Different buyers use different field names for the PING token
+   *      - Standard buyers (Modernize, Angi): use "pingToken" or "ping_token"
+   *      - Non-standard buyers (LeadProsper/Koalaty): use "ping_id" → "lp_ping_id"
+   *
+   * WHEN: Applied during PING response parsing and POST payload building
+   *
+   * HOW:
+   *   1. Extract token from PING response using responseFields (first match wins)
+   *   2. Include token in POST payload using postFieldName
+   *
+   * If not configured, defaults to standard behavior:
+   *   responseFields: ["pingToken", "ping_token"]
+   *   postFieldName: "pingToken"
+   */
+  pingTokenConfig?: PingTokenConfig;
 
   /** Configuration metadata */
   meta: {

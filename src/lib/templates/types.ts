@@ -191,6 +191,11 @@ export interface BuyerServiceConfig {
   postTemplate: TemplateConfig;
   webhookConfig?: WebhookConfig;
   restrictions?: ServiceRestrictions;
+  /**
+   * Configuration for PING token extraction and POST injection
+   * If not specified, uses default: pingToken/ping_token → pingToken
+   */
+  pingTokenConfig?: import('@/types/field-mapping').PingTokenConfig;
 }
 
 export interface PricingConfig {

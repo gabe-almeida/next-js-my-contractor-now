@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Save, RotateCcw, AlertTriangle, CheckCircle, Power } from 'lucide-react';
+import { Settings, Save, RotateCcw, AlertTriangle, CheckCircle, Power, Link2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { MappingTable } from './MappingTable';
 import { AddMappingModal } from './AddMappingModal';
@@ -12,8 +12,9 @@ import type {
   SourceFieldDefinition,
   TransformDefinition,
   ValidationResult,
+  PingTokenConfig,
 } from '@/types/field-mapping';
-import { createEmptyFieldMappingConfig, createFieldMapping } from '@/types/field-mapping';
+import { createEmptyFieldMappingConfig, createFieldMapping, DEFAULT_PING_TOKEN_CONFIG } from '@/types/field-mapping';
 import { getSourceFieldsForService } from '@/lib/field-mapping/source-fields';
 import { AVAILABLE_TRANSFORMS } from '@/lib/field-mapping/transforms';
 
@@ -142,6 +143,32 @@ export function FieldMappingEditor({
       return { ...prev, postStaticFields: rest };
     });
   }, []);
+
+  // Ping Token Configuration handlers
+  const handlePingTokenConfigChange = useCallback(
+    (field: keyof PingTokenConfig, value: string | string[]) => {
+      setConfig((prev) => ({
+        ...prev,
+        pingTokenConfig: {
+          ...DEFAULT_PING_TOKEN_CONFIG,
+          ...prev.pingTokenConfig,
+          [field]: value,
+        },
+      }));
+    },
+    []
+  );
+
+  const handlePingTokenConfigReset = useCallback(() => {
+    setConfig((prev) => {
+      const { pingTokenConfig: _, ...rest } = prev;
+      return rest as FieldMappingConfig;
+    });
+  }, []);
+
+  // Check if using custom ping token config
+  const isUsingCustomPingTokenConfig = config.pingTokenConfig !== undefined;
+  const effectivePingTokenConfig = config.pingTokenConfig || DEFAULT_PING_TOKEN_CONFIG;
 
   // Save handler
   const handleSave = async () => {
@@ -373,6 +400,126 @@ export function FieldMappingEditor({
               </button>
             </div>
           </div>
+
+          {/* PING Token Configuration */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  PING Token Configuration
+                </h2>
+              </div>
+              {isUsingCustomPingTokenConfig && (
+                <button
+                  type="button"
+                  onClick={handlePingTokenConfigReset}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Reset to defaults
+                </button>
+              )}
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              Configure how to extract the ping token from PING response and include it in POST.
+              {!isUsingCustomPingTokenConfig && (
+                <span className="text-blue-600 ml-1">(Using defaults)</span>
+              )}
+            </p>
+
+            {/* Info banner */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-800">
+                  <strong>Standard buyers</strong> (Modernize, Angi) use <code className="bg-blue-100 px-1 rounded">pingToken</code> or <code className="bg-blue-100 px-1 rounded">ping_token</code>.
+                  <br />
+                  <strong>LeadProsper/Koalaty</strong> uses <code className="bg-blue-100 px-1 rounded">ping_id</code> → <code className="bg-blue-100 px-1 rounded">lp_ping_id</code>.
+                  <br />
+                  Only customize if the buyer uses non-standard field names.
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Response Fields */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  PING Response Fields
+                  <span className="text-gray-400 font-normal ml-1">(checked in order)</span>
+                </label>
+                <input
+                  type="text"
+                  value={effectivePingTokenConfig.responseFields.join(', ')}
+                  onChange={(e) => handlePingTokenConfigChange(
+                    'responseFields',
+                    e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                  )}
+                  placeholder="pingToken, ping_token, ping_id"
+                  className="w-full text-sm border-2 border-blue-200 rounded px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Field names to check in PING response (comma-separated, first match wins)
+                </p>
+              </div>
+
+              {/* POST Field Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  POST Payload Field Name
+                </label>
+                <input
+                  type="text"
+                  value={effectivePingTokenConfig.postFieldName}
+                  onChange={(e) => handlePingTokenConfigChange('postFieldName', e.target.value)}
+                  placeholder="pingToken"
+                  className="w-full text-sm border-2 border-blue-200 rounded px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Field name to use when including token in POST payload
+                </p>
+              </div>
+
+              {/* Buyer Lead ID Fields */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Buyer Lead ID Response Fields
+                  <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={(effectivePingTokenConfig.buyerLeadIdResponseFields || []).join(', ')}
+                  onChange={(e) => handlePingTokenConfigChange(
+                    'buyerLeadIdResponseFields',
+                    e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                  )}
+                  placeholder="leadId, lead_id, id"
+                  className="w-full text-sm border-2 border-blue-200 rounded px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Field names to check for buyer&apos;s lead ID in PING response
+                </p>
+              </div>
+
+              {/* Buyer Lead ID POST Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Buyer Lead ID POST Field Name
+                </label>
+                <input
+                  type="text"
+                  value={effectivePingTokenConfig.buyerLeadIdPostField || 'buyerLeadId'}
+                  onChange={(e) => handlePingTokenConfigChange('buyerLeadIdPostField', e.target.value)}
+                  placeholder="buyerLeadId"
+                  className="w-full text-sm border-2 border-blue-200 rounded px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Field name for buyer lead ID in POST payload
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Preview */}
@@ -431,6 +578,24 @@ export function FieldMappingEditor({
                     ? new Date(config.meta.updatedAt).toLocaleString()
                     : 'Never'}
                 </dd>
+              </div>
+              <div className="border-t border-gray-100 pt-2 mt-2">
+                <div className="flex justify-between items-start">
+                  <dt className="text-gray-500">PING Token Config:</dt>
+                  <dd className="font-medium text-xs text-right">
+                    {isUsingCustomPingTokenConfig ? (
+                      <span className="text-blue-600">Custom</span>
+                    ) : (
+                      <span className="text-gray-400">Default</span>
+                    )}
+                  </dd>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {effectivePingTokenConfig.responseFields.slice(0, 2).join(', ')}
+                  {effectivePingTokenConfig.responseFields.length > 2 && '...'}
+                  {' → '}
+                  {effectivePingTokenConfig.postFieldName}
+                </div>
               </div>
             </dl>
           </div>

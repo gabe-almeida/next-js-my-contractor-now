@@ -76,6 +76,7 @@ import { BuyerResponseParser } from '../buyers/response-parser';
 import { loadBuyerConfigForAuction } from '../field-mapping/database-buyer-loader';
 import { ContractorDeliveryService, LeadForDelivery } from '../services/contractor-delivery-service';
 import { logger } from '../logger';
+import { PingTokenConfig, DEFAULT_PING_TOKEN_CONFIG } from '@/types/field-mapping';
 
 export class AuctionEngine {
   private static performanceMetrics: PerformanceMetrics['auctionMetrics'] = {
@@ -398,6 +399,90 @@ export class AuctionEngine {
   }
 
   /**
+   * Extract a value from an object using dot notation path
+   *
+   * WHY: Support nested field paths like "data.pingToken" in PING responses
+   * WHEN: Extracting ping token from PING response using configurable field names
+   * HOW: Split path by dots and traverse object
+   */
+  private static getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    const parts = path.split('.');
+    let current: unknown = obj;
+
+    for (const part of parts) {
+      if (current === null || current === undefined) {
+        return null;
+      }
+      if (typeof current !== 'object') {
+        return null;
+      }
+      current = (current as Record<string, unknown>)[part];
+    }
+
+    return current;
+  }
+
+  /**
+   * Extract ping token from PING response using configurable field names
+   *
+   * WHY: Different buyers use different field names for ping tokens
+   *      - Standard: "pingToken" or "ping_token"
+   *      - LeadProsper/Koalaty: "ping_id"
+   * WHEN: After receiving PING response, before storing in bid metadata
+   * HOW: Try each field in responseFields until one returns a non-null value
+   *
+   * @param responseData - The parsed PING response body
+   * @param config - PingTokenConfig with responseFields to check (or undefined for defaults)
+   * @returns The extracted ping token value, or null if not found
+   */
+  private static extractPingToken(
+    responseData: Record<string, unknown>,
+    config?: PingTokenConfig
+  ): string | null {
+    const effectiveConfig = config || DEFAULT_PING_TOKEN_CONFIG;
+
+    for (const field of effectiveConfig.responseFields) {
+      const value = this.getNestedValue(responseData, field);
+      if (value !== null && value !== undefined && value !== '') {
+        logger.debug('Extracted ping token', {
+          field,
+          valuePreview: String(value).substring(0, 20) + '...',
+          configSource: config ? 'custom' : 'default'
+        });
+        return String(value);
+      }
+    }
+
+    logger.warn('No ping token found in response', {
+      checkedFields: effectiveConfig.responseFields,
+      responseKeys: Object.keys(responseData)
+    });
+    return null;
+  }
+
+  /**
+   * Extract buyer lead ID from PING response using configurable field names
+   *
+   * WHY: Buyers return their internal lead ID that may be needed in POST
+   * WHEN: After receiving PING response, before storing in bid metadata
+   */
+  private static extractBuyerLeadId(
+    responseData: Record<string, unknown>,
+    config?: PingTokenConfig
+  ): string | null {
+    const fields = config?.buyerLeadIdResponseFields || DEFAULT_PING_TOKEN_CONFIG.buyerLeadIdResponseFields || [];
+
+    for (const field of fields) {
+      const value = this.getNestedValue(responseData, field);
+      if (value !== null && value !== undefined && value !== '') {
+        return String(value);
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Send PING to individual buyer
    */
   private static async sendPingToBuyer(
@@ -468,6 +553,18 @@ export class AuctionEngine {
         rawStatus: parsedResponse.rawStatus
       });
 
+      // Extract ping token using configurable field names
+      // Uses serviceConfig.pingTokenConfig if set, otherwise defaults
+      const pingTokenConfig = serviceConfig.pingTokenConfig;
+      const extractedPingToken = this.extractPingToken(
+        responseData as Record<string, unknown>,
+        pingTokenConfig
+      );
+      const extractedBuyerLeadId = this.extractBuyerLeadId(
+        responseData as Record<string, unknown>,
+        pingTokenConfig
+      );
+
       return {
         buyerId: buyer.id,
         bidAmount: validatedBid,
@@ -480,9 +577,11 @@ export class AuctionEngine {
           parsedStatus: parsedResponse.status,
           rawStatus: parsedResponse.rawStatus,
           // Capture pingToken from PING response for use in POST
-          // Modernize and other buyers return this token that must be included in POST
-          pingToken: responseData.pingToken || responseData.ping_token || null,
-          buyerLeadId: responseData.leadId || responseData.lead_id || responseData.id || null,
+          // Uses configurable field names (default: pingToken, ping_token, ping_id)
+          pingToken: extractedPingToken,
+          buyerLeadId: extractedBuyerLeadId,
+          // Store the pingTokenConfig so POST knows what field name to use
+          pingTokenConfig: pingTokenConfig,
           // Store raw response for any other fields needed in POST
           pingResponseData: responseData
         }
@@ -562,19 +661,30 @@ export class AuctionEngine {
       payload.auction_timestamp = new Date().toISOString();
 
       // CRITICAL: Include pingToken from PING response if present
-      // Modernize and other ping-post buyers require this token to match PING to POST
+      // Uses configurable field name from pingTokenConfig (default: "pingToken")
+      // This allows buyers like LeadProsper to use "lp_ping_id" instead
       if (winningBid?.metadata?.pingToken) {
-        payload.pingToken = winningBid.metadata.pingToken;
-        logger.info('Including pingToken in POST payload', {
+        // Get the configured POST field name, or use default
+        const pingTokenConfig = winningBid.metadata.pingTokenConfig as PingTokenConfig | undefined;
+        const postFieldName = pingTokenConfig?.postFieldName || DEFAULT_PING_TOKEN_CONFIG.postFieldName;
+
+        payload[postFieldName] = winningBid.metadata.pingToken;
+        logger.info('Including ping token in POST payload', {
           leadId: lead.id,
           buyerId: buyer.id,
-          pingToken: winningBid.metadata.pingToken
+          fieldName: postFieldName,
+          pingToken: winningBid.metadata.pingToken,
+          configSource: pingTokenConfig ? 'custom' : 'default'
         });
       }
 
       // Include buyerLeadId if present (some buyers return their own lead ID in PING)
+      // Uses configurable field name from pingTokenConfig (default: "buyerLeadId")
       if (winningBid?.metadata?.buyerLeadId) {
-        payload.buyerLeadId = winningBid.metadata.buyerLeadId;
+        const pingTokenConfig = winningBid.metadata.pingTokenConfig as PingTokenConfig | undefined;
+        const buyerLeadIdFieldName = pingTokenConfig?.buyerLeadIdPostField || DEFAULT_PING_TOKEN_CONFIG.buyerLeadIdPostField || 'buyerLeadId';
+
+        payload[buyerLeadIdFieldName] = winningBid.metadata.buyerLeadId;
       }
 
       // Prepare request headers
