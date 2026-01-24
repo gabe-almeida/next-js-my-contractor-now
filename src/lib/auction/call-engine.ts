@@ -399,12 +399,13 @@ export class CallAuctionEngine extends BaseAuctionEngine {
   /**
    * WHY: Checks if a buyer covers a specific ZIP code.
    * WHEN: During eligibility filtering.
-   * HOW: Queries buyer_service_zip_codes table; if no entries exist,
-   *      buyer is considered nationwide (covers all ZIPs).
+   * HOW: First checks if service config has `nationwide=true` (explicit flag),
+   *      then falls back to checking buyer_service_zip_codes table;
+   *      if no entries exist, buyer is considered nationwide (covers all ZIPs).
    *
    * NOTE: If zipCode is null/undefined, only nationwide buyers (those with
-   *       no ZIP restrictions) will match. Buyers with specific ZIP
-   *       restrictions will NOT match unknown locations.
+   *       nationwide=true OR no ZIP restrictions) will match. Buyers with
+   *       specific ZIP restrictions will NOT match unknown locations.
    *
    * @param buyerId - The buyer to check
    * @param serviceTypeId - The service type for this call
@@ -416,6 +417,19 @@ export class CallAuctionEngine extends BaseAuctionEngine {
     serviceTypeId: string,
     zipCode: string | null
   ): Promise<boolean> {
+    // First check if service config has explicit nationwide flag
+    const serviceConfig = await prisma.buyerServiceConfig.findUnique({
+      where: {
+        buyerId_serviceTypeId: { buyerId, serviceTypeId },
+      },
+      select: { nationwide: true },
+    });
+
+    // If explicitly marked as nationwide, covers all ZIPs (including unknown)
+    if (serviceConfig?.nationwide === true) {
+      return true;
+    }
+
     // Check if buyer has ANY zip code entries for this service
     const totalZipEntries = await prisma.buyerServiceZipCode.count({
       where: {
@@ -424,7 +438,7 @@ export class CallAuctionEngine extends BaseAuctionEngine {
       },
     });
 
-    // If no entries, buyer is nationwide - covers all ZIPs (including unknown)
+    // If no entries, buyer is implicitly nationwide - covers all ZIPs (including unknown)
     if (totalZipEntries === 0) {
       return true;
     }

@@ -72,47 +72,45 @@ export class BuyerEligibilityService {
         filter.zipCode
       );
 
-      // If no zip-specific coverage found, check for buyers with service configs
-      // but no zip restrictions (nationwide buyers like Modernize who filter via PING)
-      if (serviceZones.length === 0) {
-        const nationwideBuyers = await this.getNationwideBuyers(filter.serviceTypeId);
+      // Always get nationwide buyers (they participate regardless of zip code)
+      // This includes buyers with nationwide=true OR no zip code restrictions
+      const nationwideBuyers = await this.getNationwideBuyers(filter.serviceTypeId);
 
-        if (nationwideBuyers.length === 0) {
-          const result: EligibilityResult = {
-            eligible: [],
-            excluded: [],
-            totalFound: 0,
-            eligibleCount: 0,
-            excludedCount: 0
-          };
+      // Get buyer IDs from zip-matched service zones to avoid duplicates
+      const zipMatchedBuyerIds = new Set(serviceZones.map(sz => sz.buyerId));
 
-          // Cache empty results for shorter time
-          await RedisCache.set(cacheKey, result, 60); // 1 minute
+      // Filter nationwide buyers to exclude those already in zip-matched results
+      const uniqueNationwideBuyers = nationwideBuyers.filter(
+        nb => !zipMatchedBuyerIds.has(nb.buyerId)
+      );
 
-          return result;
-        }
-
-        // Use nationwide buyers as eligible
-        logger.info('Using nationwide buyers (no zip restriction)', {
-          serviceTypeId: filter.serviceTypeId,
-          zipCode: filter.zipCode,
-          nationwideCount: nationwideBuyers.length
-        });
-
+      if (serviceZones.length === 0 && uniqueNationwideBuyers.length === 0) {
         const result: EligibilityResult = {
-          eligible: nationwideBuyers,
+          eligible: [],
           excluded: [],
-          totalFound: nationwideBuyers.length,
-          eligibleCount: nationwideBuyers.length,
+          totalFound: 0,
+          eligibleCount: 0,
           excludedCount: 0
         };
 
-        await RedisCache.set(cacheKey, result, this.CACHE_TTL);
+        // Cache empty results for shorter time
+        await RedisCache.set(cacheKey, result, 60); // 1 minute
+
         return result;
       }
 
+      // Log nationwide buyer participation
+      if (uniqueNationwideBuyers.length > 0) {
+        logger.info('Including nationwide buyers in eligibility', {
+          serviceTypeId: filter.serviceTypeId,
+          zipCode: filter.zipCode,
+          nationwideCount: uniqueNationwideBuyers.length,
+          zipMatchedCount: serviceZones.length
+        });
+      }
+
       // Process each service zone to determine eligibility
-      const eligible: EligibleBuyer[] = [];
+      const eligible: EligibleBuyer[] = [...uniqueNationwideBuyers]; // Start with nationwide buyers
       const excluded: EligibilityResult['excluded'] = [];
 
       for (const serviceZone of serviceZones) {
@@ -168,7 +166,7 @@ export class BuyerEligibilityService {
       const result: EligibilityResult = {
         eligible: limitedEligible,
         excluded,
-        totalFound: serviceZones.length,
+        totalFound: serviceZones.length + uniqueNationwideBuyers.length,
         eligibleCount: limitedEligible.length,
         excludedCount: excluded.length
       };
@@ -595,7 +593,7 @@ export class BuyerEligibilityService {
   }
 
   /**
-   * Get buyers who have service configs but no zip code restrictions
+   * Get buyers who have service configs marked as nationwide OR have no zip code restrictions
    * These are "nationwide" buyers who filter leads via their PING response
    *
    * WHY: Buyers like Modernize accept leads nationwide and filter
@@ -605,15 +603,16 @@ export class BuyerEligibilityService {
    * WHEN: Called when buyer_service_zip_codes has no matches for a lead's
    *       service type + zip code combination.
    *
-   * HOW: Queries BuyerServiceConfig for active configs where the buyer
-   *      has NO entries in buyer_service_zip_codes for that service type.
+   * HOW: Queries BuyerServiceConfig for active configs where either:
+   *      1. The `nationwide` flag is true (explicit nationwide toggle), OR
+   *      2. The buyer has NO entries in buyer_service_zip_codes (implicit nationwide)
    */
   private static async getNationwideBuyers(serviceTypeId: string): Promise<EligibleBuyer[]> {
     try {
       const { prisma } = await import('../db');
 
       // Find buyers with active service configs for this service type
-      // who have NO zip code restrictions (nationwide)
+      // who are either explicitly nationwide OR have no zip code restrictions
       const serviceConfigs = await prisma.buyerServiceConfig.findMany({
         where: {
           serviceTypeId,
@@ -645,10 +644,13 @@ export class BuyerEligibilityService {
         return [];
       }
 
-      // Filter to only buyers with NO zip code entries for this service type
+      // Filter to buyers who are explicitly nationwide OR have no zip code entries
       const eligibleBuyers: EligibleBuyer[] = [];
 
       for (const config of serviceConfigs) {
+        // Check if explicitly marked as nationwide
+        const isExplicitlyNationwide = (config as any).nationwide === true;
+
         // Check if this buyer has any zip code restrictions for this service
         const zipCount = await prisma.buyerServiceZipCode.count({
           where: {
@@ -657,8 +659,8 @@ export class BuyerEligibilityService {
           }
         });
 
-        // Only include if NO zip restrictions (nationwide coverage)
-        if (zipCount === 0) {
+        // Include if explicitly nationwide OR no zip restrictions (implicit nationwide)
+        if (isExplicitlyNationwide || zipCount === 0) {
           const currentDailyCount = await this.getDailyLeadCount(
             config.buyerId,
             serviceTypeId

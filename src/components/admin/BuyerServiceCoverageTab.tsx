@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Settings,
-  Hash
+  Hash,
+  Globe,
+  Loader2
 } from 'lucide-react';
 
 interface BuyerServiceCoverageTabProps {
@@ -32,6 +34,7 @@ interface ServiceConfig {
   serviceDisplayName: string;
   serviceActive: boolean;
   configActive: boolean;
+  nationwide: boolean; // Participates in all leads regardless of ZIP
   minBid: number;
   maxBid: number;
   requiresTrustedForm: boolean;
@@ -64,6 +67,47 @@ export function BuyerServiceCoverageTab({
   const [data, setData] = useState<CoverageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatingService, setUpdatingService] = useState<string | null>(null);
+
+  const toggleNationwide = async (serviceTypeId: string, currentValue: boolean) => {
+    try {
+      setUpdatingService(serviceTypeId);
+
+      const response = await fetch(`/api/admin/buyers/${buyerId}/service-config`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
+        body: JSON.stringify({
+          serviceTypeId,
+          nationwide: !currentValue
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update service configuration');
+      }
+
+      // Update local state
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          services: prev.services.map(s =>
+            s.serviceTypeId === serviceTypeId
+              ? { ...s, nationwide: !currentValue }
+              : s
+          )
+        };
+      });
+    } catch (err) {
+      console.error('Error toggling nationwide:', err);
+      alert('Failed to update nationwide setting');
+    } finally {
+      setUpdatingService(null);
+    }
+  };
 
   const fetchCoverage = useCallback(async () => {
     try {
@@ -138,15 +182,30 @@ export function BuyerServiceCoverageTab({
         </button>
       </div>
 
-      {/* Warning if no ZIP codes */}
-      {data?.summary.hasNoZipCodes && (
+      {/* Warning if no ZIP codes and no nationwide services */}
+      {data?.summary.hasNoZipCodes && !data?.services.some(s => s.nationwide) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium text-yellow-800">No Service Zones Configured</p>
             <p className="text-sm text-yellow-700 mt-1">
-              This contractor has no ZIP code coverage configured. They will not receive
-              any leads until service zones are added.
+              This buyer has no ZIP code coverage configured and no services set to &quot;Nationwide&quot;.
+              They will not receive any leads until service zones are added or Nationwide Coverage is enabled.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Info if nationwide is enabled */}
+      {data?.services.some(s => s.nationwide) && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-start gap-3">
+          <Globe className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-indigo-800">Nationwide Coverage Enabled</p>
+            <p className="text-sm text-indigo-700 mt-1">
+              This buyer has Nationwide Coverage enabled for {data.services.filter(s => s.nationwide).length} service(s).
+              They will participate in all leads for those services regardless of ZIP code.
+              Leads are filtered via their PING response (accept/reject).
             </p>
           </div>
         </div>
@@ -250,8 +309,36 @@ export function BuyerServiceCoverageTab({
                     </div>
                   </div>
 
+                  {/* Nationwide Toggle */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                    <div className="flex items-center gap-2">
+                      <Globe className={`h-4 w-4 ${service.nationwide ? 'text-indigo-600' : 'text-gray-400'}`} />
+                      <span className="text-sm font-medium text-gray-700">Nationwide Coverage</span>
+                      <span className="text-xs text-gray-500">
+                        {service.nationwide ? '(All ZIP codes)' : '(ZIP codes required)'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => toggleNationwide(service.serviceTypeId, service.nationwide)}
+                      disabled={updatingService === service.serviceTypeId}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                        service.nationwide ? 'bg-indigo-600' : 'bg-gray-200'
+                      } ${updatingService === service.serviceTypeId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {updatingService === service.serviceTypeId ? (
+                        <Loader2 className="h-4 w-4 animate-spin absolute left-1/2 -translate-x-1/2 text-white" />
+                      ) : (
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            service.nationwide ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      )}
+                    </button>
+                  </div>
+
                   {/* Compliance badges */}
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                       service.requiresTrustedForm
                         ? 'bg-green-100 text-green-800'
