@@ -649,7 +649,7 @@ export class BuyerEligibilityService {
 
       for (const config of serviceConfigs) {
         // Check if explicitly marked as nationwide
-        const isExplicitlyNationwide = (config as any).nationwide === true;
+        const isExplicitlyNationwide = config.nationwide === true;
 
         // Check if this buyer has any zip code restrictions for this service
         const zipCount = await prisma.buyerServiceZipCode.count({

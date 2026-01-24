@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { captureApiError } from '@/lib/sentry';
 import { logger } from '@/lib/logger';
+import { RedisCache } from '@/config/redis';
 
 /**
  * GET /api/admin/buyers/[id]/service-config
@@ -215,6 +216,19 @@ export async function PATCH(
       serviceName: existingConfig.serviceType.name,
       changes: updateData
     });
+
+    // Invalidate eligibility caches when config changes
+    // This ensures the new nationwide/active settings take effect immediately
+    try {
+      await RedisCache.deletePattern(`eligibility:service:${serviceTypeId}*`);
+      await RedisCache.deletePattern(`daily-count:${buyerId}:*`);
+      logger.debug('Eligibility cache invalidated', { buyerId, serviceTypeId });
+    } catch (cacheError) {
+      // Log but don't fail the request if cache clear fails
+      logger.warn('Failed to invalidate eligibility cache', {
+        error: (cacheError as Error).message
+      });
+    }
 
     return NextResponse.json({
       success: true,
