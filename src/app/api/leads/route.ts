@@ -413,8 +413,18 @@ export async function POST(request: NextRequest) {
           trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
           trustedFormCertId: complianceData?.trustedFormCertId || undefined,
           jornayaLeadId: complianceData?.jornayaLeadId || undefined,
-          // ComplianceData is REQUIRED for auction - buyer eligibility checks tcpaConsent
-          complianceData: {
+          // Use the FULL leadComplianceData that was already created above
+          // This includes attribution data needed for field mappings like landing_page_url
+          complianceData: leadComplianceData ? {
+            userAgent: leadComplianceData.userAgent || '',
+            timestamp: leadComplianceData.timestamp || new Date().toISOString(),
+            ipAddress: leadComplianceData.ipAddress,
+            tcpaConsent: leadComplianceData.tcpaConsent?.consented ?? true,
+            privacyPolicyAccepted: true,
+            submissionSource: 'web',
+            // Include full attribution data for field mappings (landing_page_url, etc.)
+            attribution: leadComplianceData.attribution,
+          } : {
             userAgent: request.headers.get('user-agent') || '',
             timestamp: new Date().toISOString(),
             ipAddress: request.ip || request.headers.get('x-forwarded-for') || undefined,
