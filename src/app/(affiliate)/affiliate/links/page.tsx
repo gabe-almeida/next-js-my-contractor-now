@@ -19,6 +19,7 @@ interface AffiliateLink {
   name: string;
   code: string;
   targetUrl: string | null;
+  trackingUrl: string;
   clicks: number;
   conversions: number;
   isActive: boolean;

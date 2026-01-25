@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAffiliate } from '@/lib/services/affiliate-service';
 import { captureApiError } from '@/lib/sentry';
+import { normalizePhoneNumber, US_PHONE_REGEX } from '@/lib/utils/phone';
 
 // Validation schema for signup
 const signupSchema = z.object({
@@ -18,7 +19,11 @@ const signupSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50),
   lastName: z.string().min(1, 'Last name is required').max(50),
   companyName: z.string().max(100).optional(),
-  phone: z.string().max(20).optional()
+  phone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(20)
+    .regex(US_PHONE_REGEX, 'Phone number must be exactly 10 digits')
+    .transform((val) => normalizePhoneNumber(val) || val) // Normalize to E.164
 });
 
 export async function POST(request: NextRequest) {

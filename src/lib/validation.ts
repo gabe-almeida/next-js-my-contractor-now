@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import { isValidUSPhoneNumber, cleanPhoneNumber } from '@/lib/utils/phone';
+
+// Phone schema - accepts 10 digits or 11 digits starting with 1
+// Transforms to clean 10-digit format for storage
+export const phoneSchema = z.string()
+  .refine(isValidUSPhoneNumber, 'Please enter a valid 10-digit phone number')
+  .transform(cleanPhoneNumber);
 
 // Base validation schemas
 export const leadFormDataSchema = z.object({
@@ -6,34 +13,31 @@ export const leadFormDataSchema = z.object({
     .min(5, 'ZIP code must be at least 5 characters')
     .max(10, 'ZIP code cannot exceed 10 characters')
     .regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'),
-  
+
   homeOwnership: z.enum(['own', 'rent'], {
     required_error: 'Home ownership status is required'
   }),
-  
+
   timeframe: z.enum(['immediate', '1-3months', '3-6months', '6+months'], {
     required_error: 'Project timeframe is required'
   }),
-  
+
   firstName: z.string()
     .min(2, 'First name must be at least 2 characters')
     .max(50, 'First name cannot exceed 50 characters')
     .regex(/^[a-zA-Z\s'-]+$/, 'First name contains invalid characters'),
-  
+
   lastName: z.string()
     .min(2, 'Last name must be at least 2 characters')
     .max(50, 'Last name cannot exceed 50 characters')
     .regex(/^[a-zA-Z\s'-]+$/, 'Last name contains invalid characters'),
-  
+
   email: z.string()
     .email('Invalid email format')
     .max(255, 'Email cannot exceed 255 characters'),
-  
-  phone: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number cannot exceed 15 digits')
-    .regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format'),
-  
+
+  phone: phoneSchema,
+
   address: z.object({
     street: z.string().min(5, 'Street address is required'),
     city: z.string().min(2, 'City is required'),
@@ -167,9 +171,9 @@ export const buyerSchema = z.object({
   // Contact Information
   contactName: z.string().max(100).optional(),
   contactEmail: z.string().email().optional(),
-  contactPhone: z.string().max(20).optional(),
+  contactPhone: phoneSchema.optional(),
   businessEmail: z.string().email().optional(),
-  businessPhone: z.string().max(20).optional(),
+  businessPhone: phoneSchema.optional(),
 
   // Timeouts
   pingTimeout: z.number().min(1).max(300).optional(),

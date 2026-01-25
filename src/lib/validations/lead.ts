@@ -1,7 +1,14 @@
 import { z } from 'zod';
+import { isValidUSPhoneNumber, cleanPhoneNumber } from '@/lib/utils/phone';
 
 // Base schemas
 export const zipCodeSchema = z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format');
+
+// Phone schema - accepts 10 digits or 11 digits starting with 1
+// Transforms to clean 10-digit format for storage
+export const phoneSchema = z.string()
+  .refine(isValidUSPhoneNumber, 'Please enter a valid 10-digit phone number')
+  .transform(cleanPhoneNumber);
 
 export const timeframeSchema = z.enum([
   'immediately',
@@ -145,10 +152,7 @@ export const windowsFormSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email format'),
-  phone: z.string().regex(
-    /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/,
-    'Invalid phone number format'
-  ),
+  phone: phoneSchema,
   // Compliance fields
   complianceData: complianceDataSchema,
 });
@@ -197,7 +201,7 @@ export const bathroomFormSchema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().regex(/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/),
+  phone: phoneSchema,
   complianceData: complianceDataSchema,
 });
 
@@ -254,7 +258,7 @@ export const roofingFormSchema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().regex(/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/),
+  phone: phoneSchema,
   complianceData: complianceDataSchema,
 });
 

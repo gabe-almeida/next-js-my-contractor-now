@@ -1,10 +1,15 @@
 import { z } from 'zod';
 import { FormField, FormValidationError } from '@/types/forms/index';
+import {
+  isValidUSPhoneNumber,
+  formatPhoneForDisplay,
+  cleanPhoneNumber,
+} from '@/lib/utils/phone';
 
 // Base validation schemas
+// Phone schema accepts 10 digits or 11 digits starting with 1
 export const phoneSchema = z.string()
-  .regex(/^(\+1\s?)?(\([0-9]{3}\)|[0-9]{3})[\s\-]?[0-9]{3}[\s\-]?[0-9]{4}$/, 
-    'Please enter a valid phone number');
+  .refine(isValidUSPhoneNumber, 'Please enter a valid phone number');
 
 export const emailSchema = z.string()
   .email('Please enter a valid email address');
@@ -162,16 +167,9 @@ function getErrorType(code: z.ZodIssueCode): FormValidationError['type'] {
 export const validationHelpers = {
   isValidZipCode: (zip: string) => zipCodeSchema.safeParse(zip).success,
   isValidEmail: (email: string) => emailSchema.safeParse(email).success,
-  isValidPhone: (phone: string) => phoneSchema.safeParse(phone).success,
-  formatPhone: (phone: string) => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length === 10) {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    } else if (digits.length === 11 && digits[0] === '1') {
-      return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-    }
-    return phone;
-  },
+  isValidPhone: (phone: string) => isValidUSPhoneNumber(phone),
+  formatPhone: formatPhoneForDisplay,
+  cleanPhone: cleanPhoneNumber,
   formatZipCode: (zip: string) => {
     const digits = zip.replace(/\D/g, '');
     if (digits.length === 9) {

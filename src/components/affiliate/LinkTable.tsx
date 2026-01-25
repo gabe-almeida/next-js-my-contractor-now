@@ -17,6 +17,7 @@ interface AffiliateLink {
   name: string;
   code: string;
   targetUrl: string | null;
+  trackingUrl: string;
   clicks: number;
   conversions: number;
   isActive: boolean;
@@ -34,10 +35,8 @@ export function LinkTable({ links, onEdit, onDelete, onToggleActive }: LinkTable
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const copyToClipboard = async (link: AffiliateLink) => {
-    const url = link.targetUrl
-      ? `${link.targetUrl}${link.targetUrl.includes('?') ? '&' : '?'}ref=${link.code}`
-      : `${window.location.origin}?ref=${link.code}`;
-    await navigator.clipboard.writeText(url);
+    // Use the trackingUrl provided by API (https://mycontractornow.com/r/{code})
+    await navigator.clipboard.writeText(link.trackingUrl);
     setCopiedId(link.id);
     setTimeout(() => setCopiedId(null), 2000);
   };

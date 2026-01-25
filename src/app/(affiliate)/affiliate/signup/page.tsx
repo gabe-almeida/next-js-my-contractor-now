@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { User, Mail, Lock, Phone, Globe, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function AffiliateSignupPage() {
@@ -32,6 +33,10 @@ export default function AffiliateSignupPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneChange = (cleanValue: string) => {
+    setFormData(prev => ({ ...prev, phone: cleanValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -231,25 +236,17 @@ export default function AffiliateSignupPage() {
               </div>
             </div>
 
+            {/* Phone - Required */}
+            <PhoneInput
+              value={formData.phone}
+              onChange={handlePhoneChange}
+              label="Phone number"
+              required
+              icon={<Phone className="h-5 w-5 text-gray-400" />}
+              showValidation
+            />
+
             {/* Optional fields */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Phone number
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                />
-              </div>
-            </div>
 
             <div>
               <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
