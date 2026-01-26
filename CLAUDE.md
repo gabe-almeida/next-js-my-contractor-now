@@ -96,13 +96,15 @@ render logs -r srv-d0ua7j63jp1c73fnfgn0 --output text --limit 100
 
 # How to Test UI
 
-Test credentials for each portal: `docs/how-to-login-for-testing-ui/`
+**Unified Login:** `/login` - works for all user types, auto-redirects to correct dashboard.
 
-| Portal | Credentials File |
-|--------|------------------|
-| Super Admin | `admin-test-credentials.md` |
-| Affiliate | `affiliate-test-credentials.md` |
-| Contractor | `contractor-test-credentials.md` |
+Test credentials: `docs/how-to-login-for-testing-ui/README.md`
+
+| User Type | Email | Password |
+|-----------|-------|----------|
+| Super Admin | `gabe@mycontractornow.com` | `TestAdmin123!` |
+| Affiliate | `gabe@mycontractornow.com` | `TestAffiliate123!` |
+| Contractor | `gabe@mycontractornow.com` | `TestContractor123!` |
 
 ---
 
