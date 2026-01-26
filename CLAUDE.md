@@ -267,6 +267,18 @@ DATABASE_URL="postgres://postgres:CgDWlr8Bk9O6DVoX@db.cnogfaqqilmutqhpjhgl.supab
 npx prisma generate
 ```
 
+## 🚨 STOP: Lead System Changes Require Reading Docs First
+
+**Before ANY lead/auction/buyer changes, READ:**
+1. `docs/lead-system-flow.md` - Data transformation lifecycle
+2. `docs/LEAD-DELIVERY-SYSTEM.md` - Full auction system reference
+
+**Key concepts you MUST understand:**
+- Form fields (`timeline`, `isHomeowner`) transform to lead columns (`timeframe`, `ownsHome`)
+- `prepareSourceData()` in `src/lib/templates/engine.ts` flattens lead data for mappings
+- Field mappings are per-buyer in `buyer_service_configs.field_mappings` (JSON)
+- Changes to shared transforms affect ALL buyers using that transform
+
 ## 🔄 Lead Buyer System (PING/POST Auction)
 
 This system matches leads with buyers through a real-time PING/POST auction. Understanding this is CRITICAL for debugging lead delivery issues.
