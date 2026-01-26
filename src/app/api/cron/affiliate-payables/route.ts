@@ -72,7 +72,7 @@ function getPreviousMonthRange(): { start: Date; end: Date } {
 async function getSystemAdminId(): Promise<string | null> {
   // Try to find a system admin or any active admin
   const admin = await prisma.adminUser.findFirst({
-    where: { isActive: true },
+    where: { active: true },
     select: { id: true },
     orderBy: { createdAt: 'asc' }, // Get the oldest/first admin
   });
