@@ -63,6 +63,7 @@ export function cleanEmailInput(value: string): string {
 
 /**
  * Gets validation error message for invalid email
+ * Returns a simple, user-friendly message for all invalid cases
  *
  * @param email - Email to check
  * @returns Error message or null if valid
@@ -72,31 +73,32 @@ export function getEmailValidationError(email: string): string | null {
 
   const trimmed = email.trim();
 
+  // Simple validation - all errors return the same user-friendly message
   if (!trimmed.includes('@')) {
-    return 'Email must contain @';
+    return 'Please enter a valid email address.';
   }
 
   const [local, domain] = trimmed.split('@');
 
   if (!local || local.length === 0) {
-    return 'Email must have a name before @';
+    return 'Please enter a valid email address.';
   }
 
   if (!domain || domain.length === 0) {
-    return 'Email must have a domain after @';
+    return 'Please enter a valid email address.';
   }
 
   if (!domain.includes('.')) {
-    return 'Domain must include a period (e.g., .com)';
+    return 'Please enter a valid email address.';
   }
 
   const tld = domain.split('.').pop();
   if (!tld || tld.length < 2) {
-    return 'Invalid domain extension';
+    return 'Please enter a valid email address.';
   }
 
   if (!isValidEmail(trimmed)) {
-    return 'Invalid email format';
+    return 'Please enter a valid email address.';
   }
 
   return null;

@@ -11,16 +11,27 @@ When leads are submitted, we send conversion events to Meta via their Conversion
 - **Deduplication** - Event IDs sync with client-side pixel
 - **Audit trail** - All events logged to database
 
-## Service-Specific Event Names
+## Dual Event Strategy
+
+Every lead submission sends **TWO events** to Meta:
+
+1. **Generic "Lead"** - For broad campaign optimization (current)
+2. **Service-specific event** (e.g., "Windows Lead") - For future service-specific campaigns
+
+This allows you to:
+- Currently optimize campaigns for all "Lead" events
+- Later switch to service-specific optimization once you have enough conversion data
+
+### Service-Specific Event Names
 
 Events are automatically named based on the service type:
 
-| Service | Display Name | Meta Event Name |
-|---------|--------------|-----------------|
-| windows | Windows Installation | **Windows Lead** |
-| bathrooms | Bathroom Remodeling | **Bathroom Lead** |
-| roofing | Roofing Services | **Roofing Lead** |
-| hvac | HVAC Services | **HVAC Lead** |
+| Service | Display Name | Events Sent |
+|---------|--------------|-------------|
+| windows | Windows Installation | **Lead** + **Windows Lead** |
+| bathrooms | Bathroom Remodeling | **Lead** + **Bathroom Lead** |
+| roofing | Roofing Services | **Lead** + **Roofing Lead** |
+| hvac | HVAC Services | **Lead** + **HVAC Lead** |
 
 **Auto-adapts:** When you add a new service type, the event name is auto-generated from the first word of the display name + " Lead".
 
@@ -79,9 +90,17 @@ trackLeadCAPI(leadId, displayName, serviceType, userData, ...)
      ↓
 getServiceEventName("Windows Installation") → "Windows Lead"
      ↓
-sendMetaCAPIEvent() → Meta Graph API
-     ↓
-logMetaCapiEvent() → meta_capi_logs table
+     ├─────────────────────────────────────┐
+     ↓                                     ↓
+sendMetaCAPIEvent("Lead")      sendMetaCAPIEvent("Windows Lead")
+     ↓                                     ↓
+     └─────────────────────────────────────┘
+                      ↓
+              (Both in parallel)
+                      ↓
+         Meta Graph API receives both events
+                      ↓
+         logMetaCapiEvent() → meta_capi_logs table (2 entries)
 ```
 
 ## Data Sent to Meta

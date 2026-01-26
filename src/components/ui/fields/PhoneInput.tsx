@@ -6,6 +6,7 @@ import {
   cleanPhoneNumber,
   restrictPhoneInput,
   isValidUSPhoneNumber,
+  getPhoneValidationError,
 } from '@/lib/utils/phone';
 import { InlineSaveButtons, type InlineConfig } from './InlineSaveButtons';
 
@@ -101,6 +102,9 @@ export function PhoneInput({
   // Internal display value (may be partially formatted during typing)
   const [displayValue, setDisplayValue] = useState(() => formatPhoneForDisplay(value));
 
+  // Internal validation error
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   // Handle input change - restrict characters but don't fully format yet
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,11 +114,16 @@ export function PhoneInput({
       // Always send clean value to parent
       const clean = cleanPhoneNumber(restricted);
       onChange(clean);
+
+      // Clear validation error while typing
+      if (validationError) {
+        setValidationError(null);
+      }
     },
-    [onChange]
+    [onChange, validationError]
   );
 
-  // Handle blur - format the number nicely
+  // Handle blur - format the number nicely and validate
   const handleBlur = useCallback(
     (e: React.FocusEvent<HTMLInputElement>) => {
       setTouched(true);
@@ -125,6 +134,10 @@ export function PhoneInput({
       // Send clean value
       const clean = cleanPhoneNumber(formatted);
       onChange(clean);
+
+      // Validate and set error
+      const phoneError = getPhoneValidationError(formatted);
+      setValidationError(phoneError);
 
       // Call any passed onBlur handler
       props.onBlur?.(e);
@@ -141,10 +154,13 @@ export function PhoneInput({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // Determine which error to show (external takes priority)
+  const errorToShow = error || (touched ? validationError : null);
+
   // Validation state
   const isValid = isValidUSPhoneNumber(displayValue);
-  const showError = (touched || error) && error;
-  const showValid = showValidation && touched && isValid && !error;
+  const showError = !!errorToShow;
+  const showValid = showValidation && touched && isValid && !showError;
 
   // Build input classes - brand theme based on variant
   const baseClasses = 'appearance-none block w-full py-3 border-2 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 text-sm';
@@ -207,7 +223,7 @@ export function PhoneInput({
       )}
 
       {/* Error message */}
-      {showError && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {showError && <p className="mt-1 text-sm text-red-600">{errorToShow}</p>}
 
       {/* Helper text (only show if no error) */}
       {helperText && !showError && (

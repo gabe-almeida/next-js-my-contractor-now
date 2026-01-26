@@ -14,8 +14,13 @@
  * - PII is hashed with SHA-256 before sending
  *
  * EVENTS SENT:
- * - Service-specific Lead events: "Window Lead", "Bathroom Lead", etc.
+ * - Generic "Lead" event: For broad campaign optimization
+ * - Service-specific Lead events: "Windows Lead", "Bathroom Lead", etc.
  * - PageView: On every landing page visit (lightweight event)
+ *
+ * NOTE: Each lead submission sends BOTH a generic "Lead" AND a service-specific
+ * event (e.g., "Windows Lead") in parallel. This allows optimizing for broad
+ * leads now while building data for service-specific optimization later.
  *
  * DATA SENT:
  * Event Detail Parameters:
@@ -382,6 +387,10 @@ export async function sendMetaCAPIEvent(event: MetaEvent): Promise<MetaCAPIRespo
  * WHEN: Called after lead is created in database
  * HOW: Builds event from service type, sends to Meta, logs to DB
  *
+ * EVENTS SENT:
+ * 1. Service-specific event (e.g., "Windows Lead") - for future campaign optimization
+ * 2. Generic "Lead" event - for current broad optimization
+ *
  * @param leadId - Database lead ID (for logging)
  * @param serviceTypeDisplayName - Service display name (e.g., "Windows Installation")
  * @param serviceTypeName - Service type key (e.g., "windows")
@@ -399,28 +408,22 @@ export async function trackLeadCAPI(
   eventSourceUrl?: string,
   eventId?: string
 ): Promise<MetaCAPIResponse> {
-  // Generate service-specific event name
-  const eventName = getServiceEventName(serviceTypeDisplayName);
-  const finalEventId = eventId || crypto.randomUUID();
+  // Generate service-specific event name (e.g., "Windows Lead")
+  const serviceEventName = getServiceEventName(serviceTypeDisplayName);
+  const eventTime = Math.floor(Date.now() / 1000);
+  const sourceUrl = eventSourceUrl || 'https://mycontractornow.com';
 
-  const event: MetaEvent = {
-    event_name: eventName,
-    event_time: Math.floor(Date.now() / 1000), // Unix timestamp in seconds
-    event_source_url: eventSourceUrl || 'https://mycontractornow.com',
-    action_source: 'website',
-    user_data: userData,
-    custom_data: customData,
-    event_id: finalEventId,
-  };
+  // Generate unique event IDs for deduplication
+  const serviceEventId = eventId || crypto.randomUUID();
+  const genericEventId = crypto.randomUUID(); // Separate ID for generic Lead event
 
-  // Build sanitized payload for logging (PII will be hashed in sendMetaCAPIEvent)
-  const logPayload = {
+  // Helper to build log payload
+  const buildLogPayload = (eventName: string, evtId: string) => ({
     event_name: eventName,
-    event_time: event.event_time,
-    event_source_url: event.event_source_url,
-    event_id: finalEventId,
+    event_time: eventTime,
+    event_source_url: sourceUrl,
+    event_id: evtId,
     custom_data: customData,
-    // Don't log raw PII - just indicate what fields were present
     user_data_fields: {
       has_email: !!userData.email,
       has_phone: !!userData.phone,
@@ -431,37 +434,63 @@ export async function trackLeadCAPI(
       has_ip: !!userData.clientIpAddress,
       has_user_agent: !!userData.clientUserAgent,
     },
+  });
+
+  // Helper to send and log a single event
+  const sendAndLogEvent = async (eventName: string, evtId: string): Promise<MetaCAPIResponse> => {
+    const event: MetaEvent = {
+      event_name: eventName,
+      event_time: eventTime,
+      event_source_url: sourceUrl,
+      action_source: 'website',
+      user_data: userData,
+      custom_data: customData,
+      event_id: evtId,
+    };
+
+    const logPayload = buildLogPayload(eventName, evtId);
+
+    try {
+      const result = await sendMetaCAPIEvent(event);
+
+      // Log successful event to database
+      logMetaCapiEvent({
+        leadId,
+        eventName,
+        eventId: evtId,
+        serviceType: serviceTypeName,
+        requestPayload: logPayload,
+        responseData: result,
+        success: true,
+      }).catch(() => {}); // Fire and forget
+
+      return result;
+    } catch (error) {
+      // Log failed event to database
+      logMetaCapiEvent({
+        leadId,
+        eventName,
+        eventId: evtId,
+        serviceType: serviceTypeName,
+        requestPayload: logPayload,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      }).catch(() => {}); // Fire and forget
+
+      throw error;
+    }
   };
 
-  try {
-    const result = await sendMetaCAPIEvent(event);
+  // Send both events in parallel:
+  // 1. Service-specific event (e.g., "Windows Lead") - for future service-specific optimization
+  // 2. Generic "Lead" event - for current broad campaign optimization
+  const [serviceResult] = await Promise.all([
+    sendAndLogEvent(serviceEventName, serviceEventId),
+    sendAndLogEvent('Lead', genericEventId),
+  ]);
 
-    // Log successful event to database
-    logMetaCapiEvent({
-      leadId,
-      eventName,
-      eventId: finalEventId,
-      serviceType: serviceTypeName,
-      requestPayload: logPayload,
-      responseData: result,
-      success: true,
-    }).catch(() => {}); // Fire and forget
-
-    return result;
-  } catch (error) {
-    // Log failed event to database
-    logMetaCapiEvent({
-      leadId,
-      eventName,
-      eventId: finalEventId,
-      serviceType: serviceTypeName,
-      requestPayload: logPayload,
-      success: false,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    }).catch(() => {}); // Fire and forget
-
-    throw error;
-  }
+  // Return the service-specific result (both should succeed or fail together)
+  return serviceResult;
 }
 
 /**

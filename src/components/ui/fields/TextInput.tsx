@@ -88,10 +88,18 @@ function capitalizeFirstLetter(str: string): string {
 
 /**
  * Capitalizes the first letter of each word (for name fields)
+ * Preserves internal capitalization (e.g., "McDonald" stays as typed after the M)
  */
 function capitalizeEachWord(str: string): string {
   if (!str) return str;
-  return str.replace(/\b\w/g, (char) => char.toUpperCase());
+  // Split by spaces, capitalize first char of each word
+  return str
+    .split(' ')
+    .map((word) => {
+      if (!word) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 }
 
 /**
@@ -138,6 +146,11 @@ export function TextInput({
         if (!pattern.test(newValue)) {
           newValue = cleaned;
         }
+      }
+
+      // For name fields, prevent multiple consecutive spaces
+      if (nameOnly && newValue) {
+        newValue = newValue.replace(/\s{2,}/g, ' ');
       }
 
       // Auto-capitalize first letter of each word (for names)

@@ -310,18 +310,50 @@ export function formatPhoneAsYouType(phoneNumber: string): string {
 /**
  * Restricts input to only valid phone characters during typing
  * Called on CHANGE to prevent invalid characters
+ * Also enforces max digit limits:
+ * - 10 digits for standard US numbers
+ * - 11 digits if starting with 1 (country code)
+ * - 11 digits if starting with +1
  *
  * @param value - Current input value
- * @returns Cleaned value with only digits and allowed formatting chars
+ * @returns Cleaned value with only digits and allowed formatting chars, limited to max digits
  */
 export function restrictPhoneInput(value: string): string {
   // Allow digits, spaces, parentheses, hyphens, and + at start
   const startsWithPlus = value.startsWith('+');
-  const cleaned = value.replace(/[^\d\s()-]/g, '');
+  let cleaned = value.replace(/[^\d\s()-]/g, '');
 
   // Preserve + at start if it was there
   if (startsWithPlus && !cleaned.startsWith('+')) {
-    return '+' + cleaned;
+    cleaned = '+' + cleaned;
+  }
+
+  // Extract just the digits to check count
+  const digits = cleaned.replace(/\D/g, '');
+
+  // Determine max digits allowed
+  let maxDigits = 10;
+  if (startsWithPlus || digits.startsWith('1')) {
+    maxDigits = 11; // +1 or leading 1 allows 11 total digits
+  }
+
+  // If we have too many digits, truncate
+  if (digits.length > maxDigits) {
+    // Rebuild the string with only maxDigits digits
+    let digitCount = 0;
+    let result = '';
+    for (const char of cleaned) {
+      if (/\d/.test(char)) {
+        if (digitCount < maxDigits) {
+          result += char;
+          digitCount++;
+        }
+        // Skip digits beyond max
+      } else {
+        result += char; // Keep formatting chars
+      }
+    }
+    return result;
   }
 
   return cleaned;
@@ -359,3 +391,20 @@ export const E164_REGEX = /^\+[1-9]\d{1,14}$/;
  * Use with z.string().regex(US_PHONE_REGEX, { message: '...' })
  */
 export const US_PHONE_REGEX = /^\d{10}$/;
+
+/**
+ * Gets validation error message for invalid phone number
+ * Returns a simple, user-friendly message
+ *
+ * @param phone - Phone number to check
+ * @returns Error message or null if valid
+ */
+export function getPhoneValidationError(phone: string | null | undefined): string | null {
+  if (!phone || phone.trim().length === 0) return null; // Empty is not an error (use required prop)
+
+  if (!isValidUSPhoneNumber(phone)) {
+    return 'Please enter a valid phone number.';
+  }
+
+  return null;
+}
