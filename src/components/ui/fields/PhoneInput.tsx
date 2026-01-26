@@ -1,26 +1,15 @@
 'use client';
 
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  formatPhoneForDisplay,
+  cleanPhoneNumber,
+  restrictPhoneInput,
+  isValidUSPhoneNumber,
+} from '@/lib/utils/phone';
+import { InlineSaveButtons, type InlineConfig } from './InlineSaveButtons';
+
 /**
- * @deprecated Use `PhoneInput` from `@/components/ui/fields` instead!
- *
- * Migration:
- * ```tsx
- * // OLD (this file)
- * import { PhoneInput } from '@/components/ui/PhoneInput';
- *
- * // NEW (use this instead)
- * import { PhoneInput } from '@/components/ui/fields';
- * <PhoneInput value={phone} onChange={setPhone} variant="emerald" />
- * ```
- *
- * The new PhoneInput in `@/components/ui/fields` supports:
- * - variant prop for orange/emerald theming
- * - inline editing with save/discard buttons
- * - consistent API across all smart field components
- *
- * This file will be removed after full migration.
- * ============================================
- *
  * PhoneInput - Smart phone number input with automatic formatting
  *
  * WHY: Provides consistent phone formatting across the app with built-in validation
@@ -32,6 +21,7 @@
  * - Restricts invalid characters during typing
  * - Returns clean digits for database storage via onChange
  * - Visual validation feedback (green/red border)
+ * - Orange brand styling to match other components
  *
  * @example
  * // Basic form usage
@@ -42,6 +32,7 @@
  *   required
  * />
  *
+ * @example
  * // With error handling
  * <PhoneInput
  *   value={phone}
@@ -50,15 +41,20 @@
  *   error={errors.phone}
  *   showValidation
  * />
+ *
+ * @example
+ * // With inline save/discard buttons (for detail pages)
+ * <PhoneInput
+ *   value={phone}
+ *   onChange={(cleanValue) => setPhone(cleanValue)}
+ *   label="Phone"
+ *   inline={{
+ *     onSave: () => saveToDatabase({ phone }),
+ *     onDiscard: () => setPhone(originalPhone),
+ *     hasChanges: phone !== originalPhone,
+ *   }}
+ * />
  */
-
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  formatPhoneForDisplay,
-  cleanPhoneNumber,
-  restrictPhoneInput,
-  isValidUSPhoneNumber,
-} from '@/lib/utils/phone';
 
 export interface PhoneInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'type'> {
@@ -78,6 +74,10 @@ export interface PhoneInputProps
   showValidation?: boolean;
   /** Icon component to show on the left */
   icon?: React.ReactNode;
+  /** Inline editing config - adds save/discard buttons */
+  inline?: InlineConfig;
+  /** Color variant: 'orange' for public pages, 'emerald' for affiliate portal */
+  variant?: 'orange' | 'emerald';
 }
 
 export function PhoneInput({
@@ -89,6 +89,8 @@ export function PhoneInput({
   helperText,
   showValidation = false,
   icon,
+  inline,
+  variant = 'orange',
   className = '',
   disabled,
   ...props
@@ -144,15 +146,24 @@ export function PhoneInput({
   const showError = (touched || error) && error;
   const showValid = showValidation && touched && isValid && !error;
 
-  // Build input classes
-  const baseClasses = 'appearance-none block w-full py-2 border rounded-md placeholder-gray-400 focus:outline-none focus:ring-1 sm:text-sm';
-  const paddingClasses = icon ? 'pl-10 pr-3' : 'px-3';
+  // Build input classes - brand theme based on variant
+  const baseClasses = 'appearance-none block w-full py-3 border-2 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 text-sm';
+  const paddingClasses = icon ? 'pl-10 pr-4' : 'px-4';
+
+  // Brand colors: orange for public pages, emerald for affiliate portal
+  const brandClasses = variant === 'emerald'
+    ? 'border-emerald-300 focus:ring-emerald-500 focus:border-emerald-500'
+    : 'border-orange-300 focus:ring-orange-500 focus:border-orange-500';
+
   const stateClasses = showError
-    ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
     : showValid
-      ? 'border-green-500 focus:ring-green-500 focus:border-green-500'
-      : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500';
-  const disabledClasses = disabled ? 'bg-gray-100 cursor-not-allowed' : '';
+      ? 'border-green-400 focus:ring-green-500 focus:border-green-500'
+      : brandClasses;
+  const disabledClasses = disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white';
+
+  const hasInline = !!inline;
+  const inlinePosition = inline?.position || 'right';
 
   return (
     <div className="w-full">
@@ -163,25 +174,37 @@ export function PhoneInput({
         </label>
       )}
 
-      <div className="relative">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {icon}
+      <div className={hasInline && inlinePosition === 'right' ? 'relative' : ''}>
+        <div className={hasInline && inlinePosition === 'right' ? 'pr-24' : ''}>
+          <div className="relative">
+            {icon && (
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                {icon}
+              </div>
+            )}
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={displayValue}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              disabled={disabled}
+              className={`${baseClasses} ${paddingClasses} ${stateClasses} ${disabledClasses} ${className}`}
+              placeholder="(555) 555-5555"
+              {...props}
+            />
           </div>
+        </div>
+
+        {hasInline && inlinePosition === 'right' && (
+          <InlineSaveButtons config={inline} hasValue={!!displayValue.trim()} />
         )}
-        <input
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          value={displayValue}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          disabled={disabled}
-          className={`${baseClasses} ${paddingClasses} ${stateClasses} ${disabledClasses} ${className}`}
-          placeholder="(555) 555-5555"
-          {...props}
-        />
       </div>
+
+      {hasInline && inlinePosition === 'below' && (
+        <InlineSaveButtons config={inline} hasValue={!!displayValue.trim()} />
+      )}
 
       {/* Error message */}
       {showError && <p className="mt-1 text-sm text-red-600">{error}</p>}

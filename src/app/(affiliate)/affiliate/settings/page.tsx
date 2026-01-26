@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
+import { TextInput, EmailInput, PhoneInput } from '@/components/ui/fields';
 import {
   User,
   Mail,
@@ -216,89 +217,54 @@ export default function AffiliateSettingsPage() {
 
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    value={profile?.email || ''}
-                    disabled
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
-                  />
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Email cannot be changed
-                </p>
+                <EmailInput
+                  value={profile?.email || ''}
+                  onChange={() => {}}
+                  label="Email"
+                  disabled
+                  icon={<Mail className="h-5 w-5 text-gray-400" />}
+                  helperText="Email cannot be changed"
+                  variant="emerald"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={e => setFirstName(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={e => setLastName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
+                <TextInput
+                  value={firstName}
+                  onChange={setFirstName}
+                  label="First Name"
+                  nameOnly
+                  capitalizeWords
+                  icon={<User className="h-5 w-5 text-gray-400" />}
+                  variant="emerald"
+                />
+                <TextInput
+                  value={lastName}
+                  onChange={setLastName}
+                  label="Last Name"
+                  nameOnly
+                  capitalizeWords
+                  variant="emerald"
+                />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+                label="Phone"
+                icon={<Phone className="h-5 w-5 text-gray-400" />}
+                variant="emerald"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Website
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Globe className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="url"
-                    value={website}
-                    onChange={e => setWebsite(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                    placeholder="https://"
-                  />
-                </div>
-              </div>
+              <TextInput
+                type="url"
+                value={website}
+                onChange={setWebsite}
+                label="Website"
+                icon={<Globe className="h-5 w-5 text-gray-400" />}
+                placeholder="https://"
+                variant="emerald"
+              />
 
               <Button
                 type="submit"
@@ -334,57 +300,33 @@ export default function AffiliateSettingsPage() {
             )}
 
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Current Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={e => setCurrentPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
+              <TextInput
+                type="password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                label="Current Password"
+                icon={<Lock className="h-5 w-5 text-gray-400" />}
+                variant="emerald"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                    placeholder="At least 8 characters"
-                  />
-                </div>
-              </div>
+              <TextInput
+                type="password"
+                value={newPassword}
+                onChange={setNewPassword}
+                label="New Password"
+                icon={<Lock className="h-5 w-5 text-gray-400" />}
+                placeholder="At least 8 characters"
+                variant="emerald"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
+              <TextInput
+                type="password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                label="Confirm New Password"
+                icon={<Lock className="h-5 w-5 text-gray-400" />}
+                variant="emerald"
+              />
 
               <Button
                 type="submit"

@@ -12,6 +12,7 @@ import { getAttributionData, AttributionData } from '@/utils/attribution';
 import { TrustedFormProvider, useTrustedForm } from '@/components/forms/compliance/TrustedFormProvider';
 import { JornayaProvider, useJornaya } from '@/components/forms/compliance/JornayaProvider';
 import { ComplianceStatus } from '@/types/forms/index';
+import { TextInput, PhoneInput, EmailInput } from '@/components/ui/fields';
 
 interface DynamicFormProps {
   flow: QuestionFlow;
@@ -40,7 +41,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 
   // TCPA configuration and form validation
   const tcpaConfig = getTCPAConfig(buyerId);
-  const { formData, validation, touched, updateField, setFieldTouched, formatPhoneField, isSubmitEnabled } = useFormValidation(tcpaConfig.isRequired);
+  const { formData, validation, touched, updateField, setFieldTouched, isSubmitEnabled } = useFormValidation(tcpaConfig.isRequired);
 
   // Get valid steps based on current answers
   const getValidSteps = () => {
@@ -270,25 +271,6 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
         );
 
       case 'name_fields':
-        // Format name: only letters, spaces, hyphens, apostrophes; auto-capitalize first letter
-        const formatName = (value: string): string => {
-          // Remove any characters that aren't letters, spaces, hyphens, or apostrophes
-          const cleaned = value.replace(/[^a-zA-Z\s\-']/g, '');
-          // Capitalize first letter of each word (handles hyphenated names like Mary-Jane)
-          return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
-        };
-
-        // Block non-letter keys from being typed (numbers, special chars)
-        const blockInvalidNameKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
-          const key = e.key;
-          // Allow control keys: backspace, delete, arrow keys, tab, etc.
-          if (key.length > 1) return;
-          // Only allow letters, spaces, hyphens, and apostrophes
-          if (!/^[a-zA-Z\s\-']$/.test(key)) {
-            e.preventDefault();
-          }
-        };
-
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
@@ -296,52 +278,30 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => updateField('firstName', formatName(e.target.value))}
-                  onKeyDown={blockInvalidNameKeys}
-                  onBlur={() => setFieldTouched('firstName')}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    touched.firstName && validation.firstName.message
-                      ? 'border-red-300 focus:border-red-500'
-                      : validation.firstName.isValid
-                      ? 'border-green-300 focus:border-green-500'
-                      : 'border-orange-300 focus:border-orange-500'
-                  }`}
-                  placeholder="First name"
-                />
-                {touched.firstName && validation.firstName.message && (
-                  <p className="mt-1 text-sm text-red-600">{validation.firstName.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => updateField('lastName', formatName(e.target.value))}
-                  onKeyDown={blockInvalidNameKeys}
-                  onBlur={() => setFieldTouched('lastName')}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    touched.lastName && validation.lastName.message
-                      ? 'border-red-300 focus:border-red-500'
-                      : validation.lastName.isValid
-                      ? 'border-green-300 focus:border-green-500'
-                      : 'border-orange-300 focus:border-orange-500'
-                  }`}
-                  placeholder="Last name"
-                />
-                {touched.lastName && validation.lastName.message && (
-                  <p className="mt-1 text-sm text-red-600">{validation.lastName.message}</p>
-                )}
-              </div>
+              <TextInput
+                value={formData.firstName}
+                onChange={(value) => updateField('firstName', value)}
+                onBlur={() => setFieldTouched('firstName')}
+                label="First Name"
+                required
+                nameOnly
+                capitalizeWords
+                placeholder="First name"
+                error={touched.firstName ? validation.firstName.message : undefined}
+                showValidation={validation.firstName.isValid}
+              />
+              <TextInput
+                value={formData.lastName}
+                onChange={(value) => updateField('lastName', value)}
+                onBlur={() => setFieldTouched('lastName')}
+                label="Last Name"
+                required
+                nameOnly
+                capitalizeWords
+                placeholder="Last name"
+                error={touched.lastName ? validation.lastName.message : undefined}
+                showValidation={validation.lastName.isValid}
+              />
             </div>
 
             <button
@@ -365,60 +325,25 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
               {currentQuestion.question}
             </h2>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                onBlur={() => setFieldTouched('email')}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                  touched.email && validation.email.message
-                    ? 'border-red-300 focus:border-red-500'
-                    : validation.email.isValid
-                    ? 'border-green-300 focus:border-green-500'
-                    : 'border-orange-300 focus:border-orange-500'
-                }`}
-                placeholder="your@email.com"
-              />
-              {touched.email && validation.email.message && (
-                <p className="mt-1 text-sm text-red-600">{validation.email.message}</p>
-              )}
-              {validation.email.isValid && (
-                <p className="mt-1 text-sm text-green-600">✓ Valid email address</p>
-              )}
-            </div>
+            <EmailInput
+              value={formData.email}
+              onChange={(value) => updateField('email', value)}
+              onBlur={() => setFieldTouched('email')}
+              label="Email Address"
+              required
+              error={touched.email ? validation.email.message : undefined}
+              showValidation={validation.email.isValid}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => {
-                  const formatted = formatPhoneField(e.target.value);
-                  updateField('phone', formatted);
-                }}
-                onBlur={() => setFieldTouched('phone')}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                  touched.phone && validation.phone.message
-                    ? 'border-red-300 focus:border-red-500'
-                    : validation.phone.isValid
-                    ? 'border-green-300 focus:border-green-500'
-                    : 'border-orange-300 focus:border-orange-500'
-                }`}
-                placeholder="(555) 123-4567"
-              />
-              {touched.phone && validation.phone.message && (
-                <p className="mt-1 text-sm text-red-600">{validation.phone.message}</p>
-              )}
-              {validation.phone.isValid && (
-                <p className="mt-1 text-sm text-green-600">✓ Valid phone number</p>
-              )}
-            </div>
+            <PhoneInput
+              value={formData.phone}
+              onChange={(value) => updateField('phone', value)}
+              onBlur={() => setFieldTouched('phone')}
+              label="Phone Number"
+              required
+              error={touched.phone ? validation.phone.message : undefined}
+              showValidation={validation.phone.isValid}
+            />
 
             {/* TCPA Checkbox - only shows when contact info is valid */}
             <TCPACheckbox
@@ -444,21 +369,6 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
         );
 
       case 'contact':
-        // Format name: only letters, spaces, hyphens, apostrophes; auto-capitalize first letter
-        const formatContactName = (value: string): string => {
-          const cleaned = value.replace(/[^a-zA-Z\s\-']/g, '');
-          return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
-        };
-
-        // Block non-letter keys from being typed (numbers, special chars)
-        const blockInvalidContactNameKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
-          const key = e.key;
-          if (key.length > 1) return;
-          if (!/^[a-zA-Z\s\-']$/.test(key)) {
-            e.preventDefault();
-          }
-        };
-
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
@@ -466,106 +376,49 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => updateField('firstName', formatContactName(e.target.value))}
-                  onKeyDown={blockInvalidContactNameKeys}
-                  onBlur={() => setFieldTouched('firstName')}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    touched.firstName && validation.firstName.message
-                      ? 'border-red-300 focus:border-red-500'
-                      : validation.firstName.isValid
-                      ? 'border-green-300 focus:border-green-500'
-                      : 'border-orange-300 focus:border-orange-500'
-                  }`}
-                  placeholder="First name"
-                />
-                {touched.firstName && validation.firstName.message && (
-                  <p className="mt-1 text-sm text-red-600">{validation.firstName.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => updateField('lastName', formatContactName(e.target.value))}
-                  onKeyDown={blockInvalidContactNameKeys}
-                  onBlur={() => setFieldTouched('lastName')}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                    touched.lastName && validation.lastName.message
-                      ? 'border-red-300 focus:border-red-500'
-                      : validation.lastName.isValid
-                      ? 'border-green-300 focus:border-green-500'
-                      : 'border-orange-300 focus:border-orange-500'
-                  }`}
-                  placeholder="Last name"
-                />
-                {touched.lastName && validation.lastName.message && (
-                  <p className="mt-1 text-sm text-red-600">{validation.lastName.message}</p>
-                )}
-              </div>
+              <TextInput
+                value={formData.firstName}
+                onChange={(value) => updateField('firstName', value)}
+                onBlur={() => setFieldTouched('firstName')}
+                label="First Name"
+                required
+                nameOnly
+                capitalizeWords
+                placeholder="First name"
+                error={touched.firstName ? validation.firstName.message : undefined}
+                showValidation={validation.firstName.isValid}
+              />
+              <TextInput
+                value={formData.lastName}
+                onChange={(value) => updateField('lastName', value)}
+                onBlur={() => setFieldTouched('lastName')}
+                label="Last Name"
+                required
+                nameOnly
+                capitalizeWords
+                placeholder="Last name"
+                error={touched.lastName ? validation.lastName.message : undefined}
+                showValidation={validation.lastName.isValid}
+              />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                  validation.email.message
-                    ? 'border-red-300 focus:border-red-500'
-                    : validation.email.isValid
-                    ? 'border-green-300 focus:border-green-500'
-                    : 'border-orange-300 focus:border-orange-500'
-                }`}
-                placeholder="your@email.com"
-              />
-              {validation.email.message && (
-                <p className="mt-1 text-sm text-red-600">{validation.email.message}</p>
-              )}
-              {validation.email.isValid && (
-                <p className="mt-1 text-sm text-green-600">✓ Valid email address</p>
-              )}
-            </div>
+            <EmailInput
+              value={formData.email}
+              onChange={(value) => updateField('email', value)}
+              label="Email Address"
+              required
+              error={validation.email.message}
+              showValidation={validation.email.isValid}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => {
-                  const formatted = formatPhoneField(e.target.value);
-                  updateField('phone', formatted);
-                }}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 transition-colors ${
-                  validation.phone.message
-                    ? 'border-red-300 focus:border-red-500'
-                    : validation.phone.isValid
-                    ? 'border-green-300 focus:border-green-500'
-                    : 'border-orange-300 focus:border-orange-500'
-                }`}
-                placeholder="(555) 123-4567"
-              />
-              {validation.phone.message && (
-                <p className="mt-1 text-sm text-red-600">{validation.phone.message}</p>
-              )}
-              {validation.phone.isValid && (
-                <p className="mt-1 text-sm text-green-600">✓ Valid phone number</p>
-              )}
-            </div>
+            <PhoneInput
+              value={formData.phone}
+              onChange={(value) => updateField('phone', value)}
+              label="Phone Number"
+              required
+              error={validation.phone.message}
+              showValidation={validation.phone.isValid}
+            />
 
             {/* TCPA Checkbox - only shows when contact info is valid */}
             <TCPACheckbox

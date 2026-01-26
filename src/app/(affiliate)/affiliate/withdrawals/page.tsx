@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Select, TextAreaInput } from '@/components/ui/fields';
 import { RefreshCw, Wallet, DollarSign, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface Withdrawal {
@@ -34,9 +35,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const PAYMENT_METHODS = [
-  { value: 'paypal', label: 'PayPal' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'check', label: 'Check' },
+  { value: 'PAYPAL', label: 'PayPal' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'CHECK', label: 'Check' },
 ];
 
 export default function AffiliateWithdrawalsPage() {
@@ -246,41 +247,28 @@ export default function AffiliateWithdrawalsPage() {
                   <p className="mt-1 text-xs text-gray-500">Minimum: $50.00</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    value={method}
-                    onChange={(e) => setMethod(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    {PAYMENT_METHODS.map(opt => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  value={method}
+                  onChange={setMethod}
+                  label="Payment Method"
+                  options={PAYMENT_METHODS}
+                  variant="emerald"
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Details
-                  </label>
-                  <textarea
-                    value={methodDetails}
-                    onChange={(e) => setMethodDetails(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                    placeholder={
-                      method === 'PAYPAL'
-                        ? 'Enter your PayPal email address'
-                        : method === 'BANK_TRANSFER'
-                        ? 'Enter bank name, account number, routing number'
-                        : 'Enter mailing address for check'
-                    }
-                  />
-                </div>
+                <TextAreaInput
+                  value={methodDetails}
+                  onChange={setMethodDetails}
+                  label="Payment Details"
+                  rows={3}
+                  placeholder={
+                    method === 'PAYPAL'
+                      ? 'Enter your PayPal email address'
+                      : method === 'BANK_TRANSFER'
+                      ? 'Enter bank name, account number, routing number'
+                      : 'Enter mailing address for check'
+                  }
+                  variant="emerald"
+                />
 
                 <Button
                   type="submit"

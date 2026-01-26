@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Fields Preview - My Contractor Now</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #f3f4f6; }
+    .section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+    .subsection { margin-bottom: 24px; }
+    .label-demo { font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Smart Fields System</h1>
+    <p class="text-gray-600 mb-2">Single source of truth for all form inputs across the application.</p>
+    <p class="text-sm text-gray-500 mb-8">Import from: <code class="bg-gray-100 px-2 py-1 rounded">@/components/ui/fields</code></p>
+
+    <!-- Variant System -->
+    <div class="section" style="border: 2px solid #6366f1; background: linear-gradient(to bottom right, #eef2ff, white);">
+      <div class="section-title" style="color: #4f46e5;">Variant System (Color Themes)</div>
+      <p class="text-sm text-gray-600 mb-6">All smart fields support a <code class="bg-gray-100 px-1.5 py-0.5 rounded">variant</code> prop for theming.</p>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div class="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <p class="text-sm font-semibold text-orange-800 mb-2">variant="orange" (default)</p>
+          <p class="text-xs text-orange-700 mb-3">Public-facing pages: lead forms, landing pages</p>
+          <input
+            type="text"
+            value="Orange variant"
+            class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+          />
+        </div>
+        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <p class="text-sm font-semibold text-emerald-800 mb-2">variant="emerald"</p>
+          <p class="text-xs text-emerald-700 mb-3">Affiliate portal: signup, settings, dashboard</p>
+          <input
+            type="text"
+            value="Emerald variant"
+            class="w-full px-4 py-3 border-2 border-emerald-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- TextInput -->
+    <div class="section">
+      <div class="section-title">TextInput</div>
+      <p class="text-sm text-gray-600 mb-4">For single-line text fields with optional auto-formatting.</p>
+
+      <div class="subsection">
+        <div class="label-demo">Standard Text Input</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Full Name
+          </label>
+          <input
+            type="text"
+            placeholder="Enter full name"
+            class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+          />
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextInput value={name} onChange={setName} label="Full Name" /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Name Field with Auto-Capitalize</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            First Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value="John"
+            class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+          />
+          <p class="mt-1 text-xs text-gray-500">nameOnly: letters, spaces, hyphens, apostrophes only</p>
+          <p class="text-xs text-gray-500">capitalizeWords: auto-capitalizes first letter of each word</p>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextInput value={firstName} onChange={setFirstName} label="First Name" required nameOnly capitalizeWords /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Password Field</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Password
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <input
+              type="password"
+              placeholder="At least 8 characters"
+              class="w-full pl-10 pr-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextInput type="password" value={password} onChange={setPassword} label="Password" icon={&lt;Lock /&gt;} /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">With Icon (Left)</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Website
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+            </div>
+            <input
+              type="url"
+              placeholder="https://..."
+              class="w-full pl-10 pr-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextInput type="url" value={website} onChange={setWebsite} label="Website" icon={&lt;Globe /&gt;} /&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- EmailInput -->
+    <div class="section" style="border: 2px solid #3b82f6; background: linear-gradient(to bottom right, #eff6ff, white);">
+      <div class="section-title" style="color: #1d4ed8;">EmailInput (Smart Field)</div>
+      <p class="text-sm text-gray-600 mb-4">Auto-validates email format, removes ALL spaces, normalizes to lowercase on blur.</p>
+
+      <div class="subsection">
+        <div class="label-demo">Standard Email Input</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Email Address <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <input
+              type="email"
+              value="john@example.com"
+              class="w-full pl-10 pr-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+          <p class="text-xs text-blue-800 font-medium mb-2">Built-in behaviors:</p>
+          <ul class="text-xs text-blue-700 space-y-1">
+            <li>• Spaces are completely blocked (removed while typing)</li>
+            <li>• Normalizes to lowercase on blur</li>
+            <li>• Validates format: requires @, domain with period, 2+ char TLD</li>
+          </ul>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;EmailInput value={email} onChange={setEmail} label="Email" required icon={&lt;Mail /&gt;} /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Validation Error State</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Email Address <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            value="invalid-email"
+            class="w-full px-4 py-3 border-2 border-red-300 rounded-xl text-sm bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none"
+          />
+          <p class="mt-1 text-sm text-red-600">Domain must include a period (e.g., .com)</p>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Valid State (with showValidation)</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            value="john@example.com"
+            class="w-full px-4 py-3 border-2 border-green-400 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;EmailInput value={email} onChange={setEmail} showValidation /&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- PhoneInput -->
+    <div class="section" style="border: 2px solid #3b82f6; background: linear-gradient(to bottom right, #eff6ff, white);">
+      <div class="section-title" style="color: #1d4ed8;">PhoneInput (Smart Field)</div>
+      <p class="text-sm text-gray-600 mb-4">Auto-formats US phone numbers as (555) 123-4567. Only allows digits.</p>
+
+      <div class="subsection">
+        <div class="label-demo">Standard Phone Input</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Phone Number <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            </div>
+            <input
+              type="tel"
+              value="(555) 123-4567"
+              class="w-full pl-10 pr-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+          <p class="text-xs text-blue-800 font-medium mb-2">Built-in behaviors:</p>
+          <ul class="text-xs text-blue-700 space-y-1">
+            <li>• Auto-formats as you type: 5551234567 → (555) 123-4567</li>
+            <li>• Only allows digit input</li>
+            <li>• Returns clean digits (5551234567) to onChange</li>
+            <li>• Validates 10-digit US phone numbers</li>
+          </ul>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;PhoneInput value={phone} onChange={setPhone} label="Phone" required icon={&lt;Phone /&gt;} /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Valid State (10 digits)</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Phone Number
+          </label>
+          <input
+            type="tel"
+            value="(555) 123-4567"
+            class="w-full px-4 py-3 border-2 border-green-400 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;PhoneInput value={phone} onChange={setPhone} showValidation /&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- TextAreaInput -->
+    <div class="section">
+      <div class="section-title">TextAreaInput</div>
+      <p class="text-sm text-gray-600 mb-4">For multi-line text fields with optional character count.</p>
+
+      <div class="subsection">
+        <div class="label-demo">Standard Textarea</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Notes
+          </label>
+          <textarea
+            rows="4"
+            placeholder="Enter notes..."
+            class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+          ></textarea>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextAreaInput value={notes} onChange={setNotes} label="Notes" rows={4} /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">With Character Count</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Bio
+          </label>
+          <textarea
+            rows="4"
+            maxlength="500"
+            class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+          >This is example text showing character counting.</textarea>
+          <p class="mt-1 text-xs text-gray-500 text-right">47/500</p>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextAreaInput value={bio} onChange={setBio} label="Bio" maxLength={500} showCharCount /&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Select -->
+    <div class="section">
+      <div class="section-title">Select (Dropdown)</div>
+      <p class="text-sm text-gray-600 mb-4">Custom styled dropdown with keyboard navigation and portal-based rendering.</p>
+
+      <div class="subsection">
+        <div class="label-demo">Standard Select - Orange Variant</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Status <span class="text-red-500">*</span>
+          </label>
+          <button class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm text-left flex items-center justify-between bg-white hover:border-orange-400 hover:bg-orange-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none">
+            <span class="text-gray-800">Active</span>
+            <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;Select value={status} onChange={setStatus} options={options} label="Status" required /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Standard Select - Emerald Variant</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Payment Method
+          </label>
+          <button class="w-full px-4 py-3 border-2 border-emerald-300 rounded-xl text-sm text-left flex items-center justify-between bg-white hover:border-emerald-400 hover:bg-emerald-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none">
+            <span class="text-gray-800">PayPal</span>
+            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;Select value={method} onChange={setMethod} options={options} label="Payment Method" variant="emerald" /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Dropdown Open State</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Category
+          </label>
+          <button class="w-full px-4 py-3 border-2 border-orange-500 rounded-xl text-sm text-left flex items-center justify-between bg-white ring-2 ring-orange-500">
+            <span class="text-gray-500">Select category...</span>
+            <svg class="w-5 h-5 text-orange-500 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="mt-1 bg-white border-2 border-orange-300 rounded-xl shadow-xl overflow-hidden">
+            <button class="w-full px-4 py-3 text-left text-sm text-orange-700 bg-orange-50 border-b border-orange-100">Windows</button>
+            <button class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 border-b border-orange-100">Roofing</button>
+            <button class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600">HVAC</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- States -->
+    <div class="section">
+      <div class="section-title">Field States</div>
+
+      <div class="subsection">
+        <div class="label-demo">Error State</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Email <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            value="invalid"
+            class="w-full px-4 py-3 border-2 border-red-300 rounded-xl text-sm bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none"
+          />
+          <p class="mt-1 text-sm text-red-600">Email must contain @</p>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Success/Valid State</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            value="valid@email.com"
+            class="w-full px-4 py-3 border-2 border-green-400 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Disabled State</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Account ID
+          </label>
+          <input
+            type="text"
+            value="ACC-12345"
+            disabled
+            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+          />
+          <p class="mt-1 text-xs text-gray-500">This field cannot be changed</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inline Editing -->
+    <div class="section" style="border: 2px solid #10b981; background: linear-gradient(to bottom right, #ecfdf5, white);">
+      <div class="section-title" style="color: #059669;">Inline Editing (Detail Pages)</div>
+      <p class="text-sm text-gray-600 mb-6">All smart fields support an <code class="bg-gray-100 px-1.5 py-0.5 rounded">inline</code> prop for save/discard buttons.</p>
+
+      <div class="subsection">
+        <div class="label-demo">Position: Right (Default)</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <div class="relative">
+            <div class="pr-24">
+              <input
+                type="tel"
+                value="(555) 123-4567"
+                class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+              />
+            </div>
+            <div class="absolute right-0 top-0 h-full flex items-center gap-1 pr-1">
+              <button class="p-2 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600" title="Discard">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+              <button class="p-2 rounded-lg bg-gray-100 hover:bg-green-100 text-gray-600 hover:text-green-600" title="Save">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;PhoneInput value={phone} onChange={setPhone} inline={{ onSave, onDiscard, hasChanges: true }} /&gt;</code>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Save Success Flash</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <div class="relative">
+            <div class="pr-24">
+              <input
+                type="tel"
+                value="(555) 123-4567"
+                class="w-full px-4 py-3 border-2 border-green-400 rounded-xl text-sm focus:outline-none"
+              />
+            </div>
+            <div class="absolute right-0 top-0 h-full flex items-center gap-1 pr-1">
+              <button class="p-2 rounded-lg bg-green-100 text-green-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="mt-1 text-xs text-green-600">Saved!</p>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Position: Below (For Textarea)</div>
+        <div class="max-w-md">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <textarea
+            rows="3"
+            class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+          >This is a longer note that benefits from buttons below.</textarea>
+          <div class="flex justify-end gap-2 mt-2">
+            <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-300">
+              Cancel
+            </button>
+            <button class="px-3 py-1.5 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+              Save
+            </button>
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+          <code class="text-xs text-gray-700">&lt;TextAreaInput value={notes} onChange={setNotes} inline={{ onSave, onDiscard, hasChanges: true, position: 'below' }} /&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Layouts -->
+    <div class="section">
+      <div class="section-title">Form Layouts</div>
+
+      <div class="subsection">
+        <div class="label-demo">Two-Column Layout</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+            <input type="text" value="John" class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+            <input type="text" value="Doe" class="w-full px-4 py-3 border-2 border-orange-300 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="label-demo">Affiliate Portal Example (Emerald)</div>
+        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+              <input type="text" value="John" class="w-full px-4 py-3 border-2 border-emerald-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+              <input type="text" value="Doe" class="w-full px-4 py-3 border-2 border-emerald-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+              <input type="email" value="john@example.com" class="w-full px-4 py-3 border-2 border-emerald-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Reference -->
+    <div class="section" style="background: #1f2937; color: white;">
+      <div class="section-title" style="color: white;">Quick Reference</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+        <div>
+          <p class="text-gray-400 mb-2">Import:</p>
+          <code class="text-green-400">import { TextInput, EmailInput, PhoneInput, TextAreaInput, Select } from '@/components/ui/fields';</code>
+        </div>
+        <div>
+          <p class="text-gray-400 mb-2">Variants:</p>
+          <code class="text-green-400">variant="orange" | "emerald"</code>
+        </div>
+        <div>
+          <p class="text-gray-400 mb-2">Common Props:</p>
+          <code class="text-green-400">value, onChange, label, required, disabled, error, helperText, icon, variant</code>
+        </div>
+        <div>
+          <p class="text-gray-400 mb-2">Smart Features:</p>
+          <code class="text-green-400">EmailInput: no spaces, auto-lowercase, validates format</code><br/>
+          <code class="text-green-400">PhoneInput: auto-formats (555) 123-4567</code><br/>
+          <code class="text-green-400">TextInput: nameOnly, capitalizeWords</code>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

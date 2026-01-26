@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { TextInput, EmailInput } from '@/components/ui/fields';
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 type UserType = 'admin' | 'affiliate' | 'contractor';
@@ -89,49 +90,24 @@ export default function UnifiedLoginPage() {
               </div>
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition-shadow"
-                  placeholder="you@example.com"
-                />
-              </div>
-            </div>
+            <EmailInput
+              value={email}
+              onChange={setEmail}
+              label="Email address"
+              required
+              icon={<Mail className="h-5 w-5 text-gray-400" />}
+              placeholder="you@example.com"
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition-shadow"
-                  placeholder="Enter your password"
-                />
-              </div>
-            </div>
+            <TextInput
+              type="password"
+              value={password}
+              onChange={setPassword}
+              label="Password"
+              required
+              icon={<Lock className="h-5 w-5 text-gray-400" />}
+              placeholder="Enter your password"
+            />
 
             <Button
               type="submit"

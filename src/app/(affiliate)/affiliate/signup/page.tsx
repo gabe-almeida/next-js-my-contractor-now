@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { PhoneInput } from '@/components/ui/PhoneInput';
+import { TextInput, EmailInput, PhoneInput, TextAreaInput } from '@/components/ui/fields';
 import { User, Mail, Lock, Phone, Globe, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function AffiliateSignupPage() {
@@ -136,105 +136,59 @@ export default function AffiliateSignupPage() {
           <div className="space-y-4">
             {/* Name fields */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                  First name *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Last name *
-                </label>
-                <input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                />
-              </div>
+              <TextInput
+                value={formData.firstName}
+                onChange={(value) => setFormData(prev => ({ ...prev, firstName: value }))}
+                label="First name"
+                required
+                nameOnly
+                capitalizeWords
+                icon={<User className="h-5 w-5 text-gray-400" />}
+                variant="emerald"
+              />
+              <TextInput
+                value={formData.lastName}
+                onChange={(value) => setFormData(prev => ({ ...prev, lastName: value }))}
+                label="Last name"
+                required
+                nameOnly
+                capitalizeWords
+                variant="emerald"
+              />
             </div>
 
             {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address *
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  placeholder="you@example.com"
-                />
-              </div>
-            </div>
+            <EmailInput
+              value={formData.email}
+              onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
+              label="Email address"
+              required
+              icon={<Mail className="h-5 w-5 text-gray-400" />}
+              placeholder="you@example.com"
+              variant="emerald"
+            />
 
             {/* Password fields */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password *
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  placeholder="At least 8 characters"
-                />
-              </div>
-            </div>
+            <TextInput
+              type="password"
+              value={formData.password}
+              onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
+              label="Password"
+              required
+              icon={<Lock className="h-5 w-5 text-gray-400" />}
+              placeholder="At least 8 characters"
+              variant="emerald"
+            />
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Confirm password *
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                />
-              </div>
-            </div>
+            <TextInput
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(value) => setFormData(prev => ({ ...prev, confirmPassword: value }))}
+              label="Confirm password"
+              required
+              icon={<Lock className="h-5 w-5 text-gray-400" />}
+              variant="emerald"
+            />
 
             {/* Phone - Required */}
             <PhoneInput
@@ -244,44 +198,28 @@ export default function AffiliateSignupPage() {
               required
               icon={<Phone className="h-5 w-5 text-gray-400" />}
               showValidation
+              variant="emerald"
             />
 
             {/* Optional fields */}
+            <TextInput
+              type="url"
+              value={formData.website}
+              onChange={(value) => setFormData(prev => ({ ...prev, website: value }))}
+              label="Website or social media"
+              icon={<Globe className="h-5 w-5 text-gray-400" />}
+              placeholder="https://..."
+              variant="emerald"
+            />
 
-            <div>
-              <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
-                Website or social media
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Globe className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="website"
-                  name="website"
-                  type="url"
-                  value={formData.website}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="marketingChannels" className="block text-sm font-medium text-gray-700 mb-1">
-                How will you promote us?
-              </label>
-              <textarea
-                id="marketingChannels"
-                name="marketingChannels"
-                rows={3}
-                value={formData.marketingChannels}
-                onChange={handleChange}
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                placeholder="e.g., blog, YouTube, email list, social media..."
-              />
-            </div>
+            <TextAreaInput
+              value={formData.marketingChannels}
+              onChange={(value) => setFormData(prev => ({ ...prev, marketingChannels: value }))}
+              label="How will you promote us?"
+              rows={3}
+              placeholder="e.g., blog, YouTube, email list, social media..."
+              variant="emerald"
+            />
           </div>
 
           <div>
