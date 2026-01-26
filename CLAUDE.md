@@ -77,10 +77,10 @@ DATABASE_URL="postgres://postgres:CgDWlr8Bk9O6DVoX@db.cnogfaqqilmutqhpjhgl.supab
 
 | Service | ID |
 |---------|-----|
-| my-contractor-now | `srv-XXXXX` *(get from Render dashboard)* |
+| my-contractor-now | `srv-d0ua7j63jp1c73fnfgn0` |
 
 ```bash
-render logs -r srv-XXXXX --output text --limit 100
+render logs -r srv-d0ua7j63jp1c73fnfgn0 --output text --limit 100
 ```
 
 ## Key Services (Reuse These!)
@@ -113,30 +113,12 @@ render logs -r srv-XXXXX --output text --limit 100
 
 ---
 
-# Gabe-OS (Spec-Driven Development)
+# Quality Standards
 
-**This project uses Gabe-OS for feature development.**
-
-## Quick Commands
-| Command | Purpose |
-|---------|---------|
-| `/gabe-os/main-menu` | Dashboard of all specs |
-| `/gabe-os/new-spec` | Create new feature spec |
-| `/gabe-os/implement-spec` | Execute spec with quality gates |
-| `/gabe-os/continue-spec` | Resume work on spec |
-| `/gabe-os/audit-spec` | Post-implementation review |
-
-## Quality Standards
 - 500-line file limit (warning at 400)
 - WHY/WHEN/HOW documentation required
 - Single Responsibility Principle enforced
-
-## Workflow
-1. `/gabe-os/new-spec "feature name"` - Creates spec
-2. `/gabe-os/implement-spec` - Executes with parallel batching
-3. `/gabe-os/audit-spec` - Quality review
-
-**For full Gabe-OS docs:** `~/Dev/Gabe-OS/docs/`
+- DRY: Reusable components over duplication
 
 ---
 
