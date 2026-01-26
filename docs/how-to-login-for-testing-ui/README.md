@@ -1,10 +1,10 @@
 # UI Testing Credentials
 
-## Unified Login
+## Login
 
 **URL:** https://mycontractornow.com/login
 
-All user types can login from the same page. The system detects your account type and redirects you to the correct dashboard.
+All user types login from the same page. The system detects your account type and redirects you to the correct dashboard.
 
 ## Test Accounts
 
@@ -13,13 +13,6 @@ All user types can login from the same page. The system detects your account typ
 | **Super Admin** | `gabe@mycontractornow.com` | `TestAdmin123!` | `/admin` |
 | **Affiliate** | `gabe@mycontractornow.com` | `TestAffiliate123!` | `/affiliate/dashboard` |
 | **Contractor** | `gabe@mycontractornow.com` | `TestContractor123!` | `/contractor/dashboard` |
-
-## Legacy Direct Login URLs
-
-These still work if needed:
-- Admin: `/admin/login`
-- Affiliate: `/affiliate/login`
-- Contractor: `/contractor/login`
 
 ## Notes
 
