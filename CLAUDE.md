@@ -102,9 +102,9 @@ Test credentials: `docs/how-to-login-for-testing-ui/README.md`
 
 | User Type | Email | Password |
 |-----------|-------|----------|
-| Super Admin | `gabe@mycontractornow.com` | `TestAdmin123!` |
-| Affiliate | `gabe@mycontractornow.com` | `TestAffiliate123!` |
-| Contractor | `gabe@mycontractornow.com` | `TestContractor123!` |
+| Super Admin | `admin@mycontractornow.com` | `TestAdmin123!` |
+| Affiliate | `affiliate@mycontractornow.com` | `TestAffiliate123!` |
+| Contractor | `contractor@mycontractornow.com` | `TestContractor123!` |
 
 ---
 

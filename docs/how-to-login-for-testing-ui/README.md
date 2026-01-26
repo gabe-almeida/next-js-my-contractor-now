@@ -10,12 +10,12 @@ All user types login from the same page. The system detects your account type an
 
 | User Type | Email | Password | Dashboard |
 |-----------|-------|----------|-----------|
-| **Super Admin** | `gabe@mycontractornow.com` | `TestAdmin123!` | `/admin` |
-| **Affiliate** | `gabe@mycontractornow.com` | `TestAffiliate123!` | `/affiliate/dashboard` |
-| **Contractor** | `gabe@mycontractornow.com` | `TestContractor123!` | `/contractor/dashboard` |
+| **Super Admin** | `admin@mycontractornow.com` | `TestAdmin123!` | `/admin` |
+| **Affiliate** | `affiliate@mycontractornow.com` | `TestAffiliate123!` | `/affiliate/dashboard` |
+| **Contractor** | `contractor@mycontractornow.com` | `TestContractor123!` | `/contractor/dashboard` |
 
 ## Notes
 
-- All test accounts use the same email but different passwords
+- Each user type has a unique email
 - Change passwords after first login
 - Accounts created: 2026-01-26
