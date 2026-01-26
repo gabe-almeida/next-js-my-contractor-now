@@ -40,12 +40,12 @@
 - **Dev Tools:** tsx 4.0.0 for TypeScript execution
 
 ## Deployment
-- **Application Hosting:** TBD (Vercel recommended for Next.js)
-- **Database Hosting:** TBD (PostgreSQL compatible)
-- **Redis Hosting:** TBD (Redis Cloud, AWS ElastiCache, etc.)
-- **Asset Hosting:** Next.js static assets
-- **Deployment Solution:** TBD
-- **Code Repository:** Git (local)
+- **Application Hosting:** Render (Next.js standalone mode)
+- **Database Hosting:** Supabase PostgreSQL
+- **Redis Hosting:** Upstash Redis
+- **Asset Hosting:** Next.js static assets via Render
+- **Deployment Solution:** Render auto-deploy from GitHub main branch
+- **Code Repository:** GitHub (gabe-almeida/next-js-my-contractor-now)
 
 ## Import Strategy
 - **Module System:** Node.js ES modules

@@ -138,6 +138,6 @@ When this skill is invoked:
 ## Troubleshooting
 
 - **Browser not connected:** Ensure Claude browser extension is running
-- **Form not loading:** Check if Vercel deployment is complete
+- **Form not loading:** Check if Render deployment is complete
 - **PING fails:** Check buyer service config in database
 - **POST rejected:** Check for duplicate leads or test data detection
