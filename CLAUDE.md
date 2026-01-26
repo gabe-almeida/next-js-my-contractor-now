@@ -63,17 +63,17 @@ What this system does and WHY it exists.
 
 | Item | Value |
 |------|-------|
-| Host (pooled) | `db.cnogfaqqilmutqhpjhgl.supabase.co:6543` |
-| Host (direct) | `db.cnogfaqqilmutqhpjhgl.supabase.co:5432` |
+| Host (pooled) | `aws-0-us-east-2.pooler.supabase.com:6543` |
+| Host (direct) | `aws-0-us-east-2.pooler.supabase.com:5432` |
 | Database | `postgres` |
-| User | `postgres` |
+| User | `postgres.cnogfaqqilmutqhpjhgl` |
 | Password | `CgDWlr8Bk9O6DVoX` |
 
 **Important:** Use port 5432 (direct) for migrations, port 6543 (pooled) with `?pgbouncer=true` for app queries.
 
 ```bash
 # Push schema to production (use direct connection - port 5432)
-DATABASE_URL="postgres://postgres:CgDWlr8Bk9O6DVoX@db.cnogfaqqilmutqhpjhgl.supabase.co:5432/postgres" npx prisma db push
+DATABASE_URL="postgresql://postgres.cnogfaqqilmutqhpjhgl:CgDWlr8Bk9O6DVoX@aws-0-us-east-2.pooler.supabase.com:5432/postgres" npx prisma db push
 ```
 
 ## Render (Production)
