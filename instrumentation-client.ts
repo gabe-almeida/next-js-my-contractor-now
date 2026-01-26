@@ -30,7 +30,5 @@ Sentry.init({
       maskAllText: true,
       blockAllMedia: true,
     }),
-    // Capture console.log, console.warn, and console.error as logs
-    Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
   ],
 });
