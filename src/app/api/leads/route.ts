@@ -60,6 +60,8 @@ import { generateZodSchema } from '@/lib/validations/dynamic-schema';
 import { sanitizeFormData } from '@/lib/security/sanitize';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 import { recordConversion } from '@/lib/services/affiliate-link-service';
+import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service';
+import { sendAuctionCompletionEmail, AuctionEmailData } from '@/lib/services/admin-email-service';
 import { AuctionEngine } from '@/lib/auction/engine';
 import { LeadData } from '@/lib/templates/types';
 import { trackLeadCAPI } from '@/lib/meta/conversion-api';
@@ -394,79 +396,183 @@ export async function POST(request: NextRequest) {
       });
       console.log('[API /api/leads] Lead added to Redis queue:', { leadId: result.id, jobId });
     } catch (queueError) {
-      // Redis not configured or unavailable - process inline instead!
-      console.warn('[API /api/leads] Redis unavailable, processing lead inline:', queueError);
+      // Redis not configured or unavailable - process async WITHOUT blocking!
+      // IMPORTANT: We use setTimeout to ensure the HTTP response is sent BEFORE auction starts.
+      // This gives the user immediate feedback while auction runs in background.
+      console.warn('[API /api/leads] Redis unavailable, processing lead async (fire-and-forget):', queueError);
 
-      // Process lead inline using AuctionEngine
-      try {
-        // Prepare lead data for auction
-        // IMPORTANT: complianceData with tcpaConsent is REQUIRED for buyer eligibility checks!
-        const leadDataForAuction = {
-          id: result.id,
-          serviceTypeId: serviceType.id,
-          serviceType: serviceType as any, // Prisma type differs from LeadData.ServiceType
-          zipCode,
-          formData: sanitizedFormData,
-          ownsHome,
-          timeframe,
-          status: 'PENDING',
-          trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
-          trustedFormCertId: complianceData?.trustedFormCertId || undefined,
-          jornayaLeadId: complianceData?.jornayaLeadId || undefined,
-          // Use the FULL leadComplianceData that was already created above
-          // This includes attribution data needed for field mappings like landing_page_url
-          complianceData: leadComplianceData ? {
-            userAgent: leadComplianceData.userAgent || '',
-            timestamp: leadComplianceData.timestamp || new Date().toISOString(),
-            ipAddress: leadComplianceData.ipAddress,
-            tcpaConsent: leadComplianceData.tcpaConsent?.consented ?? true,
-            privacyPolicyAccepted: true,
-            submissionSource: 'web',
-            // Include full attribution data for field mappings (landing_page_url, etc.)
-            attribution: leadComplianceData.attribution,
-          } : {
-            userAgent: request.headers.get('user-agent') || '',
-            timestamp: new Date().toISOString(),
-            ipAddress: request.ip || request.headers.get('x-forwarded-for') || undefined,
-            tcpaConsent: complianceData?.tcpaConsent ?? true,
-            privacyPolicyAccepted: true,
-            submissionSource: 'web',
-          },
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-        } as LeadData;
+      // Prepare lead data for auction
+      // IMPORTANT: complianceData with tcpaConsent is REQUIRED for buyer eligibility checks!
+      const leadDataForAuction = {
+        id: result.id,
+        serviceTypeId: serviceType.id,
+        serviceType: serviceType as any, // Prisma type differs from LeadData.ServiceType
+        zipCode,
+        formData: sanitizedFormData,
+        ownsHome,
+        timeframe,
+        status: 'PENDING',
+        trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
+        trustedFormCertId: complianceData?.trustedFormCertId || undefined,
+        jornayaLeadId: complianceData?.jornayaLeadId || undefined,
+        complianceData: leadComplianceData ? {
+          userAgent: leadComplianceData.userAgent || '',
+          timestamp: leadComplianceData.timestamp || new Date().toISOString(),
+          ipAddress: leadComplianceData.ipAddress,
+          tcpaConsent: leadComplianceData.tcpaConsent?.consented ?? true,
+          privacyPolicyAccepted: true,
+          submissionSource: 'web',
+          attribution: leadComplianceData.attribution,
+        } : {
+          userAgent: request.headers.get('user-agent') || '',
+          timestamp: new Date().toISOString(),
+          ipAddress: request.ip || request.headers.get('x-forwarded-for') || undefined,
+          tcpaConsent: complianceData?.tcpaConsent ?? true,
+          privacyPolicyAccepted: true,
+          submissionSource: 'web',
+        },
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+      } as LeadData;
 
-        console.log('[API /api/leads] Starting inline auction for lead:', result.id);
-        auctionResult = await AuctionEngine.runAuction(leadDataForAuction);
-        console.log('[API /api/leads] Inline auction completed:', {
-          leadId: result.id,
-          status: auctionResult.status,
-          winningBuyerId: auctionResult.winningBuyerId,
-          winningBidAmount: auctionResult.winningBidAmount,
-        });
+      // FIRE AND FORGET with setTimeout - ensures response is sent first
+      // Using setTimeout(0) schedules as macrotask, running after current I/O (response send)
+      console.log('[API /api/leads] Scheduling background auction for lead:', result.id);
 
-        // Update lead status based on auction result
-        const newStatus = auctionResult.status === 'completed' && auctionResult.postResult?.success
-          ? LeadStatus.SOLD
-          : auctionResult.participantCount > 0
-            ? LeadStatus.PROCESSING
-            : LeadStatus.PENDING;
+      setTimeout(async () => {
+        try {
+          // Mark as PROCESSING before auction starts
+          await prisma.lead.update({
+            where: { id: result.id },
+            data: { status: LeadStatus.PROCESSING },
+          });
 
-        await prisma.lead.update({
-          where: { id: result.id },
-          data: {
-            status: newStatus,
-            winningBuyerId: auctionResult.winningBuyerId || null,
-            winningBid: auctionResult.winningBidAmount || null,
-          },
-        });
+          const auctionResult = await AuctionEngine.runAuction(leadDataForAuction);
+          console.log('[API /api/leads] Background auction completed:', {
+            leadId: result.id,
+            status: auctionResult.status,
+            winningBuyerId: auctionResult.winningBuyerId,
+            winningBidAmount: auctionResult.winningBidAmount,
+            participantCount: auctionResult.participantCount,
+          });
 
-        console.log('[API /api/leads] Lead status updated:', { leadId: result.id, newStatus });
-      } catch (auctionError) {
-        // Auction failed but lead is still saved - log error
-        captureApiError(auctionError, { route: '/api/leads', action: 'inline_auction', extra: { leadId: result.id } });
-        console.error('[API /api/leads] Inline auction failed:', auctionError);
-      }
+          // Determine final status based on auction result
+          let finalStatus: LeadStatus;
+          let statusReason: string;
+
+          if (auctionResult.winningBuyerId && auctionResult.postResult?.success) {
+            finalStatus = LeadStatus.SOLD;
+            statusReason = `Sold to buyer ${auctionResult.winningBuyerId} for $${auctionResult.winningBidAmount}`;
+          } else if (auctionResult.winningBuyerId && !auctionResult.postResult?.success) {
+            finalStatus = LeadStatus.DELIVERY_FAILED;
+            statusReason = `Delivery failed to buyer ${auctionResult.winningBuyerId}: ${auctionResult.postResult?.error || 'Unknown error'}`;
+          } else {
+            finalStatus = LeadStatus.REJECTED;
+            statusReason = auctionResult.participantCount === 0
+              ? 'No eligible buyers found for auction'
+              : 'No winning bids received';
+          }
+
+          // Update lead with final status
+          await prisma.lead.update({
+            where: { id: result.id },
+            data: {
+              status: finalStatus,
+              winningBuyerId: auctionResult.winningBuyerId || null,
+              winningBid: auctionResult.winningBidAmount || null,
+            },
+          });
+
+          // Record status history
+          await recordSystemStatusChange(
+            result.id,
+            LeadStatus.PROCESSING,
+            finalStatus,
+            statusReason,
+            ChangeSource.SYSTEM
+          );
+
+          console.log('[API /api/leads] Lead status updated:', { leadId: result.id, finalStatus });
+
+          // Send admin notification email
+          try {
+            // Fetch buyer names for bids
+            const buyerIds = auctionResult.allBids?.map((bid: any) => bid.buyerId) || [];
+            const buyers = buyerIds.length > 0 ? await prisma.buyer.findMany({
+              where: { id: { in: buyerIds } },
+              select: { id: true, name: true, displayName: true }
+            }) : [];
+            const buyerMap = new Map(buyers.map(b => [b.id, b.displayName || b.name]));
+
+            // Fetch winning buyer name
+            let winningBuyerName: string | undefined;
+            if (auctionResult.winningBuyerId) {
+              const winningBuyer = await prisma.buyer.findUnique({
+                where: { id: auctionResult.winningBuyerId },
+                select: { name: true, displayName: true }
+              });
+              winningBuyerName = winningBuyer?.displayName || winningBuyer?.name;
+            }
+
+            const emailData: AuctionEmailData = {
+              leadId: result.id,
+              serviceType: serviceType.name,
+              zipCode,
+              customerName: sanitizedFormData.firstName
+                ? `${sanitizedFormData.firstName} ${sanitizedFormData.lastName || ''}`.trim()
+                : sanitizedFormData.name,
+              customerEmail: sanitizedFormData.email,
+              customerPhone: sanitizedFormData.phone,
+              status: finalStatus === LeadStatus.SOLD ? 'SOLD'
+                : finalStatus === LeadStatus.DELIVERY_FAILED ? 'DELIVERY_FAILED'
+                : 'REJECTED',
+              participantCount: auctionResult.participantCount || 0,
+              bids: (auctionResult.allBids || []).map((bid: any) => ({
+                buyerName: buyerMap.get(bid.buyerId) || bid.buyerId,
+                buyerId: bid.buyerId,
+                bidAmount: bid.bidAmount || 0,
+                responseTimeMs: bid.responseTimeMs || 0,
+                isWinner: bid.buyerId === auctionResult.winningBuyerId,
+                postStatus: bid.buyerId === auctionResult.winningBuyerId
+                  ? (auctionResult.postResult?.success ? 'SUCCESS' : 'FAILED')
+                  : 'NOT_ATTEMPTED'
+              })),
+              winningBuyerId: auctionResult.winningBuyerId,
+              winningBuyerName,
+              winningBidAmount: auctionResult.winningBidAmount,
+              failureReason: finalStatus !== LeadStatus.SOLD ? statusReason : undefined,
+              createdAt: result.createdAt,
+              auctionCompletedAt: new Date()
+            };
+
+            await sendAuctionCompletionEmail(emailData);
+            console.log('[API /api/leads] Admin notification email sent for lead:', result.id);
+          } catch (emailError) {
+            console.error('[API /api/leads] Failed to send admin notification email:', emailError);
+          }
+
+        } catch (auctionError) {
+          // Auction failed - update lead status to REJECTED
+          captureApiError(auctionError, { route: '/api/leads', action: 'background_auction', extra: { leadId: result.id } });
+          console.error('[API /api/leads] Background auction failed:', auctionError);
+
+          try {
+            await prisma.lead.update({
+              where: { id: result.id },
+              data: { status: LeadStatus.REJECTED },
+            });
+            await recordSystemStatusChange(
+              result.id,
+              LeadStatus.PROCESSING,
+              LeadStatus.REJECTED,
+              `Auction error: ${(auctionError as Error).message}`,
+              ChangeSource.SYSTEM
+            );
+          } catch (updateError) {
+            console.error('[API /api/leads] Failed to update lead status after auction error:', updateError);
+          }
+        }
+      }, 0); // setTimeout(0) ensures this runs after the current event loop tick (after response sent)
     }
 
     // Record affiliate conversion if attribution exists

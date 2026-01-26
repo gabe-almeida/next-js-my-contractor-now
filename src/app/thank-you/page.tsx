@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { CheckCircleIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
@@ -69,25 +69,6 @@ function ThankYouContent() {
                 <p className="text-gray-600 text-sm">
                   Receive a quote and schedule your project
                 </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">
-              Questions? We're Here to Help
-            </h4>
-
-            <div className="flex justify-center space-x-8">
-              <div className="flex items-center">
-                <PhoneIcon className="w-5 h-5 text-orange-600 mr-2" />
-                <span className="text-gray-600">(555) 123-4567</span>
-              </div>
-
-              <div className="flex items-center">
-                <EnvelopeIcon className="w-5 h-5 text-orange-600 mr-2" />
-                <span className="text-gray-600">support@mycontractornow.com</span>
               </div>
             </div>
           </div>
