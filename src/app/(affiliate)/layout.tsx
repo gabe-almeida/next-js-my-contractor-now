@@ -21,7 +21,9 @@ interface AffiliateUser {
 }
 
 // Public routes that don't require authentication
-const publicRoutes = ['/affiliate/login', '/affiliate/signup'];
+// Use exact match for /affiliate, prefix match for signup
+const exactPublicRoutes = ['/affiliate'];
+const prefixPublicRoutes = ['/affiliate/signup'];
 
 export default function AffiliateRootLayout({
   children,
@@ -33,7 +35,8 @@ export default function AffiliateRootLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = exactPublicRoutes.includes(pathname) ||
+    prefixPublicRoutes.some(route => pathname.startsWith(route));
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -48,7 +51,7 @@ export default function AffiliateRootLayout({
         document.cookie.split('; ').find(row => row.startsWith('affiliate_token='))?.split('=')[1];
 
       if (!token) {
-        router.push('/affiliate/login');
+        router.push('/login');
         return;
       }
 
@@ -78,7 +81,7 @@ export default function AffiliateRootLayout({
         // Clear invalid token and redirect
         localStorage.removeItem('affiliate_token');
         document.cookie = 'affiliate_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        router.push('/affiliate/login');
+        router.push('/login');
         return;
       }
 
