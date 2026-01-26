@@ -8,19 +8,34 @@
 
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { logger } from '@/lib/logger';
+import { captureApiError } from '@/lib/sentry';
+
+// Check if AWS SES is configured
+const AWS_CONFIGURED = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
 
 // Initialize SES client (credentials from environment)
 const sesClient = new SESClient({
   region: process.env.AWS_REGION || 'us-east-1',
-  credentials: process.env.AWS_ACCESS_KEY_ID ? {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  credentials: AWS_CONFIGURED ? {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   } : undefined, // Use default credential chain if not explicitly set
 });
 
 // Admin email recipient
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'gabe@mycontractornow.com';
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'notifications@mycontractornow.com';
+
+// Log configuration status on module load (once)
+if (!AWS_CONFIGURED) {
+  logger.warn('[AdminEmail] AWS SES NOT CONFIGURED - emails will fail!', {
+    hasAccessKeyId: !!process.env.AWS_ACCESS_KEY_ID,
+    hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1 (default)',
+    adminEmail: ADMIN_EMAIL,
+    fromEmail: FROM_EMAIL,
+  });
+}
 
 /**
  * Auction result data structure for email notifications
@@ -68,10 +83,53 @@ export interface AuctionEmailData {
  * HOW: Formats auction data into HTML email and sends via SES.
  */
 export async function sendAuctionCompletionEmail(data: AuctionEmailData): Promise<boolean> {
+  // Check if AWS is configured first
+  if (!AWS_CONFIGURED) {
+    const configError = new Error('AWS SES not configured - cannot send admin notification email');
+
+    logger.error('[AdminEmail] SKIPPING EMAIL - AWS SES NOT CONFIGURED', {
+      leadId: data.leadId,
+      status: data.status,
+      auctionOutcome: data.status === 'SOLD'
+        ? `Sold for $${data.winningBidAmount}`
+        : data.failureReason,
+      missingEnvVars: {
+        AWS_ACCESS_KEY_ID: !process.env.AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY: !process.env.AWS_SECRET_ACCESS_KEY,
+      },
+      wouldHaveSentTo: ADMIN_EMAIL,
+      wouldHaveSentFrom: FROM_EMAIL,
+    });
+
+    // Report to Sentry so you get alerted
+    captureApiError(configError, {
+      route: 'admin-email-service',
+      action: 'sendAuctionCompletionEmail',
+      extra: {
+        leadId: data.leadId,
+        auctionStatus: data.status,
+        participantCount: data.participantCount,
+        bidsReceived: data.bids.length,
+        winningBidAmount: data.winningBidAmount,
+        reason: 'AWS_SES_NOT_CONFIGURED',
+      },
+    });
+
+    return false;
+  }
+
   try {
     const subject = buildEmailSubject(data);
     const htmlBody = buildEmailHtml(data);
     const textBody = buildEmailText(data);
+
+    logger.info('[AdminEmail] Attempting to send auction notification', {
+      leadId: data.leadId,
+      status: data.status,
+      to: ADMIN_EMAIL,
+      from: FROM_EMAIL,
+      subject,
+    });
 
     const command = new SendEmailCommand({
       Source: FROM_EMAIL,
@@ -98,17 +156,53 @@ export async function sendAuctionCompletionEmail(data: AuctionEmailData): Promis
 
     await sesClient.send(command);
 
-    logger.info('Admin auction email sent successfully', {
+    logger.info('[AdminEmail] Email sent successfully', {
       leadId: data.leadId,
       status: data.status,
       recipient: ADMIN_EMAIL,
+      participantCount: data.participantCount,
+      bidsReceived: data.bids.length,
+      winningBidAmount: data.winningBidAmount,
     });
 
     return true;
   } catch (error) {
-    logger.error('Failed to send admin auction email', {
+    const errorMessage = (error as Error).message;
+    const errorName = (error as Error).name;
+
+    logger.error('[AdminEmail] FAILED to send email via AWS SES', {
       leadId: data.leadId,
-      error: (error as Error).message,
+      status: data.status,
+      errorName,
+      errorMessage,
+      awsRegion: process.env.AWS_REGION || 'us-east-1',
+      fromEmail: FROM_EMAIL,
+      toEmail: ADMIN_EMAIL,
+      // Include auction context so you know what you missed
+      auctionSummary: {
+        participantCount: data.participantCount,
+        bidsReceived: data.bids.length,
+        winningBuyerName: data.winningBuyerName,
+        winningBidAmount: data.winningBidAmount,
+        failureReason: data.failureReason,
+      },
+    });
+
+    // Report to Sentry with full context
+    captureApiError(error, {
+      route: 'admin-email-service',
+      action: 'sendAuctionCompletionEmail',
+      extra: {
+        leadId: data.leadId,
+        auctionStatus: data.status,
+        participantCount: data.participantCount,
+        bidsReceived: data.bids.length,
+        winningBidAmount: data.winningBidAmount,
+        fromEmail: FROM_EMAIL,
+        toEmail: ADMIN_EMAIL,
+        awsRegion: process.env.AWS_REGION || 'us-east-1',
+        errorName,
+      },
     });
 
     // Don't throw - email failure shouldn't break lead processing
