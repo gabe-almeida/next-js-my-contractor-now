@@ -289,6 +289,29 @@ export function stateToAbbreviation(value: unknown): string {
 }
 
 // =============================================================================
+// URL Transforms
+// =============================================================================
+
+/**
+ * Prepend base URL to a path
+ *
+ * WHY: Some buyers expect full URLs for landing_page_url but we store paths
+ * WHEN: Processing complianceData.attribution.landing_page for Koalaty Leads
+ * HOW: Prepends https://mycontractornow.com to paths starting with /
+ */
+export function urlToFullUrl(value: unknown): string {
+  const path = String(value).trim();
+  if (!path) return 'https://mycontractornow.com';
+  // Already a full URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // Ensure path starts with /
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `https://mycontractornow.com${normalizedPath}`;
+}
+
+// =============================================================================
 // Number Transforms
 // =============================================================================
 
@@ -422,6 +445,10 @@ export function executeTransform(transformId: string, value: unknown): unknown {
     // Address transforms
     case 'address.stateAbbrev':
       return stateToAbbreviation(value);
+
+    // URL transforms
+    case 'url.fullUrl':
+      return urlToFullUrl(value);
 
     default:
       console.warn(`Unknown transform: ${transformId}, returning original value`);
