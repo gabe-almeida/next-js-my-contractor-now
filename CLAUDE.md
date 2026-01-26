@@ -94,6 +94,16 @@ render logs -r srv-d0ua7j63jp1c73fnfgn0 --output text --limit 100
 
 ---
 
+# How to Test UI
+
+Test credentials for each portal: `docs/how-to-login-for-testing-ui/`
+
+| Portal | Credentials File |
+|--------|------------------|
+| Affiliate | `affiliate-test-credentials.md` |
+
+---
+
 # System-Specific Rules
 
 ## Lead System Changes
