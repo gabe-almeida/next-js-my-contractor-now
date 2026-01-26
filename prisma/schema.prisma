@@ -72,6 +72,11 @@ model Buyer {
   callHoursOfOperation   Json?     @map("call_hours_of_operation")
   callRingTimeout        Int       @default(25) @map("call_ring_timeout")
 
+  // Contractor portal login fields
+  passwordHash           String?   @map("password_hash")
+  loginEnabled           Boolean   @default(false) @map("login_enabled")
+  lastLoginAt            DateTime? @map("last_login_at")
+
   createdAt               DateTime              @default(now()) @map("created_at")
   updatedAt               DateTime              @updatedAt @map("updated_at")
   serviceConfigs          BuyerServiceConfig[]

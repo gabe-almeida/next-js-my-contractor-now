@@ -1,19 +1,19 @@
 # Contractor Portal Test Credentials
 
-## Status
+## Login URL
 
-**No contractor login portal exists yet.**
+https://mycontractornow.com/contractor/login
 
-Contractors currently:
-- Sign up at `/contractors`
-- Get stored in `buyers` table with type `CONTRACTOR`
-- Receive leads via email/webhook notifications
-- Do NOT have a self-service dashboard login
+## Test Account
 
-## Future Implementation
+| Field | Value |
+|-------|-------|
+| **Email** | `gabe@mycontractornow.com` |
+| **Password** | `TestContractor123!` |
+| **Company** | Gabe Test Contracting |
 
-When contractor dashboard is built, add credentials here.
+## Notes
 
-## Contractor Signup URL (Public)
-
-https://mycontractornow.com/contractors
+- Account created: 2026-01-26
+- Change password after first login
+- Dashboard shows leads assigned to this contractor

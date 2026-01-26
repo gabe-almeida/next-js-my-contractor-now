@@ -102,7 +102,7 @@ Test credentials for each portal: `docs/how-to-login-for-testing-ui/`
 |--------|------------------|
 | Super Admin | `admin-test-credentials.md` |
 | Affiliate | `affiliate-test-credentials.md` |
-| Contractor | `contractor-test-credentials.md` (no login yet) |
+| Contractor | `contractor-test-credentials.md` |
 
 ---
 
