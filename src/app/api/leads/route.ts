@@ -626,14 +626,24 @@ export async function POST(request: NextRequest) {
       // Generate event ID for deduplication with client-side pixel
       const eventId = `lead_${result.id}_${Date.now()}`;
 
-      // Send to Meta CAPI (fire and forget)
-      trackLeadCAPI(metaUserData, metaCustomData, eventSourceUrl, eventId).catch(err => {
+      // Send to Meta CAPI (fire and forget) with service-specific event name
+      // Event name is auto-generated from service display name (e.g., "Windows Lead")
+      trackLeadCAPI(
+        result.id,                // leadId for database logging
+        serviceType.displayName,  // "Windows Installation" → "Windows Lead"
+        serviceType.name,         // "windows" for logging
+        metaUserData,
+        metaCustomData,
+        eventSourceUrl,
+        eventId
+      ).catch(err => {
         console.warn('[Meta CAPI] Failed to send Lead event:', err);
       });
 
       console.log('[Meta CAPI] Lead event queued for sending:', {
         leadId: result.id,
         eventId,
+        serviceType: serviceType.name,
         hasEmail: !!metaUserData.email,
         hasPhone: !!metaUserData.phone,
         hasFBC: !!metaUserData.fbc,

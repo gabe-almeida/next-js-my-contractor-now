@@ -7,20 +7,20 @@
  * WHY:  Boost pixel matching by sending events from server with full customer data
  * WHEN: Called on lead submission to send Lead and PageView events
  *
- * BENEFITS OF CAPI:
- * - Better event matching (not blocked by ad blockers or browser restrictions)
- * - Access to server-side data (IP address, user agent)
- * - Deduplication with client-side pixel events via event_id
- * - Higher quality data (PII is hashed securely server-side)
+ * FEATURES:
+ * - Service-specific event names (e.g., "Window Lead", "Bathroom Lead")
+ * - Auto-generates event names from service display names
+ * - Logs all CAPI calls to database for debugging/auditing
+ * - PII is hashed with SHA-256 before sending
  *
  * EVENTS SENT:
+ * - Service-specific Lead events: "Window Lead", "Bathroom Lead", etc.
  * - PageView: On every landing page visit (lightweight event)
- * - Lead: On form submission with full customer data and attribution
  *
  * DATA SENT:
  * Event Detail Parameters:
  * - action_source: 'website'
- * - event_name: 'Lead' or 'PageView'
+ * - event_name: 'Window Lead', 'Bathroom Lead', etc.
  * - event_time: Unix timestamp
  * - event_source_url: Full page URL
  * - event_id: Unique ID for deduplication with pixel
@@ -28,28 +28,18 @@
  * - value: Lead value/revenue
  *
  * Customer Information Parameters (ALL HASHED WITH SHA-256):
- * - email (em)
- * - phone (ph)
- * - first name (fn)
- * - last name (ln)
- * - city (ct)
- * - state (st)
- * - zip code (zp)
- * - country (country)
- * - date of birth (db)
- * - gender (ge)
- * - external_id
+ * - email (em), phone (ph), first name (fn), last name (ln)
+ * - city (ct), state (st), zip code (zp), country (country)
+ * - date of birth (db), gender (ge), external_id
  *
  * NOT HASHED:
- * - client_ip_address
- * - client_user_agent
- * - fbc (Facebook Click ID cookie)
- * - fbp (Facebook Browser ID cookie)
+ * - client_ip_address, client_user_agent, fbc, fbp
  *
- * SECURITY:
- * - PII is hashed with SHA-256 before sending
- * - Access token is server-side only (never exposed to client)
- * - IP and user agent are sent unhashed per Meta requirements
+ * DATABASE LOGGING:
+ * All CAPI calls are logged to `meta_capi_logs` table with:
+ * - Full request payload (PII already hashed)
+ * - Meta's response (events_received, fbtrace_id)
+ * - Success/failure status and error messages
  *
  * DOCS: https://developers.facebook.com/docs/marketing-api/conversions-api
  * ============================================================================
@@ -57,6 +47,29 @@
 
 import crypto from 'crypto';
 import { MetaConfig } from './config';
+import { prisma } from '@/lib/prisma';
+
+/**
+ * Generate Meta event name from service display name
+ * Takes first word of display name and appends " Lead"
+ *
+ * WHY: Auto-adapts when new services are added
+ * WHEN: Called when sending lead events to Meta
+ *
+ * @example
+ * "Windows Installation" → "Windows Lead"
+ * "Bathroom Remodeling" → "Bathroom Lead"
+ * "HVAC Services" → "HVAC Lead"
+ *
+ * @param displayName - Service type display name from database
+ * @returns Event name for Meta CAPI (e.g., "Window Lead")
+ */
+export function getServiceEventName(displayName: string): string {
+  if (!displayName) return 'Lead';
+
+  const firstWord = displayName.split(' ')[0];
+  return `${firstWord} Lead`;
+}
 
 /**
  * Hash PII data with SHA-256
@@ -152,7 +165,7 @@ export interface MetaCustomData {
  * Meta CAPI event parameters
  */
 export interface MetaEvent {
-  // Event name: 'Lead', 'PageView', etc.
+  // Event name: 'Window Lead', 'Bathroom Lead', etc.
   event_name: string;
   // Event time (Unix timestamp in seconds)
   event_time: number;
@@ -203,10 +216,53 @@ interface MetaCAPIRequest {
 /**
  * Meta CAPI response
  */
-interface MetaCAPIResponse {
+export interface MetaCAPIResponse {
   events_received: number;
   messages: string[];
   fbtrace_id: string;
+}
+
+/**
+ * Log Meta CAPI event to database
+ * Fire-and-forget - errors are logged but don't block
+ */
+async function logMetaCapiEvent(params: {
+  leadId: string;
+  eventName: string;
+  eventId: string | undefined;
+  serviceType: string;
+  requestPayload: Record<string, any>;
+  responseData?: MetaCAPIResponse;
+  success: boolean;
+  errorMessage?: string;
+}): Promise<void> {
+  try {
+    await prisma.metaCapiLog.create({
+      data: {
+        leadId: params.leadId,
+        eventName: params.eventName,
+        eventId: params.eventId,
+        serviceType: params.serviceType,
+        requestPayload: params.requestPayload as object,
+        // Cast to object for Prisma JSON compatibility
+        ...(params.responseData && {
+          responseData: params.responseData as unknown as object,
+        }),
+        success: params.success,
+        errorMessage: params.errorMessage,
+        fbtraceId: params.responseData?.fbtrace_id,
+        eventsReceived: params.responseData?.events_received,
+      },
+    });
+    console.log('[Meta CAPI] Event logged to database:', {
+      leadId: params.leadId,
+      eventName: params.eventName,
+      success: params.success,
+    });
+  } catch (err) {
+    // Don't let logging failures affect the main flow
+    console.warn('[Meta CAPI] Failed to log event to database:', err);
+  }
 }
 
 /**
@@ -227,7 +283,7 @@ export async function sendMetaCAPIEvent(event: MetaEvent): Promise<MetaCAPIRespo
   }
 
   // Hash all PII fields in user_data
-  const hashedUserData: any = {
+  const hashedUserData: Record<string, string | undefined> = {
     // Hashed PII
     em: hashPII(event.user_data.email),
     ph: hashPhone(event.user_data.phone),
@@ -263,7 +319,7 @@ export async function sendMetaCAPIEvent(event: MetaEvent): Promise<MetaCAPIRespo
         event_time: event.event_time,
         event_source_url: event.event_source_url,
         action_source: event.action_source,
-        user_data: hashedUserData,
+        user_data: hashedUserData as MetaCAPIRequest['data'][0]['user_data'],
         custom_data: event.custom_data,
         event_id: event.event_id,
       },
@@ -319,31 +375,93 @@ export async function sendMetaCAPIEvent(event: MetaEvent): Promise<MetaCAPIRespo
 }
 
 /**
- * Track Lead event via Meta CAPI
+ * Track Lead event via Meta CAPI with database logging
  * Call this when a lead is successfully submitted
  *
+ * WHY: Sends conversion data to Meta for ad optimization
+ * WHEN: Called after lead is created in database
+ * HOW: Builds event from service type, sends to Meta, logs to DB
+ *
+ * @param leadId - Database lead ID (for logging)
+ * @param serviceTypeDisplayName - Service display name (e.g., "Windows Installation")
+ * @param serviceTypeName - Service type key (e.g., "windows")
  * @param userData - Customer information (PII will be hashed)
  * @param customData - Lead-specific data (currency, value, etc.)
  * @param eventSourceUrl - Full page URL where lead was submitted
- * @param eventId - Optional ID for deduplication with pixel (use same ID as client-side)
+ * @param eventId - Optional ID for deduplication with pixel
  */
 export async function trackLeadCAPI(
+  leadId: string,
+  serviceTypeDisplayName: string,
+  serviceTypeName: string,
   userData: MetaUserData,
   customData?: MetaCustomData,
   eventSourceUrl?: string,
   eventId?: string
 ): Promise<MetaCAPIResponse> {
+  // Generate service-specific event name
+  const eventName = getServiceEventName(serviceTypeDisplayName);
+  const finalEventId = eventId || crypto.randomUUID();
+
   const event: MetaEvent = {
-    event_name: 'Lead',
+    event_name: eventName,
     event_time: Math.floor(Date.now() / 1000), // Unix timestamp in seconds
     event_source_url: eventSourceUrl || 'https://mycontractornow.com',
     action_source: 'website',
     user_data: userData,
     custom_data: customData,
-    event_id: eventId || crypto.randomUUID(),
+    event_id: finalEventId,
   };
 
-  return sendMetaCAPIEvent(event);
+  // Build sanitized payload for logging (PII will be hashed in sendMetaCAPIEvent)
+  const logPayload = {
+    event_name: eventName,
+    event_time: event.event_time,
+    event_source_url: event.event_source_url,
+    event_id: finalEventId,
+    custom_data: customData,
+    // Don't log raw PII - just indicate what fields were present
+    user_data_fields: {
+      has_email: !!userData.email,
+      has_phone: !!userData.phone,
+      has_name: !!(userData.firstName || userData.lastName),
+      has_address: !!(userData.city || userData.state || userData.zipCode),
+      has_fbc: !!userData.fbc,
+      has_fbp: !!userData.fbp,
+      has_ip: !!userData.clientIpAddress,
+      has_user_agent: !!userData.clientUserAgent,
+    },
+  };
+
+  try {
+    const result = await sendMetaCAPIEvent(event);
+
+    // Log successful event to database
+    logMetaCapiEvent({
+      leadId,
+      eventName,
+      eventId: finalEventId,
+      serviceType: serviceTypeName,
+      requestPayload: logPayload,
+      responseData: result,
+      success: true,
+    }).catch(() => {}); // Fire and forget
+
+    return result;
+  } catch (error) {
+    // Log failed event to database
+    logMetaCapiEvent({
+      leadId,
+      eventName,
+      eventId: finalEventId,
+      serviceType: serviceTypeName,
+      requestPayload: logPayload,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    }).catch(() => {}); // Fire and forget
+
+    throw error;
+  }
 }
 
 /**

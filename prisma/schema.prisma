@@ -157,6 +157,7 @@ model Lead {
   transactions           Transaction[]
   statusHistory          LeadStatusHistory[]
   affiliateCommissions   AffiliateCommission[]
+  metaCapiLogs           MetaCapiLog[]
 
   @@index([status])
   @@index([zipCode])
@@ -222,6 +223,31 @@ model ComplianceAuditLog {
   @@index([eventType])
   @@index([createdAt])
   @@map("compliance_audit_log")
+}
+
+// Meta Conversions API (CAPI) logging for offline conversion tracking
+// Stores all events sent to Meta for debugging and auditing
+model MetaCapiLog {
+  id             String   @id @default(uuid())
+  leadId         String   @map("lead_id")
+  eventName      String   @map("event_name")       // "Window Lead", "Bathroom Lead", etc.
+  eventId        String?  @map("event_id")         // Deduplication ID sent to Meta
+  serviceType    String   @map("service_type")     // "windows", "bathrooms", etc.
+  requestPayload Json     @map("request_payload")  // Full payload sent to Meta (PII already hashed)
+  responseData   Json?    @map("response_data")    // Meta's response
+  success        Boolean  @default(false)
+  errorMessage   String?  @map("error_message")
+  fbtraceId      String?  @map("fbtrace_id")       // Meta's trace ID for debugging
+  eventsReceived Int?     @map("events_received")  // Number of events Meta acknowledged
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([serviceType])
+  @@index([success])
+  @@index([createdAt])
+  @@map("meta_capi_logs")
 }
 
 model BuyerServiceZipCode {
