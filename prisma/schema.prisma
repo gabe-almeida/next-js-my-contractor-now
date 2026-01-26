@@ -77,6 +77,13 @@ model Buyer {
   loginEnabled           Boolean   @default(false) @map("login_enabled")
   lastLoginAt            DateTime? @map("last_login_at")
 
+  // Invoicing fields (Accounts Receivable)
+  paymentTermsDays       Int       @default(30) @map("payment_terms_days")
+  billingEmail           String?   @map("billing_email")
+  billingAddress         String?   @map("billing_address") @db.Text
+  taxId                  String?   @map("tax_id")  // EIN for US businesses
+  expectedScrubRate      Decimal?  @map("expected_scrub_rate") @db.Decimal(5, 4)  // 0.10 = 10%
+
   createdAt               DateTime              @default(now()) @map("created_at")
   updatedAt               DateTime              @updatedAt @map("updated_at")
   serviceConfigs          BuyerServiceConfig[]
@@ -89,6 +96,9 @@ model Buyer {
   callBids         CallBid[]
   callFeedback     CallFeedback[]
   dailyMetrics     DailyMetric[]
+
+  // Invoicing relations
+  invoices         Invoice[]
 
   @@index([type])
   @@index([pricingModel])
@@ -163,6 +173,7 @@ model Lead {
   statusHistory          LeadStatusHistory[]
   affiliateCommissions   AffiliateCommission[]
   metaCapiLogs           MetaCapiLog[]
+  invoiceLineItems       InvoiceLineItem[]
 
   @@index([status])
   @@index([zipCode])
@@ -312,6 +323,13 @@ model AdminUser {
 
   statusChanges LeadStatusHistory[]
 
+  // Invoice audit relations
+  invoicesCreated      Invoice[]              @relation("InvoiceCreator")
+  invoicesSent         Invoice[]              @relation("InvoiceSender")
+  invoicesCancelled    Invoice[]              @relation("InvoiceCanceller")
+  invoicePayments      InvoicePayment[]
+  invoiceStatusChanges InvoiceStatusHistory[]
+
   @@map("admin_users")
 }
 
@@ -402,6 +420,9 @@ model Affiliate {
   callDisputes       CallDispute[]
   affiliatePayments  AffiliatePayment[]
   dailyMetrics       DailyMetric[]
+
+  // Invoicing relations (Accounts Payable - formal invoices with line items)
+  invoices           Invoice[]
 
   @@index([status])
   @@index([email])
@@ -984,4 +1005,201 @@ model DailyMetric {
   @@index([affiliateId, date])
   @@index([serviceTypeId, date])
   @@map("daily_metrics")
+}
+
+// ============================================
+// INVOICING SYSTEM MODELS
+// ============================================
+
+enum InvoiceType {
+  RECEIVABLE  // We invoice buyers (they owe US)
+  PAYABLE     // We owe affiliates (we pay THEM)
+}
+
+enum InvoiceStatus {
+  DRAFT           // Not yet finalized
+  SENT            // Sent to buyer, Net 30 starts
+  PARTIALLY_PAID
+  PAID            // Fully paid
+  OVERDUE         // Past due date, unpaid
+  CANCELLED       // Voided
+  DISPUTED        // Under dispute
+}
+
+enum PaymentMethod {
+  WIRE
+  ACH
+  CHECK
+  PAYPAL
+  CREDIT_CARD
+  OTHER
+}
+
+// Master invoice record
+model Invoice {
+  id                String         @id @default(uuid())
+  invoiceNumber     String         @unique @map("invoice_number")  // AR-2024-00001 (receivable) or AP-2024-00001 (payable)
+  type              InvoiceType    // RECEIVABLE or PAYABLE
+
+  // Polymorphic: exactly ONE of buyerId OR affiliateId must be set
+  // IMPORTANT: Enforce in InvoiceService.create() - Prisma cannot enforce this constraint
+  buyerId           String?        @map("buyer_id")
+  affiliateId       String?        @map("affiliate_id")
+
+  // Billing period
+  periodStart       DateTime       @map("period_start") @db.Date
+  periodEnd         DateTime       @map("period_end") @db.Date
+
+  // Amounts (stored as Decimal for precision)
+  subtotal          Decimal        @db.Decimal(10, 2)
+  adjustments       Decimal        @default(0) @db.Decimal(10, 2)  // Credits/debits
+  taxAmount         Decimal        @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  total             Decimal        @db.Decimal(10, 2)
+  amountPaid        Decimal        @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  balance           Decimal        @db.Decimal(10, 2)  // total - amountPaid
+
+  // Status & dates
+  status            InvoiceStatus  @default(DRAFT)
+  issuedAt          DateTime?      @map("issued_at")  // When marked SENT
+  dueDate           DateTime?      @map("due_date") @db.Date  // issuedAt + payment terms
+  paidInFullAt      DateTime?      @map("paid_in_full_at")
+
+  // Payment terms (default Net 30)
+  paymentTermsDays  Int            @default(30) @map("payment_terms_days")
+
+  // Notes & metadata
+  notes             String?        @db.Text  // Internal notes
+  buyerNotes        String?        @map("buyer_notes") @db.Text  // Shown on invoice
+
+  // Audit trail
+  createdById       String         @map("created_by_id")
+  sentById          String?        @map("sent_by_id")
+  sentAt            DateTime?      @map("sent_at")
+  cancelledById     String?        @map("cancelled_by_id")
+  cancelledAt       DateTime?      @map("cancelled_at")
+  cancellationReason String?       @map("cancellation_reason")
+
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Optimistic locking for concurrent payment handling
+  version           Int            @default(1)
+
+  // Relations
+  buyer             Buyer?         @relation(fields: [buyerId], references: [id])
+  affiliate         Affiliate?     @relation(fields: [affiliateId], references: [id])
+  createdBy         AdminUser      @relation("InvoiceCreator", fields: [createdById], references: [id])
+  sentBy            AdminUser?     @relation("InvoiceSender", fields: [sentById], references: [id])
+  cancelledBy       AdminUser?     @relation("InvoiceCanceller", fields: [cancelledById], references: [id])
+
+  lineItems         InvoiceLineItem[]
+  payments          InvoicePayment[]
+  statusHistory     InvoiceStatusHistory[]
+
+  @@index([buyerId])
+  @@index([affiliateId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([invoiceNumber])
+  @@index([type, status])
+  @@index([version])  // For optimistic locking queries
+  @@map("invoices")
+}
+
+// Invoice line items (linked to leads or manual entries)
+model InvoiceLineItem {
+  id              String    @id @default(uuid())
+  invoiceId       String    @map("invoice_id")
+
+  // Link to lead (optional - manual entries won't have this)
+  leadId          String?   @map("lead_id")
+  callId          String?   @map("call_id")  // For pay-per-call
+
+  // Line item details
+  description     String
+  quantity        Int       @default(1)
+  unitPrice       Decimal   @map("unit_price") @db.Decimal(10, 2)
+  amount          Decimal   @db.Decimal(10, 2)  // quantity * unitPrice
+
+  // Type for categorization
+  itemType        String    @default("LEAD") @map("item_type")  // LEAD, CALL, ADJUSTMENT, CREDIT, FEE, SCRUB_CREDIT
+
+  // Metadata (service type, date, etc.)
+  metadata        Json?     // Flexible storage for lead details
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  lead            Lead?     @relation(fields: [leadId], references: [id])
+
+  @@index([invoiceId])
+  @@index([leadId])
+  @@index([callId])
+  @@map("invoice_line_items")
+}
+
+// Payment records
+model InvoicePayment {
+  id                String        @id @default(uuid())
+  invoiceId         String        @map("invoice_id")
+
+  amount            Decimal       @db.Decimal(10, 2)
+  paymentDate       DateTime      @map("payment_date") @db.Date
+  paymentMethod     PaymentMethod @map("payment_method")
+
+  // Reference info
+  referenceNumber   String?       @map("reference_number")  // Check #, wire ref, etc.
+  bankAccount       String?       @map("bank_account")      // Last 4 digits
+
+  notes             String?       @db.Text
+
+  // Audit
+  recordedById      String        @map("recorded_by_id")
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  invoice           Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recordedBy        AdminUser     @relation(fields: [recordedById], references: [id])
+
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@map("invoice_payments")
+}
+
+// Audit trail for invoice status changes
+model InvoiceStatusHistory {
+  id              String        @id @default(uuid())
+  invoiceId       String        @map("invoice_id")
+
+  oldStatus       InvoiceStatus? @map("old_status")
+  newStatus       InvoiceStatus  @map("new_status")
+  reason          String?
+
+  // Audit
+  changedById     String?       @map("changed_by_id")  // null for system changes
+  changeSource    String        @default("ADMIN") @map("change_source")  // ADMIN, SYSTEM, WEBHOOK
+  ipAddress       String?       @map("ip_address")
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  changedBy       AdminUser?    @relation(fields: [changedById], references: [id])
+
+  @@index([invoiceId])
+  @@index([createdAt])
+  @@map("invoice_status_history")
+}
+
+// Invoice number sequence (for thread-safe generation)
+// Separate sequences for AR (receivable) and AP (payable)
+model InvoiceSequence {
+  id              String    @id @default(uuid())
+  prefix          String    // "AR" or "AP"
+  year            Int
+  lastNumber      Int       @default(0) @map("last_number")
+
+  @@unique([prefix, year])
+  @@map("invoice_sequences")
 }

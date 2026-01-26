@@ -16,7 +16,12 @@ import {
   Bell,
   LogOut,
   User,
-  TestTube
+  TestTube,
+  DollarSign,
+  Receipt,
+  Wallet,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AdminUser } from '@/types';
@@ -26,7 +31,25 @@ interface AdminLayoutProps {
   user?: AdminUser;
 }
 
-const navigationItems = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavSection {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+}
+
+type NavigationItem = NavItem | NavSection;
+
+function isNavSection(item: NavigationItem): item is NavSection {
+  return 'items' in item;
+}
+
+const navigationItems: NavigationItem[] = [
   {
     name: 'Dashboard',
     href: '/admin',
@@ -53,6 +76,22 @@ const navigationItems = [
     icon: UserPlus,
   },
   {
+    name: 'Finance',
+    icon: DollarSign,
+    items: [
+      {
+        name: 'Invoices',
+        href: '/admin/invoices',
+        icon: Receipt,
+      },
+      {
+        name: 'Payouts',
+        href: '/admin/payouts',
+        icon: Wallet,
+      },
+    ],
+  },
+  {
     name: 'Payload Testing',
     href: '/admin/payload-testing',
     icon: TestTube,
@@ -71,6 +110,7 @@ const navigationItems = [
 
 export function AdminLayout({ children, user }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['Finance']);
   const pathname = usePathname();
 
   const isActivePath = (href: string) => {
@@ -78,6 +118,18 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
       return pathname === href;
     }
     return pathname.startsWith(href);
+  };
+
+  const isSectionActive = (section: NavSection) => {
+    return section.items.some(item => isActivePath(item.href));
+  };
+
+  const toggleSection = (sectionName: string) => {
+    setExpandedSections(prev =>
+      prev.includes(sectionName)
+        ? prev.filter(s => s !== sectionName)
+        : [...prev, sectionName]
+    );
   };
 
   return (
@@ -109,6 +161,69 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
           <div className="space-y-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
+
+              // Handle expandable section (like Finance)
+              if (isNavSection(item)) {
+                const isExpanded = expandedSections.includes(item.name);
+                const sectionActive = isSectionActive(item);
+
+                return (
+                  <div key={item.name}>
+                    <button
+                      onClick={() => toggleSection(item.name)}
+                      className={`
+                        w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors group
+                        ${sectionActive
+                          ? 'bg-orange-50 text-orange-700'
+                          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
+                      `}
+                    >
+                      <div className="flex items-center">
+                        <Icon className={`
+                          mr-3 h-5 w-5 flex-shrink-0
+                          ${sectionActive ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-600'}
+                        `} />
+                        <span>{item.name}</span>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      )}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-1 ml-8 space-y-1">
+                        {item.items.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          const isSubActive = isActivePath(subItem.href);
+
+                          return (
+                            <Link
+                              key={subItem.name}
+                              href={subItem.href}
+                              className={`
+                                flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors group
+                                ${isSubActive
+                                  ? 'bg-orange-50 text-orange-700 border-l-4 border-orange-500'
+                                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
+                              `}
+                              onClick={() => setSidebarOpen(false)}
+                            >
+                              <SubIcon className={`
+                                mr-3 h-4 w-4 flex-shrink-0
+                                ${isSubActive ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-600'}
+                              `} />
+                              <span>{subItem.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Regular navigation item
               const isActive = isActivePath(item.href);
 
               return (

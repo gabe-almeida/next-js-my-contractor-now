@@ -2,8 +2,8 @@ services:
   - type: web
     name: my-contractor-now
     runtime: node
-    region: oregon
-    plan: free
+    region: ohio
+    plan: starter
     buildCommand: |
       corepack enable &&
       corepack prepare pnpm@latest --activate &&
@@ -15,6 +15,8 @@ services:
         value: production
       - key: SKIP_RADAR_VALIDATION
         value: "true"
+      - key: CRON_SECRET
+        sync: false  # Set manually in Render dashboard
     buildFilter:
       paths:
         - src/**
@@ -24,3 +26,34 @@ services:
         - next.config.js
       cacheKeyFiles:
         - pnpm-lock.yaml
+
+  # Invoice Overdue Check - Daily at 6 AM UTC
+  # NOTE: Cron jobs require Starter plan or higher
+  - type: cron
+    name: invoice-overdue-check
+    runtime: node
+    region: ohio
+    plan: starter
+    schedule: "0 6 * * *"
+    buildCommand: echo "Using main service"
+    startCommand: |
+      curl -X GET "https://my-contractor-now.onrender.com/api/cron/invoice-overdue-check" \
+        -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  # Monthly Affiliate Payables - 1st of month at midnight UTC
+  - type: cron
+    name: affiliate-payables-monthly
+    runtime: node
+    region: ohio
+    plan: starter
+    schedule: "0 0 1 * *"
+    buildCommand: echo "Using main service"
+    startCommand: |
+      curl -X GET "https://my-contractor-now.onrender.com/api/cron/affiliate-payables" \
+        -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        sync: false
