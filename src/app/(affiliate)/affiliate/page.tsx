@@ -302,9 +302,9 @@ export default function AffiliateLandingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-800 mb-2">Fast Payouts</h3>
+              <h3 className="font-semibold text-gray-800 mb-2">30 Day Payouts</h3>
               <p className="text-sm text-gray-600">
-                Get paid quickly with flexible withdrawal options
+                Reliable monthly payouts with flexible withdrawal options
               </p>
             </div>
 
