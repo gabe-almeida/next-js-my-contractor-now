@@ -302,7 +302,7 @@ export class CallAuctionEngine extends BaseAuctionEngine {
       const eligibleConfigs = await prisma.buyerServiceConfig.findMany({
         where: {
           serviceTypeId: call.serviceTypeId,
-          active: true,
+          callActive: true, // Uses call-specific toggle (not webform 'active')
           buyer: {
             active: true,
             acceptsCalls: true,

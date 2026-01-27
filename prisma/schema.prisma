@@ -131,6 +131,7 @@ model BuyerServiceConfig {
   callPingUrl              String?   @map("call_ping_url")
   callFieldMappings        Json?     @map("call_field_mappings")
   requireIvrQualification  Boolean   @default(false) @map("require_ivr_qualification")
+  callActive               Boolean   @default(false) @map("call_active") // Independent toggle for call participation
 
   buyer               Buyer       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   serviceType         ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
