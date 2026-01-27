@@ -104,6 +104,29 @@ Bids are tried in order of bid amount (highest first), with response time as tie
 
 ## Configuration
 
+### Buyer Eligibility
+
+A buyer is eligible for call auctions when:
+
+1. **Buyer level**: `acceptsCalls: true`
+2. **Service level**: `callActive: true` (independent from webform lead `active` toggle)
+3. **Has bid configured**: `callBidAmount` is set
+
+This allows buyers to participate in calls vs webform leads independently per service.
+
+```
+BuyerServiceConfig toggles:
+├─ active      → webform lead participation
+└─ callActive  → call auction participation
+```
+
+**Example**: Home Appointments Windows
+- `active: true` → receives webform leads
+- `callActive: true` → participates in call auctions
+- Each can be toggled independently
+
+### Engine Settings
+
 Key settings in `call-engine.ts`:
 
 | Setting | Default | Purpose |
