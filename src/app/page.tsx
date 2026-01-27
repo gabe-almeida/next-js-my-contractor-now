@@ -1,127 +1,72 @@
-'use client';
-
 /**
- * Homepage - Main entry point for lead generation
+ * Homepage - Main entry point for lead generation (Server Component)
  *
  * WHY: Users select their project type to start the quote flow
  * WHEN: User visits the homepage
- * HOW: Fetches active services from database, renders dropdown
+ * HOW: Fetches active services server-side, renders static content with
+ *      interactive HomeHero client component
+ *
+ * PERFORMANCE: This page uses ISR (Incremental Static Regeneration).
+ * - Pre-rendered at build time with fresh data
+ * - Revalidates every 5 minutes OR instantly via on-demand revalidation
+ * - No client-side API calls for service list
  */
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import { prisma } from '@/lib/db';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import PortalDropdown from '@/components/ui/PortalDropdown';
-import { usePageTracking } from '@/hooks/usePageTracking';
+import HomeHero from '@/components/home/HomeHero';
 
-export default function HomePage() {
-  const [selectedService, setSelectedService] = useState('');
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+// Revalidate every 5 minutes (fallback if on-demand revalidation doesn't fire)
+export const revalidate = 300;
 
-  // Track page view for analytics
-  usePageTracking({ pageType: 'HOME', pagePath: '/' });
+/**
+ * Fetch active service types from database
+ * Server-side only - runs at build time and on revalidation
+ */
+async function getServiceTypes() {
+  try {
+    const services = await prisma.serviceType.findMany({
+      where: { active: true },
+      orderBy: { name: 'asc' },
+      select: {
+        name: true,
+        displayName: true,
+      },
+    });
 
-  // Fetch active services from database
-  useEffect(() => {
-    async function fetchServices() {
-      try {
-        const response = await fetch('/api/service-types');
-        const result = await response.json();
+    return services.map((s) => ({
+      id: s.name.toLowerCase(),
+      name: s.displayName || s.name,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch services:', error);
+    // Fallback to default services if DB fails
+    return [
+      { id: 'windows', name: 'Windows' },
+      { id: 'roofing', name: 'Roofing' },
+      { id: 'bathrooms', name: 'Bathrooms' },
+    ];
+  }
+}
 
-        if (result.success && result.data) {
-          // Map to dropdown format, only active services
-          const services = result.data
-            .filter((s: any) => s.active)
-            .map((s: any) => ({
-              id: s.name.toLowerCase(),
-              name: s.displayName || s.name,
-            }));
-          setServiceTypes(services);
-        }
-      } catch (error) {
-        console.error('Failed to fetch services:', error);
-        // Fallback to default services if API fails
-        setServiceTypes([
-          { id: 'windows', name: 'Windows' },
-          { id: 'roofing', name: 'Roofing' },
-          { id: 'bathrooms', name: 'Bathrooms' },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchServices();
-  }, []);
-
-  const handleServiceSelect = (serviceId: string, serviceName: string) => {
-    setSelectedService(serviceName);
-    // Navigate to the specific service form at /services/[slug]
-    if (serviceId !== 'other') {
-      window.location.href = `/services/${serviceId}`;
-    }
-  };
+export default async function HomePage() {
+  const serviceTypes = await getServiceTypes();
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
-      {/* Main Hero Section */}
-      <div className="bg-gradient-to-r from-orange-400 to-orange-500 min-h-[600px] flex items-center justify-center relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          {/* Contractor Mascot */}
-          <div className="mb-8 flex justify-center">
-            <div className="w-40 h-40 flex items-center justify-center relative z-20">
-              <div className="relative w-full h-full">
-                <Image
-                  src="/assets/my contractor now guy waving with emblem.gif"
-                  alt="My Contractor Now Mascot"
-                  fill
-                  className="object-contain"
-                  unoptimized
-                />
-              </div>
-            </div>
-          </div>
+      {/* Interactive Hero Section (Client Component) */}
+      <HomeHero serviceTypes={serviceTypes} />
 
-          {/* Main Heading */}
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            How Much Will Your Project Cost?
-          </h1>
-          <p className="text-xl text-white mb-12">
-            Find a local pro near you!
-          </p>
-
-          {/* Main Form Card */}
-          <div className="bg-white rounded-lg shadow-xl p-8 max-w-lg mx-auto relative z-[100]">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-              What type of project is this?
-            </h2>
-
-            {/* Service Type Dropdown - Portal Based */}
-            <PortalDropdown
-              items={serviceTypes}
-              selectedValue={selectedService}
-              placeholder="Select your project type"
-              onSelect={handleServiceSelect}
-            />
-
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              Free, no-obligation estimates from local pros.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* How It Works Section */}
+      {/* How It Works Section - Pure Server HTML */}
       <div className="py-16 bg-gray-50 relative z-10">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
             How It Works
           </h2>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">

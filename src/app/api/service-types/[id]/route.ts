@@ -16,6 +16,7 @@ import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
 import { captureApiError } from '@/lib/sentry';
+import { revalidateServicePages, revalidateOnServiceDelete } from '@/lib/revalidation';
 
 /**
  * Invalidate service flow cache when service is updated
@@ -124,14 +125,18 @@ export async function PUT(
       data: updateData,
     });
 
-    // Invalidate cache so new flow is served
+    // Invalidate Redis cache so new flow is served
     await invalidateServiceFlowCache(serviceType.name, serviceType.id);
+
+    // Revalidate static pages so changes appear immediately
+    revalidateServicePages(serviceType.name);
 
     return NextResponse.json({
       success: true,
       data: serviceType,
       message: 'Service type updated successfully',
       cacheInvalidated: true,
+      pagesRevalidated: true,
       timestamp: new Date().toISOString(),
     });
 
@@ -185,10 +190,14 @@ export async function DELETE(
         data: { active: false },
       });
 
+      // Revalidate pages so deactivated service disappears from dropdown
+      revalidateOnServiceDelete(existing.name);
+
       return NextResponse.json({
         success: true,
         message: `Service type deactivated (${leadCount} leads reference this service)`,
         softDelete: true,
+        pagesRevalidated: true,
         timestamp: new Date().toISOString(),
       });
     }
@@ -198,9 +207,13 @@ export async function DELETE(
       where: { id },
     });
 
+    // Revalidate pages so deleted service disappears
+    revalidateOnServiceDelete(existing.name);
+
     return NextResponse.json({
       success: true,
       message: 'Service type deleted successfully',
+      pagesRevalidated: true,
       timestamp: new Date().toISOString(),
     });
 

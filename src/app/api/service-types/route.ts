@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { createServiceTypeSchema, updateServiceTypeSchema } from '@/lib/validations/lead';
 import { handleApiError } from '@/lib/utils';
 import { captureApiError } from '@/lib/sentry';
+import { revalidateOnServiceCreate } from '@/lib/revalidation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,10 +76,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Revalidate pages so new service appears immediately
+    revalidateOnServiceCreate(name);
+
     return NextResponse.json({
       success: true,
       data: serviceType,
       message: 'Service type created successfully',
+      pagesRevalidated: true,
       timestamp: new Date().toISOString(),
     }, { status: 201 });
 
