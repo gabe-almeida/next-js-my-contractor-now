@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma';
 import { captureApiError } from '@/lib/sentry';
 import { logger } from '@/lib/logger';
 import { RedisCache } from '@/config/redis';
+import { invalidateServiceConfigCache } from '@/lib/field-mapping/database-buyer-loader';
 
 /**
  * GET /api/admin/buyers/[id]/service-config
@@ -208,6 +209,9 @@ export async function PATCH(
       },
       data: updateData
     });
+
+    // Invalidate in-memory service config cache immediately
+    invalidateServiceConfigCache(buyerId, serviceTypeId);
 
     logger.info('Service config updated', {
       buyerId,
