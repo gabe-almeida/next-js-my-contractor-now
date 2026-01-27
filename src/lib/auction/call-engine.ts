@@ -101,8 +101,8 @@ export class CallAuctionEngine extends BaseAuctionEngine {
   // Default configuration
   private static readonly DEFAULT_CONFIG: CallAuctionConfig = {
     pingTimeoutMs: 2000, // 2 seconds - aggressive for caller experience
-    maxCascadeDepth: 3, // Max 3 transfer attempts
-    maxCascadeTimeMs: 8000, // 8 second total cascade time limit
+    maxCascadeDepth: 99, // Try all bidders (no arbitrary limit, controlled by time)
+    maxCascadeTimeMs: 90000, // 90 second total cascade time limit
     requireMinimumBid: true,
     minimumBid: 5.0,
   };
@@ -652,14 +652,18 @@ export class CallAuctionEngine extends BaseAuctionEngine {
     // Log successful bid
     this.logBidReceived(call, buyer, validated, result.responseTimeMs, 'network');
 
-    // Store in CallBid table
+    // Store in CallBid table (include parsed expiresAt for cascade expiration checks)
+    const pingResponseWithExpiry = {
+      ...response.rawResponse,
+      expiresAt: response.expiresAt?.toISOString(), // Store parsed expiration for cascade
+    };
     await this.storeBid(
       call.id,
       buyer.buyerId,
       validated,
       result.responseTimeMs,
       response.transferNumber,
-      response.rawResponse
+      pingResponseWithExpiry
     );
 
     return {

@@ -606,11 +606,12 @@ export function buildCascadeTransfer(
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL;
 
   // Build dial attributes with cascade callback
+  // Default timeout is 10 seconds (industry standard for fast rerouting)
   const dialAttributes: Record<string, unknown> = {
     callerId,
     action: `${baseUrl}/api/calls/cascade?callId=${callId}&position=${position}`,
     method: 'POST',
-    timeout: options.timeout || 25,
+    timeout: options.timeout || 10,
   };
 
   // Add recording if requested

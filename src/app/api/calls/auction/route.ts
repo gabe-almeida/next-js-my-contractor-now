@@ -37,7 +37,7 @@ import {
 } from '@/lib/twilio/verify-signature';
 import { isWebhookProcessed, markWebhookProcessed, markWebhookFailed } from '@/lib/twilio/idempotency';
 import { logWebhookReceived, createCallActivityLog, logCallStateChange } from '@/lib/twilio/logging';
-import { buildTransfer, buildRejection, buildEmptyResponse } from '@/lib/twilio/twiml-builder';
+import { buildCascadeTransfer, buildRejection, buildEmptyResponse } from '@/lib/twilio/twiml-builder';
 import { CallAuctionEngine, type CallAuctionResult } from '@/lib/auction/call-engine';
 import { validateTransition, type CallStatus } from '@/lib/twilio/state-machine';
 
@@ -284,15 +284,17 @@ export async function POST(request: NextRequest) {
         eligibleBuyers: result.eligibleBuyersCount,
       });
 
-      // Build transfer TwiML
+      // Build transfer TwiML - use cascade endpoint so we can reroute if no answer
+      // Position 0 = first transfer attempt (winner)
       return createTwimlResponse(
-        buildTransfer(
+        buildCascadeTransfer(
           winner.transferNumber,
           call.callerPhone, // Pass through original caller ID
-          `${baseUrl}/api/calls/completed?callId=${callId}`,
+          0, // Position 0 = first attempt
+          callId,
           {
             record: true,
-            callId,
+            timeout: 10, // 10 second ring timeout - industry standard for fast rerouting
           }
         )
       );

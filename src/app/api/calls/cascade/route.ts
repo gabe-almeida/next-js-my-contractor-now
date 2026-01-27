@@ -9,27 +9,29 @@
  *
  * HOW:
  *   1. Parse dial status from Twilio (completed, no-answer, busy, failed)
- *   2. If answered → call completed successfully
- *   3. If not answered → get next buyer from ranked bids
+ *   2. If answered → forward to /api/calls/completed for payout processing
+ *   3. If not answered → get next buyer from ranked bids (filter expired)
  *   4. If more buyers available → return TwiML to dial next buyer
- *   5. If cascade exhausted → play rejection message
+ *   5. If all buyers exhausted or time limit reached → play rejection message
  *
- * CASCADE LIMITS (from spec):
- * - MAX_CASCADE_DEPTH = 3 (max 3 buyers tried)
- * - MAX_CASCADE_TIME_MS = 8000 (8 seconds total)
+ * CASCADE LIMITS:
+ * - Try ALL valid bidders (no arbitrary depth limit)
+ * - MAX_CASCADE_TIME_MS = 90000 (90 seconds total, ~9 attempts at 10s each)
+ * - Filter out expired bids (check buyer's TTL from PING response)
+ * - DIAL_TIMEOUT_SECONDS = 10 (industry standard for fast rerouting)
  *
  * CALL FLOW:
  * +----------------------------------------------------------------------+
  * |  First transfer (position 0) → Dial winner                           |
  * |      |                                                               |
- * |  [ANSWERED] Call connected → /api/calls/completed handles it         |
+ * |  [ANSWERED] Call connected → forward to /api/calls/completed         |
  * |  [NO_ANSWER] Cascade → Try next buyer (position 1)                   |
  * |      |                                                               |
- * |  Second attempt (position 1) → Dial second-place buyer               |
- * |  [NO_ANSWER] Cascade → Try next buyer (position 2)                   |
- * |      |                                                               |
- * |  Third attempt (position 2) → Dial third-place buyer                 |
- * |  [NO_ANSWER] Cascade exhausted → Play rejection, hangup              |
+ * |  Continue trying all bidders until:                                  |
+ * |    - Someone answers                                                 |
+ * |    - All bidders exhausted                                           |
+ * |    - Total time exceeds 90 seconds                                   |
+ * |    - Remaining bids have expired                                     |
  * +----------------------------------------------------------------------+
  */
 
@@ -53,17 +55,22 @@ import { Prisma } from '@prisma/client';
 // =====================================
 
 /**
- * WHY: Maximum number of buyers to try before giving up.
- * WHEN: Checking if cascade should continue.
+ * WHY: Maximum total time for all cascade attempts combined.
+ * WHEN: Checking if caller has waited too long.
+ * HOW: With 10-second ring timeout per attempt, 90 seconds allows ~9 attempts.
+ *      Industry standard is to try all bidders, limited by caller patience.
+ *
+ * Note: We no longer use a fixed MAX_CASCADE_DEPTH. Instead, we try ALL
+ * valid bidders until someone answers, all are exhausted, or time runs out.
  */
-const MAX_CASCADE_DEPTH = 3;
+const MAX_CASCADE_TIME_MS = 90000; // 90 seconds total
 
 /**
- * WHY: Maximum total time for cascade attempts.
- * WHEN: Checking if caller has waited too long.
- * Note: Caller patience is ~8-10 seconds total.
+ * WHY: Ring timeout per dial attempt.
+ * WHEN: Building TwiML for cascade transfer.
+ * HOW: Industry standard is 5-10 seconds. Shorter = faster rerouting.
  */
-const MAX_CASCADE_TIME_MS = 8000;
+const DIAL_TIMEOUT_SECONDS = 10;
 
 // =====================================
 // TYPE DEFINITIONS
@@ -93,30 +100,62 @@ interface RankedBid {
   bidAmount: number;
   transferNumber: string;
   bidStatus: string;
+  expiresAt: Date | null;
 }
 
 /**
  * WHY: Map database bid record to RankedBid interface.
  * WHEN: After loading bids from database.
- * HOW: Extracts buyer name and converts Decimal to number.
+ * HOW: Extracts buyer name, converts Decimal to number, parses expiresAt from pingResponse.
  */
 function mapBidToRankedBid(bid: {
   buyerId: string;
   bidAmount: Prisma.Decimal;
   transferNumber: string | null;
   bidStatus: string;
+  pingResponse: unknown;
   buyer: { name: string };
 }): RankedBid | null {
   if (!bid.transferNumber) {
     return null;
   }
+
+  // Parse expiresAt from pingResponse JSON if available
+  let expiresAt: Date | null = null;
+  if (bid.pingResponse && typeof bid.pingResponse === 'object') {
+    const response = bid.pingResponse as Record<string, unknown>;
+    if (response.expiresAt) {
+      expiresAt = new Date(response.expiresAt as string);
+    } else if (response.expireInSeconds) {
+      // Calculate from creation time + TTL (fallback)
+      const ttlSeconds = Number(response.expireInSeconds);
+      if (!isNaN(ttlSeconds)) {
+        // Estimate based on bid creation - this is approximate
+        expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+      }
+    }
+  }
+
   return {
     buyerId: bid.buyerId,
     buyerName: bid.buyer.name,
     bidAmount: bid.bidAmount.toNumber(),
     transferNumber: bid.transferNumber,
     bidStatus: bid.bidStatus,
+    expiresAt,
   };
+}
+
+/**
+ * WHY: Check if a bid has expired.
+ * WHEN: Before attempting to dial a buyer.
+ * HOW: Compare expiresAt to current time.
+ */
+function isBidExpired(bid: RankedBid): boolean {
+  if (!bid.expiresAt) {
+    return false; // No expiration = never expires (contractors)
+  }
+  return new Date() > bid.expiresAt;
 }
 
 // =====================================
@@ -180,7 +219,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ─────────────────────────────────────────────────────────────
-      // Step 3: Load call record
+      // Step 3: Load call record with all valid bids
       // ─────────────────────────────────────────────────────────────
       const call = await prisma.call.findUnique({
         where: { id: callId },
@@ -195,7 +234,12 @@ export async function POST(request: NextRequest) {
               { bidAmount: 'desc' },
               { responseTimeMs: 'asc' },
             ],
-            include: {
+            select: {
+              buyerId: true,
+              bidAmount: true,
+              transferNumber: true,
+              bidStatus: true,
+              pingResponse: true, // Contains expiresAt for expiration check
               buyer: {
                 select: { name: true },
               },
@@ -230,11 +274,11 @@ export async function POST(request: NextRequest) {
         dialDuration: payload.DialCallDuration,
       });
 
-      // If call was answered, it's being handled by /api/calls/completed
+      // If call was answered and completed, forward to completed handler for payout processing
       if (dialStatus === 'completed') {
         logger.info({
           event: 'cascade.completed',
-          message: 'Dial completed, call was answered',
+          message: 'Dial completed, call was answered - forwarding to completed handler',
           callId,
           callSid,
           position,
@@ -247,38 +291,33 @@ export async function POST(request: NextRequest) {
           dialStatus,
         });
 
-        // The /api/calls/completed handler will update the call record
+        // Forward the request to the completed handler by making an internal call
+        // The completed handler will calculate payouts and finalize the call
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL;
+        try {
+          await fetch(`${baseUrl}/api/calls/completed?callId=${callId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(body as Record<string, string>).toString(),
+          });
+        } catch (error) {
+          logger.error({
+            event: 'cascade.forward_error',
+            message: 'Failed to forward to completed handler',
+            callId,
+            error: (error as Error).message,
+          });
+        }
+
         return createTwimlResponse(buildEmptyResponse());
       }
 
       // ─────────────────────────────────────────────────────────────
-      // Step 5: Check cascade limits
+      // Step 5: Check cascade time limit
       // ─────────────────────────────────────────────────────────────
       const nextPosition = position + 1;
 
-      // Check depth limit
-      if (nextPosition >= MAX_CASCADE_DEPTH) {
-        logger.info({
-          event: 'cascade.depth_exceeded',
-          message: 'Max cascade depth reached, no more attempts',
-          callId,
-          callSid,
-          position,
-          maxDepth: MAX_CASCADE_DEPTH,
-        });
-
-        await handleCascadeExhausted(callId, callSid, 'depth_exceeded', position);
-        await markWebhookProcessed(callSid, idempotencyKey, undefined, {
-          result: 'depth_exceeded',
-          position,
-        });
-
-        return createTwimlResponse(
-          buildRejection('We\'re sorry, no specialists are available at this time. Please try again later.')
-        );
-      }
-
-      // Check time limit
+      // Check time limit (no longer using arbitrary depth limit - try all bidders)
       const cascadeStartTime = call.auctionCompletedAt || call.createdAt;
       const elapsedMs = Date.now() - cascadeStartTime.getTime();
       if (elapsedMs > MAX_CASCADE_TIME_MS) {
@@ -305,14 +344,28 @@ export async function POST(request: NextRequest) {
       }
 
       // ─────────────────────────────────────────────────────────────
-      // Step 6: Get next buyer in ranking
+      // Step 6: Get next buyer in ranking (filter expired bids)
       // ─────────────────────────────────────────────────────────────
 
-      // Map database bids to RankedBid interface and filter out current winner
+      // Map database bids to RankedBid interface, filter out:
+      // - Current winner (already tried)
+      // - Expired bids (TTL from buyer's PING response)
       const availableBids: RankedBid[] = call.bids
         .filter((bid) => bid.buyerId !== call.winningBuyerId)
         .map(mapBidToRankedBid)
-        .filter((bid): bid is RankedBid => bid !== null);
+        .filter((bid): bid is RankedBid => bid !== null)
+        .filter((bid) => !isBidExpired(bid)); // Filter out expired bids
+
+      // Log if any bids were filtered due to expiration
+      const expiredCount = call.bids.length - availableBids.length - 1; // -1 for winner
+      if (expiredCount > 0) {
+        logger.info({
+          event: 'cascade.expired_bids_filtered',
+          message: `Filtered ${expiredCount} expired bids from cascade pool`,
+          callId,
+          expiredCount,
+        });
+      }
 
       // Skip buyers we've already tried (based on position)
       const nextBid = availableBids[position];
@@ -325,6 +378,7 @@ export async function POST(request: NextRequest) {
           callSid,
           position,
           availableBids: availableBids.length,
+          totalBids: call.bids.length,
         });
 
         await handleCascadeExhausted(callId, callSid, 'no_more_buyers', position);
@@ -358,13 +412,14 @@ export async function POST(request: NextRequest) {
 
       logger.info({
         event: 'cascade.attempting_next',
-        message: `Cascade attempting buyer ${nextPosition + 1}/${MAX_CASCADE_DEPTH}`,
+        message: `Cascade attempting buyer ${nextPosition + 1}/${availableBids.length + 1}`,
         callId,
         callSid,
         position: nextPosition,
         buyerId: nextBid.buyerId,
         buyerName: nextBid.buyerName,
         bidAmount: nextBid.bidAmount,
+        remainingBidders: availableBids.length - position - 1,
       });
 
       return createTwimlResponse(
@@ -373,7 +428,7 @@ export async function POST(request: NextRequest) {
           call.callerPhone,
           nextPosition,
           callId,
-          { record: true, timeout: 25 }
+          { record: true, timeout: DIAL_TIMEOUT_SECONDS }
         )
       );
     } catch (error) {
@@ -489,7 +544,7 @@ async function logCascadeAttempt(
     await createCallActivityLog(
       callId,
       'cascade.attempting',
-      `Cascade attempt ${position + 1}/${MAX_CASCADE_DEPTH}: ${nextBid.buyerName}`,
+      `Cascade attempt #${position + 1}: ${nextBid.buyerName} ($${nextBid.bidAmount.toFixed(2)})`,
       {
         level: 'info',
         details: {
@@ -571,7 +626,7 @@ async function handleCascadeExhausted(
         details: {
           reason,
           finalPosition,
-          maxDepth: MAX_CASCADE_DEPTH,
+          totalAttempts: finalPosition + 1,
         },
         visibleToAffiliate: true,
         visibleToAdmin: true,
