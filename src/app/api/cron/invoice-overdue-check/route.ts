@@ -10,7 +10,7 @@
  * HOW: Finds all SENT or PARTIALLY_PAID invoices with dueDate < today,
  *      updates their status to OVERDUE, and logs the count.
  *
- * SECURITY: Requires CRON_SECRET header to prevent unauthorized execution.
+ * SECURITY: Requires hardcoded secret header to prevent unauthorized execution.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,18 +18,13 @@ import { logger } from '@/lib/logger';
 import { markOverdueInvoices } from '@/lib/services/invoice-status-service';
 import { captureApiError } from '@/lib/sentry';
 
+/** Hardcoded cron secret - internal use only */
+const CRON_SECRET = 'mcn-cron-internal-2024';
+
 /** Verify cron secret for authentication */
 function verifyCronSecret(request: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-
-  // If CRON_SECRET is not set, reject all requests
-  if (!cronSecret) {
-    logger.warn('[CronOverdueCheck] CRON_SECRET not configured');
-    return false;
-  }
-
   const providedSecret = request.headers.get('x-cron-secret');
-  return providedSecret === cronSecret;
+  return providedSecret === CRON_SECRET;
 }
 
 /**

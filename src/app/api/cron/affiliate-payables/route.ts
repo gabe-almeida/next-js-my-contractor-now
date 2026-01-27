@@ -13,7 +13,7 @@
  *      2. Creates a PAYABLE invoice with line items for each commission/lead
  *      3. Sets dueDate to Net 30 from invoice creation
  *
- * SECURITY: Requires CRON_SECRET header to prevent unauthorized execution.
+ * SECURITY: Requires hardcoded secret header to prevent unauthorized execution.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -23,21 +23,13 @@ import { captureApiError } from '@/lib/sentry';
 import { createInvoice, type LineItemInput } from '@/lib/services/invoice-service';
 import { toDecimal, roundCurrency } from '@/lib/utils/decimal-helpers';
 
-/** System admin ID for automated invoice creation */
-const SYSTEM_ADMIN_ID = 'system-cron';
+/** Hardcoded cron secret - internal use only */
+const CRON_SECRET = 'mcn-cron-internal-2024';
 
 /** Verify cron secret for authentication */
 function verifyCronSecret(request: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-
-  // If CRON_SECRET is not set, reject all requests
-  if (!cronSecret) {
-    logger.warn('[CronAffiliatePayables] CRON_SECRET not configured');
-    return false;
-  }
-
   const providedSecret = request.headers.get('x-cron-secret');
-  return providedSecret === cronSecret;
+  return providedSecret === CRON_SECRET;
 }
 
 /**
