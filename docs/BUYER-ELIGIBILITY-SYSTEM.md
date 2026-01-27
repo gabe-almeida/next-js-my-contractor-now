@@ -328,4 +328,125 @@ VALUES ('xxx', 'windows-id', '90210', true);
 
 ---
 
-*Last Updated: 2026-01-24*
+## Caching Architecture
+
+Understanding the caching is critical for knowing when config changes take effect.
+
+### Cache Types
+
+| Cache | Type | TTL | Location | Invalidation |
+|-------|------|-----|----------|--------------|
+| Service Config | **In-memory Map** | 1 min | `database-buyer-loader.ts` | `invalidateServiceConfigCache()` |
+| Buyer Config | **In-memory Map** | 1 min | `database-buyer-loader.ts` | `invalidateBuyerConfigCache()` |
+| Eligibility | Redis (no-op*) | 15 min | `ServiceZoneRepository` | `RedisCache.deletePattern()` |
+| ZIP Codes | Redis (no-op*) | 24 hr | `ServiceZoneRepository` | `clearCaches()` |
+
+**\*Note:** Redis is not fully configured in production. Redis operations silently return/skip when not configured, falling back to direct database queries.
+
+### Critical: In-Memory Cache
+
+The **in-memory Map caches** in `database-buyer-loader.ts` are the actual caches being used:
+
+```typescript
+// src/lib/field-mapping/database-buyer-loader.ts
+const buyerCache = new Map<string, { config: DatabaseBuyerConfig; expires: number }>();
+const serviceConfigCache = new Map<string, { config: DatabaseServiceConfig; expires: number }>();
+const CACHE_TTL_MS = 60000; // 1 minute
+```
+
+When admin updates a service config, this cache MUST be invalidated:
+
+```typescript
+// src/app/api/admin/buyers/[id]/service-config/route.ts
+invalidateServiceConfigCache(buyerId, serviceTypeId); // Clears in-memory Map
+```
+
+### How Active Toggle Changes Take Effect
+
+```
+Admin toggles active=false in UI
+        │
+        ▼
+PATCH /api/admin/buyers/[id]/service-config
+        │
+        ├─► Database updated: buyer_service_configs.active = false
+        │
+        ├─► In-memory cache invalidated: invalidateServiceConfigCache()
+        │
+        └─► Redis cache invalidated (no-op if not configured)
+
+Next auction runs
+        │
+        ▼
+loadBuyerConfigForAuction(buyerId, serviceTypeId)
+        │
+        ├─► loadServiceConfig() misses in-memory cache
+        │
+        ├─► Loads fresh config from database with active=false
+        │
+        └─► CHECK: if (!dbServiceConfig.active) return null
+                │
+                └─► Buyer skipped (does not receive PING)
+```
+
+### Code Reference: Active Check
+
+```typescript
+// src/lib/field-mapping/database-buyer-loader.ts:736-739
+export async function loadBuyerConfigForAuction(...) {
+  const dbServiceConfig = await loadServiceConfig(buyerId, serviceTypeId);
+
+  // Skip inactive service configs - buyer shouldn't receive PINGs
+  if (!dbServiceConfig.active) {
+    return null;
+  }
+  // ... rest of function
+}
+```
+
+### Where Active Is Checked
+
+| Flow | Where Active Is Checked | How |
+|------|------------------------|-----|
+| **Web Lead (Nationwide)** | `getNationwideBuyers()` | Prisma query with `active: true` |
+| **Web Lead (ZIP-based)** | `loadBuyerConfigForAuction()` | Returns `null` if inactive |
+| **Phone Call** | `getEligibleCallBuyers()` | Prisma query with `active: true` |
+
+---
+
+## Admin UI: Service Active Toggle
+
+**Location:** Admin → Buyers → [Select Buyer] → Service Coverage Tab
+
+Each service config now shows toggles for:
+- **Service Active** - Green toggle, controls `buyer_service_configs.active`
+- **Nationwide Coverage** - Indigo toggle, controls `buyer_service_configs.nationwide`
+
+### UI Component
+
+```
+src/components/admin/BuyerServiceCoverageTab.tsx
+├── toggleActive(serviceTypeId, currentValue)    → PATCH with { active: !value }
+└── toggleNationwide(serviceTypeId, currentValue) → PATCH with { nationwide: !value }
+```
+
+### Effect of Each Toggle
+
+| Toggle | When OFF | When ON |
+|--------|----------|---------|
+| **Service Active** | Buyer does NOT receive leads/calls for this service | Buyer participates in auctions |
+| **Nationwide** | Buyer only gets matching ZIP codes | Buyer gets ALL leads (filters via PING) |
+
+---
+
+## Files Modified (Active Toggle Feature)
+
+| File | Change |
+|------|--------|
+| `src/components/admin/BuyerServiceCoverageTab.tsx` | Added `toggleActive()` function and toggle UI |
+| `src/lib/field-mapping/database-buyer-loader.ts` | Added active check in `loadBuyerConfigForAuction()` |
+| `src/app/api/admin/buyers/[id]/service-config/route.ts` | Added in-memory cache invalidation |
+
+---
+
+*Last Updated: 2026-01-27*
