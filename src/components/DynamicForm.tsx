@@ -345,6 +345,14 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
               showValidation={validation.phone.isValid}
             />
 
+            {/* Hidden Jornaya LeadID input for compliance verification */}
+            <input
+              type="hidden"
+              name="leadid_token"
+              id="leadid_token"
+              value={complianceStatus.jornaya.token || ''}
+            />
+
             {/* TCPA Checkbox - only shows when contact info is valid */}
             <TCPACheckbox
               config={tcpaConfig}
@@ -418,6 +426,14 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
               required
               error={validation.phone.message}
               showValidation={validation.phone.isValid}
+            />
+
+            {/* Hidden Jornaya LeadID input for compliance verification */}
+            <input
+              type="hidden"
+              name="leadid_token"
+              id="leadid_token_contact"
+              value={complianceStatus.jornaya.token || ''}
             />
 
             {/* TCPA Checkbox - only shows when contact info is valid */}

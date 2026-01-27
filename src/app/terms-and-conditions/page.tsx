@@ -71,7 +71,7 @@ export default function TermsAndConditionsPage() {
                 <section>
                   <h2 className="text-xl font-semibold text-gray-800 mb-3">6. Privacy</h2>
                   <p className="text-gray-700">
-                    Use of the service is governed by the Privacy Policy, which details data collection practices.
+                    Use of the service is governed by our <a href="/privacy-policy" className="text-orange-600 hover:text-orange-700 underline">Privacy Policy</a>, which details data collection practices.
                   </p>
                 </section>
 

@@ -42,6 +42,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/privacy-policy#ccpa" className="hover:text-orange-400 transition-colors">
+                  CCPA / Do Not Sell My Info
+                </Link>
+              </li>
+              <li>
                 <Link href="/home-improvement-companies" className="hover:text-orange-400 transition-colors">
                   Home Improvement Companies
                 </Link>

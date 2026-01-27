@@ -79,6 +79,38 @@ export default function PrivacyPolicyPage() {
                   </ul>
                 </section>
 
+                <section id="ccpa">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-3">Your California Privacy Rights (CCPA)</h2>
+                  <p className="text-gray-700 mb-3">
+                    If you are a California resident, the California Consumer Privacy Act (CCPA) provides you with specific rights regarding your personal information:
+                  </p>
+                  <ul className="list-disc pl-6 text-gray-700 space-y-2">
+                    <li><strong>Right to Know:</strong> You have the right to request disclosure of the categories and specific pieces of personal information we have collected about you, the sources of that information, the business purposes for collecting it, and the categories of third parties with whom we share it.</li>
+                    <li><strong>Right to Delete:</strong> You have the right to request deletion of your personal information, subject to certain exceptions.</li>
+                    <li><strong>Right to Opt-Out:</strong> You have the right to opt-out of the sale or sharing of your personal information. To exercise this right, see the "How to Opt-Out" section below.</li>
+                    <li><strong>Right to Non-Discrimination:</strong> We will not discriminate against you for exercising any of your CCPA rights.</li>
+                  </ul>
+                  <p className="text-gray-700 mt-3">
+                    To exercise any of these rights, please contact us using the information in the Contact section below. We will respond to verifiable requests within 45 days.
+                  </p>
+                </section>
+
+                <section>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-3">How to Opt-Out</h2>
+                  <p className="text-gray-700 mb-3">
+                    You may opt-out of marketing communications and data sharing at any time using the following methods:
+                  </p>
+                  <ul className="list-disc pl-6 text-gray-700 space-y-2">
+                    <li><strong>Email:</strong> Send an email to <a href="mailto:gabe@mycontractornow.com" className="text-orange-600 hover:text-orange-700">gabe@mycontractornow.com</a> with the subject line "Opt-Out Request" or "Do Not Sell My Information"</li>
+                    <li><strong>Text Messages:</strong> Reply STOP to any text message you receive from us</li>
+                    <li><strong>Phone Calls:</strong> Request to be placed on our do-not-call list during any call, or contact us using the information below</li>
+                    <li><strong>Mail:</strong> Send a written request to our mailing address listed in the Contact section</li>
+                  </ul>
+                  <p className="text-gray-700 mt-3">
+                    Please allow up to 10 business days for your request to be processed. Note that opting out of marketing communications will not affect transactional messages related to services you have requested.
+                  </p>
+                </section>
+
                 <section>
                   <h2 className="text-xl font-semibold text-gray-800 mb-3">Contact Information</h2>
                   <div className="bg-gray-50 p-4 rounded-lg">
