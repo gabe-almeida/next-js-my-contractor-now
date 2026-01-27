@@ -22,6 +22,7 @@ import {
   Wallet,
   ChevronDown,
   ChevronRight,
+  Phone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AdminUser } from '@/types';
@@ -59,6 +60,11 @@ const navigationItems: NavigationItem[] = [
     name: 'Leads',
     href: '/admin/leads',
     icon: FileText,
+  },
+  {
+    name: 'Calls',
+    href: '/admin/calls',
+    icon: Phone,
   },
   {
     name: 'Services',
