@@ -58,6 +58,7 @@ import {
   logBillingEvent,
 } from '@/lib/twilio/logging';
 import { buildEmptyResponse } from '@/lib/twilio/twiml-builder';
+import { sendCallAuctionEmail, CallAuctionEmailData } from '@/lib/services/admin-email-service';
 import {
   validateTransition,
   mapDialStatus,
@@ -382,7 +383,19 @@ async function handleCompletionWithCallId(
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Step 11: Mark webhook as processed
+  // Step 11: Send admin email notification (fire-and-forget)
+  // ─────────────────────────────────────────────────────────────
+  sendCallAuctionEmailNotification(call, callId, parsedPayload, payoutResult).catch((error) => {
+    logger.warn({
+      event: 'completion.email_error',
+      message: 'Failed to send admin email notification',
+      callId,
+      error: (error as Error).message,
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Step 12: Mark webhook as processed
   // ─────────────────────────────────────────────────────────────
   await markWebhookProcessed(callSid, 'call_completed', undefined, {
     result: 'success',
@@ -733,6 +746,64 @@ async function fireAffiliatePostback(
       error: (updateError as Error).message,
     });
   }
+}
+
+/**
+ * WHY: Send admin email notification for completed calls.
+ * WHEN: After call completion is processed.
+ * HOW: Gather call data and send via admin-email-service.
+ */
+async function sendCallAuctionEmailNotification(
+  call: CallWithCampaign,
+  callId: string,
+  parsedPayload: {
+    connectedDurationSeconds: number;
+    disposition: string;
+  },
+  payoutResult: PayoutResult
+): Promise<void> {
+  // Fetch full call data with bids for email
+  const fullCall = await prisma.call.findUnique({
+    where: { id: callId },
+    include: {
+      serviceType: { select: { name: true, displayName: true } },
+      bids: {
+        orderBy: [{ bidAmount: 'desc' }, { responseTimeMs: 'asc' }],
+        include: { buyer: { select: { name: true } } },
+      },
+    },
+  });
+
+  if (!fullCall) return;
+
+  const emailData: CallAuctionEmailData = {
+    callId: fullCall.id,
+    callSid: fullCall.twilioCallSid,
+    serviceType: fullCall.serviceType?.displayName || fullCall.serviceType?.name || 'Unknown',
+    callerZip: fullCall.callerZip || 'Unknown',
+    callerPhone: fullCall.callerPhone,
+    callerState: fullCall.callerState || undefined,
+    status: payoutResult.isBillable ? 'CONNECTED' : 'NO_ANSWER',
+    participantCount: fullCall.bids.length,
+    bids: fullCall.bids.map((bid) => ({
+      buyerId: bid.buyerId,
+      buyerName: bid.buyer?.name || 'Unknown',
+      bidAmount: bid.bidAmount.toNumber(),
+      responseTimeMs: bid.responseTimeMs || 0,
+      isWinner: bid.buyerId === fullCall.winningBuyerId,
+      transferNumber: bid.transferNumber || undefined,
+    })),
+    winningBuyerId: fullCall.winningBuyerId || undefined,
+    winningBuyerName: fullCall.bids.find((b) => b.buyerId === fullCall.winningBuyerId)?.buyer?.name,
+    winningBidAmount: fullCall.winningBid?.toNumber(),
+    callDurationSeconds: parsedPayload.connectedDurationSeconds,
+    billableDurationSeconds: payoutResult.isBillable ? parsedPayload.connectedDurationSeconds : undefined,
+    failureReason: payoutResult.reason,
+    createdAt: fullCall.createdAt,
+    auctionCompletedAt: fullCall.auctionCompletedAt || new Date(),
+  };
+
+  await sendCallAuctionEmail(emailData);
 }
 
 /**

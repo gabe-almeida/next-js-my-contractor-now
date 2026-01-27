@@ -26,6 +26,8 @@ const sesClient = new SESClient({
 });
 
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'notifications@mycontractornow.com';
+const FROM_NAME = 'My Contractor Now';
+const FROM_ADDRESS = `${FROM_NAME} <${FROM_EMAIL}>`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mycontractornow.com';
 
 type UserType = 'admin' | 'affiliate' | 'contractor';
@@ -347,7 +349,7 @@ This link will expire in 1 hour. If you didn't request this reset, you can safel
   `;
 
   const command = new SendEmailCommand({
-    Source: FROM_EMAIL,
+    Source: FROM_ADDRESS,
     Destination: { ToAddresses: [email] },
     Message: {
       Subject: { Data: subject, Charset: 'UTF-8' },

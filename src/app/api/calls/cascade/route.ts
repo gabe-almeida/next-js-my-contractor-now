@@ -49,6 +49,7 @@ import { logWebhookReceived, createCallActivityLog, logCallStateChange } from '@
 import { buildCascadeTransfer, buildRejection, buildEmptyResponse } from '@/lib/twilio/twiml-builder';
 import { type CallStatus } from '@/lib/twilio/state-machine';
 import { Prisma } from '@prisma/client';
+import { sendCallAuctionEmail, CallAuctionEmailData } from '@/lib/services/admin-email-service';
 
 // =====================================
 // CONSTANTS
@@ -641,6 +642,16 @@ async function handleCascadeExhausted(
       reason,
       finalPosition,
     });
+
+    // Send admin email notification (fire-and-forget)
+    sendCascadeExhaustedEmail(callId, reason, finalPosition).catch((error) => {
+      logger.warn({
+        event: 'cascade.email_error',
+        message: 'Failed to send cascade exhausted email',
+        callId,
+        error: (error as Error).message,
+      });
+    });
   } catch (error) {
     logger.error('Failed to handle cascade exhaustion', {
       callId,
@@ -648,6 +659,57 @@ async function handleCascadeExhausted(
       error: (error as Error).message,
     });
   }
+}
+
+/**
+ * WHY: Send admin email notification when cascade is exhausted.
+ * WHEN: All buyers tried or time limit reached.
+ * HOW: Gather call data and send via admin-email-service.
+ */
+async function sendCascadeExhaustedEmail(
+  callId: string,
+  reason: string,
+  finalPosition: number
+): Promise<void> {
+  const call = await prisma.call.findUnique({
+    where: { id: callId },
+    include: {
+      serviceType: { select: { name: true, displayName: true } },
+      bids: {
+        orderBy: [{ bidAmount: 'desc' }, { responseTimeMs: 'asc' }],
+        include: { buyer: { select: { name: true } } },
+      },
+    },
+  });
+
+  if (!call) return;
+
+  const emailData: CallAuctionEmailData = {
+    callId: call.id,
+    callSid: call.twilioCallSid,
+    serviceType: call.serviceType?.displayName || call.serviceType?.name || 'Unknown',
+    callerZip: call.callerZip || 'Unknown',
+    callerPhone: call.callerPhone,
+    callerState: call.callerState || undefined,
+    status: 'NO_ANSWER',
+    participantCount: call.bids.length,
+    bids: call.bids.map((bid) => ({
+      buyerId: bid.buyerId,
+      buyerName: bid.buyer?.name || 'Unknown',
+      bidAmount: bid.bidAmount.toNumber(),
+      responseTimeMs: bid.responseTimeMs || 0,
+      isWinner: bid.buyerId === call.winningBuyerId,
+      transferNumber: bid.transferNumber || undefined,
+    })),
+    winningBuyerId: call.winningBuyerId || undefined,
+    winningBuyerName: call.bids.find((b) => b.buyerId === call.winningBuyerId)?.buyer?.name,
+    winningBidAmount: call.winningBid?.toNumber(),
+    failureReason: `Cascade exhausted: ${reason.replace(/_/g, ' ')} after ${finalPosition + 1} attempts`,
+    createdAt: call.createdAt,
+    auctionCompletedAt: new Date(),
+  };
+
+  await sendCallAuctionEmail(emailData);
 }
 
 /**

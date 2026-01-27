@@ -25,6 +25,8 @@ const sesClient = new SESClient({
 // Admin email recipient
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'gabe@mycontractornow.com';
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'notifications@mycontractornow.com';
+const FROM_NAME = 'My Contractor Now';
+const FROM_ADDRESS = `${FROM_NAME} <${FROM_EMAIL}>`;
 
 // Log configuration status on module load (once)
 if (!AWS_CONFIGURED) {
@@ -132,7 +134,7 @@ export async function sendAuctionCompletionEmail(data: AuctionEmailData): Promis
     });
 
     const command = new SendEmailCommand({
-      Source: FROM_EMAIL,
+      Source: FROM_ADDRESS,
       Destination: {
         ToAddresses: [ADMIN_EMAIL],
       },
@@ -414,5 +416,310 @@ Completed: ${data.auctionCompletedAt.toLocaleString()}
 
 ---
 View in Admin: https://mycontractornow.com/admin/leads
+  `.trim();
+}
+
+// ============================================================================
+// CALL AUCTION EMAIL NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Call auction result data structure for email notifications
+ */
+export interface CallAuctionEmailData {
+  callId: string;
+  callSid: string;
+  serviceType: string;
+  callerZip: string;
+  callerPhone: string;
+  callerState?: string;
+
+  // Auction results
+  status: 'CONNECTED' | 'NO_ANSWER' | 'NO_BIDS' | 'CALLER_HANGUP' | 'FAILED';
+  participantCount: number;
+
+  // Bid details
+  bids: Array<{
+    buyerName: string;
+    buyerId: string;
+    bidAmount: number;
+    responseTimeMs: number;
+    isWinner: boolean;
+    transferNumber?: string;
+  }>;
+
+  // Winner info (if connected)
+  winningBuyerId?: string;
+  winningBuyerName?: string;
+  winningBidAmount?: number;
+  callDurationSeconds?: number;
+  billableDurationSeconds?: number;
+
+  // Failure reason (if not connected)
+  failureReason?: string;
+
+  // Timestamps
+  createdAt: Date;
+  auctionCompletedAt: Date;
+}
+
+/**
+ * Send admin notification email after call auction completes
+ *
+ * WHY: Keep admin informed of all call auction outcomes in real-time.
+ * WHEN: Called after call auction and transfer attempt completes.
+ * HOW: Formats call data into HTML email and sends via SES.
+ */
+export async function sendCallAuctionEmail(data: CallAuctionEmailData): Promise<boolean> {
+  if (!AWS_CONFIGURED) {
+    logger.error('[AdminEmail] SKIPPING CALL EMAIL - AWS SES NOT CONFIGURED', {
+      callId: data.callId,
+      status: data.status,
+    });
+    return false;
+  }
+
+  try {
+    const subject = buildCallEmailSubject(data);
+    const htmlBody = buildCallEmailHtml(data);
+    const textBody = buildCallEmailText(data);
+
+    logger.info('[AdminEmail] Sending call auction notification', {
+      callId: data.callId,
+      status: data.status,
+      to: ADMIN_EMAIL,
+    });
+
+    const command = new SendEmailCommand({
+      Source: FROM_ADDRESS,
+      Destination: { ToAddresses: [ADMIN_EMAIL] },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: {
+          Html: { Data: htmlBody, Charset: 'UTF-8' },
+          Text: { Data: textBody, Charset: 'UTF-8' },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+
+    logger.info('[AdminEmail] Call email sent successfully', {
+      callId: data.callId,
+      status: data.status,
+    });
+
+    return true;
+  } catch (error) {
+    logger.error('[AdminEmail] Failed to send call email', {
+      callId: data.callId,
+      error: (error as Error).message,
+    });
+    captureApiError(error, {
+      route: 'admin-email-service',
+      action: 'sendCallAuctionEmail',
+      extra: { callId: data.callId, status: data.status },
+    });
+    return false;
+  }
+}
+
+function buildCallEmailSubject(data: CallAuctionEmailData): string {
+  const statusEmoji = data.status === 'CONNECTED' ? '📞' : data.status === 'NO_ANSWER' ? '📵' : '❌';
+  const statusText = data.status === 'CONNECTED'
+    ? `CONNECTED $${data.winningBidAmount?.toFixed(2)}`
+    : data.status === 'NO_ANSWER'
+    ? 'NO ANSWER'
+    : data.status === 'NO_BIDS'
+    ? 'NO BIDS'
+    : data.status === 'CALLER_HANGUP'
+    ? 'CALLER HANGUP'
+    : 'FAILED';
+
+  return `${statusEmoji} Call ${statusText} | ${data.serviceType} | ${data.callerZip}`;
+}
+
+function buildCallEmailHtml(data: CallAuctionEmailData): string {
+  const statusColor = data.status === 'CONNECTED' ? '#10b981' : data.status === 'NO_ANSWER' ? '#f59e0b' : '#ef4444';
+  const statusText = data.status === 'CONNECTED' ? 'CONNECTED' :
+                     data.status === 'NO_ANSWER' ? 'NO ANSWER' :
+                     data.status === 'NO_BIDS' ? 'NO BIDS' :
+                     data.status === 'CALLER_HANGUP' ? 'CALLER HANGUP' : 'FAILED';
+
+  const bidsTableRows = data.bids.length > 0
+    ? data.bids.map(bid => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px; font-weight: ${bid.isWinner ? 'bold' : 'normal'};">
+            ${bid.buyerName}${bid.isWinner ? ' 🏆' : ''}
+          </td>
+          <td style="padding: 12px; color: #10b981; font-weight: bold;">$${bid.bidAmount.toFixed(2)}</td>
+          <td style="padding: 12px; color: #6b7280;">${bid.responseTimeMs}ms</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #6b7280;">No bids received</td></tr>';
+
+  const durationDisplay = data.callDurationSeconds
+    ? `${Math.floor(data.callDurationSeconds / 60)}m ${data.callDurationSeconds % 60}s`
+    : 'N/A';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+    <!-- Header -->
+    <div style="background-color: ${statusColor}; color: white; padding: 24px; text-align: center;">
+      <h1 style="margin: 0; font-size: 24px;">📞 CALL ${statusText}</h1>
+      <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">
+        ${data.status === 'CONNECTED'
+          ? `Connected to ${data.winningBuyerName} for $${data.winningBidAmount?.toFixed(2)}`
+          : data.failureReason || 'Call auction completed'}
+      </p>
+    </div>
+
+    <!-- Call Summary -->
+    <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+      <h2 style="margin: 0 0 16px; font-size: 18px; color: #111827;">Call Details</h2>
+      <table style="width: 100%;">
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280; width: 140px;">Call ID:</td>
+          <td style="padding: 4px 0; font-family: monospace; font-size: 12px;">${data.callId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280;">Service Type:</td>
+          <td style="padding: 4px 0; font-weight: 500;">${data.serviceType}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280;">Caller Phone:</td>
+          <td style="padding: 4px 0;"><a href="tel:${data.callerPhone}" style="color: #3b82f6;">${data.callerPhone}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280;">Caller ZIP:</td>
+          <td style="padding: 4px 0; font-weight: 500;">${data.callerZip}</td>
+        </tr>
+        ${data.callerState ? `
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280;">State:</td>
+          <td style="padding: 4px 0;">${data.callerState}</td>
+        </tr>
+        ` : ''}
+        ${data.callDurationSeconds ? `
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280;">Duration:</td>
+          <td style="padding: 4px 0; font-weight: 500;">${durationDisplay}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    <!-- Auction Summary -->
+    <div style="padding: 24px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+      <h2 style="margin: 0 0 16px; font-size: 18px; color: #111827;">Auction Summary</h2>
+      <div style="display: flex; gap: 24px;">
+        <div style="flex: 1; text-align: center; padding: 16px; background-color: white; border-radius: 8px;">
+          <div style="font-size: 28px; font-weight: bold; color: #f97316;">${data.participantCount}</div>
+          <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Buyers Pinged</div>
+        </div>
+        <div style="flex: 1; text-align: center; padding: 16px; background-color: white; border-radius: 8px;">
+          <div style="font-size: 28px; font-weight: bold; color: #3b82f6;">${data.bids.filter(b => b.bidAmount > 0).length}</div>
+          <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Bids Received</div>
+        </div>
+        <div style="flex: 1; text-align: center; padding: 16px; background-color: white; border-radius: 8px;">
+          <div style="font-size: 28px; font-weight: bold; color: ${data.status === 'CONNECTED' ? '#10b981' : '#ef4444'};">
+            ${data.status === 'CONNECTED' ? `$${data.winningBidAmount?.toFixed(2)}` : '$0'}
+          </div>
+          <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Revenue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bids Table -->
+    <div style="padding: 24px;">
+      <h2 style="margin: 0 0 16px; font-size: 18px; color: #111827;">Bid Details</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+            <th style="padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280;">Buyer</th>
+            <th style="padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280;">Bid</th>
+            <th style="padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280;">Response</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${bidsTableRows}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding: 16px 24px; background-color: #f9fafb; text-align: center; font-size: 12px; color: #6b7280;">
+      <p style="margin: 0;">
+        Created: ${data.createdAt.toLocaleString()} |
+        Completed: ${data.auctionCompletedAt.toLocaleString()}
+      </p>
+      <p style="margin: 8px 0 0;">
+        <a href="https://mycontractornow.com/admin/calls" style="color: #f97316;">View in Admin Panel →</a>
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+  `;
+}
+
+function buildCallEmailText(data: CallAuctionEmailData): string {
+  const statusText = data.status === 'CONNECTED'
+    ? `CONNECTED to ${data.winningBuyerName} for $${data.winningBidAmount?.toFixed(2)}`
+    : data.status === 'NO_ANSWER'
+    ? `NO ANSWER: ${data.failureReason}`
+    : data.status === 'NO_BIDS'
+    ? `NO BIDS: ${data.failureReason}`
+    : data.status === 'CALLER_HANGUP'
+    ? 'CALLER HANGUP during auction'
+    : `FAILED: ${data.failureReason}`;
+
+  const bidsText = data.bids.length > 0
+    ? data.bids.map(bid =>
+        `  - ${bid.buyerName}: $${bid.bidAmount.toFixed(2)} (${bid.responseTimeMs}ms)${bid.isWinner ? ' [WINNER]' : ''}`
+      ).join('\n')
+    : '  No bids received';
+
+  return `
+CALL AUCTION ${data.status}
+${'='.repeat(50)}
+
+STATUS: ${statusText}
+
+CALL DETAILS
+------------
+Call ID: ${data.callId}
+Service: ${data.serviceType}
+Caller: ${data.callerPhone}
+ZIP Code: ${data.callerZip}
+${data.callerState ? `State: ${data.callerState}` : ''}
+${data.callDurationSeconds ? `Duration: ${Math.floor(data.callDurationSeconds / 60)}m ${data.callDurationSeconds % 60}s` : ''}
+
+AUCTION SUMMARY
+---------------
+Buyers Pinged: ${data.participantCount}
+Bids Received: ${data.bids.filter(b => b.bidAmount > 0).length}
+${data.status === 'CONNECTED' ? `Revenue: $${data.winningBidAmount?.toFixed(2)}` : 'Revenue: $0'}
+
+BIDS
+----
+${bidsText}
+
+TIMESTAMPS
+----------
+Created: ${data.createdAt.toLocaleString()}
+Completed: ${data.auctionCompletedAt.toLocaleString()}
+
+---
+View in Admin: https://mycontractornow.com/admin/calls
   `.trim();
 }
