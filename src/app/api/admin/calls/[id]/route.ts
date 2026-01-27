@@ -61,7 +61,7 @@ async function handleGetCallDetail(
           select: {
             id: true,
             companyName: true,
-            contactEmail: true,
+            email: true,
           },
         },
         winningBuyer: {
