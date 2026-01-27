@@ -10,10 +10,10 @@
  */
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { TextInput, EmailInput, PhoneInput, TextAreaInput } from '@/components/ui/fields';
-import { User, Mail, Lock, Phone, Globe, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, Lock, Phone, Globe, AlertCircle, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function AffiliateSignupPage() {
   const [formData, setFormData] = useState({
@@ -29,11 +29,7 @@ export default function AffiliateSignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const router = useRouter();
 
   const handlePhoneChange = (cleanValue: string) => {
     setFormData(prev => ({ ...prev, phone: cleanValue }));
@@ -90,50 +86,71 @@ export default function AffiliateSignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <div className="bg-emerald-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto">
-            <CheckCircle className="h-8 w-8 text-emerald-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-400 to-orange-500 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full">
+          {/* Logo/Brand */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white">My Contractor Now</h1>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Application Submitted!
-          </h2>
-          <p className="text-gray-600">
-            Thank you for applying to our affiliate program. Your application is being reviewed
-            and you will receive an email once your account is approved.
-          </p>
-          <Link
-            href="/affiliate/login"
-            className="inline-block text-emerald-600 hover:text-emerald-500 font-medium"
-          >
-            Return to login
-          </Link>
+
+          {/* Success Card */}
+          <div className="bg-white shadow-xl rounded-lg p-8 text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Application Submitted!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Thank you for applying to our affiliate program. Your application is being reviewed
+              and you will receive an email once your account is approved.
+            </p>
+            <Button
+              onClick={() => router.push('/login')}
+              className="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+            >
+              Return to login
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-400 to-orange-500 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="mb-6 flex items-center text-white hover:text-orange-100 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back
+        </button>
+
+        {/* Logo/Brand */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white">My Contractor Now</h1>
+          <p className="mt-2 text-sm text-orange-100">
             Become an Affiliate
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Earn commissions by referring customers to our platform
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start">
-              <AlertCircle className="h-5 w-5 text-red-400 mr-3 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+        {/* Signup Card */}
+        <div className="bg-white shadow-xl rounded-lg p-8">
+          <p className="text-sm text-gray-600 text-center mb-6">
+            Earn commissions by referring customers to our platform
+          </p>
 
-          <div className="space-y-4">
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start">
+                <AlertCircle className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
             {/* Name fields */}
             <div className="grid grid-cols-2 gap-4">
               <TextInput
@@ -144,7 +161,6 @@ export default function AffiliateSignupPage() {
                 nameOnly
                 capitalizeWords
                 icon={<User className="h-5 w-5 text-gray-400" />}
-                variant="emerald"
               />
               <TextInput
                 value={formData.lastName}
@@ -153,7 +169,6 @@ export default function AffiliateSignupPage() {
                 required
                 nameOnly
                 capitalizeWords
-                variant="emerald"
               />
             </div>
 
@@ -165,7 +180,6 @@ export default function AffiliateSignupPage() {
               required
               icon={<Mail className="h-5 w-5 text-gray-400" />}
               placeholder="you@example.com"
-              variant="emerald"
             />
 
             {/* Password fields */}
@@ -177,7 +191,6 @@ export default function AffiliateSignupPage() {
               required
               icon={<Lock className="h-5 w-5 text-gray-400" />}
               placeholder="At least 8 characters"
-              variant="emerald"
             />
 
             <TextInput
@@ -187,7 +200,6 @@ export default function AffiliateSignupPage() {
               label="Confirm password"
               required
               icon={<Lock className="h-5 w-5 text-gray-400" />}
-              variant="emerald"
             />
 
             {/* Phone - Required */}
@@ -198,7 +210,6 @@ export default function AffiliateSignupPage() {
               required
               icon={<Phone className="h-5 w-5 text-gray-400" />}
               showValidation
-              variant="emerald"
             />
 
             {/* Optional fields */}
@@ -209,7 +220,6 @@ export default function AffiliateSignupPage() {
               label="Website or social media"
               icon={<Globe className="h-5 w-5 text-gray-400" />}
               placeholder="https://..."
-              variant="emerald"
             />
 
             <TextAreaInput
@@ -218,32 +228,34 @@ export default function AffiliateSignupPage() {
               label="How will you promote us?"
               rows={3}
               placeholder="e.g., blog, YouTube, email list, social media..."
-              variant="emerald"
             />
-          </div>
 
-          <div>
             <Button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Submitting...' : 'Submit Application'}
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Application'
+              )}
             </Button>
-          </div>
+          </form>
+        </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link
-                href="/affiliate/login"
-                className="font-medium text-emerald-600 hover:text-emerald-500"
-              >
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </form>
+        {/* Footer link */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-white">
+            Already have an account?{' '}
+            <a href="/login" className="font-medium text-white underline hover:text-orange-100">
+              Sign in
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
