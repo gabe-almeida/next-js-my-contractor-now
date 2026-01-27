@@ -192,3 +192,86 @@ All configuration for Home Appointments is isolated to their buyer record:
 ## Original Email
 
 See the buyer's notes in the database for the complete original email from Home Appointments with integration instructions.
+
+---
+
+## Transformation Verification (Jan 27, 2026)
+
+### Sample PING Payload (wrapped in Request)
+```json
+{
+  "Request": {
+    "Key": "77e3c8a6...",
+    "API_Action": "pingPostLead",
+    "Mode": "ping",
+    "TYPE": "38",
+    "SRC": "Zoka",
+    "Return_Best_Price": "1",
+    "Format": "JSON",
+    "Trade": "Windows",
+    "Landing_Page": "https://mycontractornow.com",
+    "TCPA_Language": "By clicking Submit...",
+    "Zip": "90210",
+    "IP_Address": "192.168.1.100",
+    "Trusted_Form_URL": "https://cert.trustedform.com/...",
+    "TCPA_Consent": "Yes",
+    "User_Agent": "Mozilla/5.0...",
+    "Sub_ID": "aff-click-123",
+    "Pub_ID": "partner-ref-456",
+    "Homeowner": "Yes",
+    "Number_Of_Windows": "3-5",
+    "Project_Type": "Repair"
+  }
+}
+```
+
+### Sample POST Payload (wrapped in Request)
+```json
+{
+  "Request": {
+    "Key": "77e3c8a6...",
+    "API_Action": "pingPostLead",
+    "Mode": "post",
+    "TYPE": "38",
+    "SRC": "Zoka",
+    "Format": "JSON",
+    "Trade": "Windows",
+    "Landing_Page": "https://mycontractornow.com",
+    "TCPA_Language": "By clicking Submit...",
+    "Zip": "90210",
+    "IP_Address": "192.168.1.100",
+    "Trusted_Form_URL": "https://cert.trustedform.com/...",
+    "TCPA_Consent": "Yes",
+    "User_Agent": "Mozilla/5.0...",
+    "Sub_ID": "aff-click-123",
+    "Pub_ID": "partner-ref-456",
+    "Homeowner": "Yes",
+    "First_Name": "John",
+    "Last_Name": "Doe",
+    "Primary_Phone": "5551234567",
+    "Email": "john@example.com",
+    "Address": "123 Main St",
+    "City": "Beverly Hills",
+    "State": "CA",
+    "LeadiD_Token": "jornaya-token-xyz",
+    "Unique_Identifier": "lead-12345",
+    "Lead_ID": "874",
+    "Number_Of_Windows": "3-5",
+    "Project_Type": "Repair"
+  }
+}
+```
+
+### Transformation Details
+| Source Field | Target Field | Transform | Example |
+|--------------|--------------|-----------|---------|
+| `ownsHome` | `Homeowner` | `boolean.yesNo` | `true` → `"Yes"` |
+| `complianceData.tcpaConsent` | `TCPA_Consent` | `boolean.yesNo` | `true` → `"Yes"` |
+| `phone` | `Primary_Phone` | `phone.digitsOnly` | `"555-123-4567"` → `"5551234567"` |
+| `formData.projectScope` | `Project_Type` | valueMap | `"repair"` → `"Repair"` |
+| `formData.numberOfWindows` | `Number_Of_Windows` | valueMap | `"9+"` → `"10+"` |
+
+### Fixes Applied (Jan 27, 2026)
+1. **Moved static fields** - `Trade`, `Landing_Page`, `TCPA_Language` moved from invalid mapping with `sourceField: null` to `pingStaticFields`/`postStaticFields`
+2. **Fixed compliance paths** - Changed from `compliance.*` to `complianceData.*` (matching actual data structure)
+3. **Added TCPA_Language** - Static consent text since there's no dynamic field for this
