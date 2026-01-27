@@ -69,6 +69,53 @@ export function BuyerServiceCoverageTab({
   const [error, setError] = useState<string | null>(null);
   const [updatingService, setUpdatingService] = useState<string | null>(null);
 
+  const toggleActive = async (serviceTypeId: string, currentValue: boolean) => {
+    try {
+      setUpdatingService(serviceTypeId);
+
+      const response = await fetch(`/api/admin/buyers/${buyerId}/service-config`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || ''}`
+        },
+        body: JSON.stringify({
+          serviceTypeId,
+          active: !currentValue
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update service configuration');
+      }
+
+      // Update local state
+      setData(prev => {
+        if (!prev) return prev;
+        const newActiveCount = prev.services.filter(s =>
+          s.serviceTypeId === serviceTypeId ? !currentValue : s.configActive
+        ).length;
+        return {
+          ...prev,
+          services: prev.services.map(s =>
+            s.serviceTypeId === serviceTypeId
+              ? { ...s, configActive: !currentValue }
+              : s
+          ),
+          summary: {
+            ...prev.summary,
+            activeServices: newActiveCount
+          }
+        };
+      });
+    } catch (err) {
+      console.error('Error toggling active:', err);
+      alert('Failed to update active setting');
+    } finally {
+      setUpdatingService(null);
+    }
+  };
+
   const toggleNationwide = async (serviceTypeId: string, currentValue: boolean) => {
     try {
       setUpdatingService(serviceTypeId);
@@ -307,6 +354,38 @@ export function BuyerServiceCoverageTab({
                       </div>
                       <div className="text-xs text-gray-500">ZIP codes</div>
                     </div>
+                  </div>
+
+                  {/* Service Active Toggle */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                    <div className="flex items-center gap-2">
+                      {service.configActive ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-400" />
+                      )}
+                      <span className="text-sm font-medium text-gray-700">Service Active</span>
+                      <span className="text-xs text-gray-500">
+                        {service.configActive ? '(Receiving leads)' : '(Not receiving leads)'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => toggleActive(service.serviceTypeId, service.configActive)}
+                      disabled={updatingService === service.serviceTypeId}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                        service.configActive ? 'bg-green-600' : 'bg-gray-200'
+                      } ${updatingService === service.serviceTypeId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {updatingService === service.serviceTypeId ? (
+                        <Loader2 className="h-4 w-4 animate-spin absolute left-1/2 -translate-x-1/2 text-white" />
+                      ) : (
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            service.configActive ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      )}
+                    </button>
                   </div>
 
                   {/* Nationwide Toggle */}

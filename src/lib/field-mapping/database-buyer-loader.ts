@@ -733,6 +733,11 @@ export async function loadBuyerConfigForAuction(
     return null;
   }
 
+  // Skip inactive service configs - buyer shouldn't receive PINGs
+  if (!dbServiceConfig.active) {
+    return null;
+  }
+
   // Use buyer-level timeouts if service-level ones are default values
   // This allows buyer-level timeout settings to apply when templates don't specify
   if (dbServiceConfig.webhookConfig.timeouts.ping === 3000) {
