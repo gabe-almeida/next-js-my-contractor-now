@@ -29,7 +29,7 @@ const SHARED_TRANSFORMS = new Set([
   'string.uppercase', 'string.lowercase', 'string.titlecase', 'string.trim',
   'string.truncate50', 'string.truncate100', 'string.truncate255',
   // Phone
-  'phone.digitsOnly', 'phone.e164', 'phone.dashed', 'phone.dotted', 'phone.parentheses',
+  'phone.digitsOnly', 'phone.us10', 'phone.e164', 'phone.dashed', 'phone.dotted', 'phone.parentheses',
   // Date
   'date.isoDate', 'date.usDate', 'date.usDateShort', 'date.timestamp', 'date.timestampMs', 'date.iso8601',
   // Number

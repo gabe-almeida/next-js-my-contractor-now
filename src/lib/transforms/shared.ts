@@ -124,6 +124,27 @@ export function phoneDigitsOnly(value: unknown): string {
 }
 
 /**
+ * Normalize to exactly 10 US digits (strips country code if present)
+ *
+ * WHY: Many buyers (Home Appointments, etc.) expect exactly 10 digits
+ * WHEN: Phone numbers might come as +1XXXXXXXXXX, 1XXXXXXXXXX, or XXXXXXXXXX
+ * HOW: Strip non-digits, then remove leading 1 if 11 digits
+ *
+ * Examples:
+ * - "+1-555-123-4567" → "5551234567"
+ * - "15551234567"     → "5551234567"
+ * - "555-123-4567"    → "5551234567"
+ */
+export function phoneToUS10(value: unknown): string {
+  const digits = String(value).replace(/\D/g, '');
+  // If 11 digits starting with 1, strip the country code
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return digits.slice(1);
+  }
+  return digits;
+}
+
+/**
  * Convert to E.164 format (+1XXXXXXXXXX)
  */
 export function phoneToE164(value: unknown): string {
@@ -407,6 +428,8 @@ export function executeTransform(transformId: string, value: unknown): unknown {
     // Phone transforms
     case 'phone.digitsOnly':
       return phoneDigitsOnly(value);
+    case 'phone.us10':
+      return phoneToUS10(value);
     case 'phone.e164':
       return phoneToE164(value);
     case 'phone.dashed':
