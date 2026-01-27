@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { TextInput, EmailInput } from '@/components/ui/fields';
-import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
 type UserType = 'admin' | 'affiliate' | 'contractor';
 
@@ -70,12 +70,21 @@ export default function UnifiedLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-400 to-orange-500 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="mb-6 flex items-center text-white hover:text-orange-100 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back
+        </button>
+
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Contractor Now</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-white">My Contractor Now</h1>
+          <p className="mt-2 text-sm text-orange-100">
             Sign in to your account
           </p>
         </div>
@@ -112,7 +121,7 @@ export default function UnifiedLoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <>
@@ -124,28 +133,19 @@ export default function UnifiedLoginPage() {
               )}
             </Button>
           </form>
-
-          {/* Help text */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              This login works for admins, affiliates, and contractors.
-              <br />
-              You&apos;ll be redirected to your dashboard automatically.
-            </p>
-          </div>
         </div>
 
         {/* Footer links */}
         <div className="mt-6 text-center space-y-2">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white">
             Want to become an affiliate?{' '}
-            <a href="/affiliate/signup" className="font-medium text-blue-600 hover:text-blue-500">
+            <a href="/affiliate" className="font-medium text-white underline hover:text-orange-100">
               Sign up here
             </a>
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white">
             Need help?{' '}
-            <a href="mailto:support@mycontractornow.com" className="font-medium text-blue-600 hover:text-blue-500">
+            <a href="mailto:support@mycontractornow.com" className="font-medium text-white underline hover:text-orange-100">
               Contact support
             </a>
           </p>
