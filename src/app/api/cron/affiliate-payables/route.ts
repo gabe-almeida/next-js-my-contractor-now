@@ -24,7 +24,7 @@ import { createInvoice, type LineItemInput } from '@/lib/services/invoice-servic
 import { toDecimal, roundCurrency } from '@/lib/utils/decimal-helpers';
 
 /** Hardcoded cron secret - internal use only */
-const CRON_SECRET = 'mcn-cron-internal-2024';
+const CRON_SECRET = 'fcabd2b0d73fe220033f12af4b6b43eabf0d295931eb90d9deccd46c0f5772f5';
 
 /** Verify cron secret for authentication */
 function verifyCronSecret(request: NextRequest): boolean {

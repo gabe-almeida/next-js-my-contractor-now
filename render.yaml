@@ -38,7 +38,7 @@ services:
     buildCommand: echo "Using main service"
     startCommand: |
       curl -X GET "https://my-contractor-now.onrender.com/api/cron/invoice-overdue-check" \
-        -H "x-cron-secret: mcn-cron-internal-2024"
+        -H "x-cron-secret: fcabd2b0d73fe220033f12af4b6b43eabf0d295931eb90d9deccd46c0f5772f5"
 
   # Monthly Affiliate Payables - 1st of month at midnight UTC
   - type: cron
@@ -50,4 +50,4 @@ services:
     buildCommand: echo "Using main service"
     startCommand: |
       curl -X GET "https://my-contractor-now.onrender.com/api/cron/affiliate-payables" \
-        -H "x-cron-secret: mcn-cron-internal-2024"
+        -H "x-cron-secret: fcabd2b0d73fe220033f12af4b6b43eabf0d295931eb90d9deccd46c0f5772f5"

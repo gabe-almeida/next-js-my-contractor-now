@@ -19,7 +19,7 @@ import { markOverdueInvoices } from '@/lib/services/invoice-status-service';
 import { captureApiError } from '@/lib/sentry';
 
 /** Hardcoded cron secret - internal use only */
-const CRON_SECRET = 'mcn-cron-internal-2024';
+const CRON_SECRET = 'fcabd2b0d73fe220033f12af4b6b43eabf0d295931eb90d9deccd46c0f5772f5';
 
 /** Verify cron secret for authentication */
 function verifyCronSecret(request: NextRequest): boolean {
