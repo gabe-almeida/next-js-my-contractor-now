@@ -145,7 +145,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     return { success: true };
 
   } catch (error) {
-    captureApiError(error, { action: 'requestPasswordReset', email });
+    captureApiError(error, { action: 'requestPasswordReset', extra: { email } });
     logger.error('[PasswordReset] Failed to request reset', { error: (error as Error).message });
     return { success: false, error: 'Failed to process request' };
   }
