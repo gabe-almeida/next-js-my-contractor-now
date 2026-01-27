@@ -63,19 +63,12 @@ export default function AffiliateLandingPage() {
       <Header />
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 min-h-[500px] flex items-center justify-center relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-          }} />
-        </div>
-
+      <div className="bg-gradient-to-r from-orange-400 to-orange-500 min-h-[500px] flex items-center justify-center relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Earn Money Selling Home Service Leads & Calls
           </h1>
-          <p className="text-xl text-emerald-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-white mb-8 max-w-2xl mx-auto">
             Join our affiliate network and get paid for every qualified lead or call you generate.
             No inventory, no customer service - just results.
           </p>
@@ -83,7 +76,7 @@ export default function AffiliateLandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/affiliate/signup"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-emerald-700 bg-white rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-orange-600 bg-white rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
             >
               Get Started Free
             </Link>
@@ -202,9 +195,9 @@ export default function AffiliateLandingPage() {
               serviceTypes.map((service) => (
                 <div
                   key={service.id}
-                  className="bg-white rounded-lg p-6 text-center border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all"
+                  className="bg-white rounded-lg p-6 text-center border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all"
                 >
-                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <ServiceIcon name={service.name} />
                   </div>
                   <span className="font-medium text-gray-800">{service.displayName}</span>
@@ -212,13 +205,13 @@ export default function AffiliateLandingPage() {
               ))
             )}
             {/* More coming soon */}
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-6 text-center border border-emerald-200">
-              <div className="w-12 h-12 bg-emerald-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 text-center border border-orange-200">
+              <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
-              <span className="font-medium text-emerald-700">More Coming</span>
+              <span className="font-medium text-orange-700">More Coming</span>
             </div>
           </div>
         </div>
@@ -233,7 +226,7 @@ export default function AffiliateLandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">1</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
@@ -245,7 +238,7 @@ export default function AffiliateLandingPage() {
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">2</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
@@ -257,7 +250,7 @@ export default function AffiliateLandingPage() {
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">3</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
@@ -280,8 +273,8 @@ export default function AffiliateLandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -331,17 +324,17 @@ export default function AffiliateLandingPage() {
       </div>
 
       {/* Final CTA Section */}
-      <div className="py-20 bg-gradient-to-br from-emerald-600 to-emerald-800">
+      <div className="py-20 bg-gradient-to-r from-orange-400 to-orange-500">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             Ready to Start Earning?
           </h2>
-          <p className="text-xl text-emerald-100 mb-8">
+          <p className="text-xl text-white mb-8">
             Join our affiliate network today and turn your traffic into revenue
           </p>
           <Link
             href="/affiliate/signup"
-            className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold text-emerald-700 bg-white rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold text-orange-600 bg-white rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
           >
             Apply Now - It&apos;s Free
           </Link>
@@ -357,7 +350,7 @@ export default function AffiliateLandingPage() {
  * Service Icon component - returns appropriate icon based on service name
  */
 function ServiceIcon({ name }: { name: string }) {
-  const iconClass = "w-6 h-6 text-emerald-600";
+  const iconClass = "w-6 h-6 text-orange-500";
 
   switch (name.toLowerCase()) {
     case 'windows':
