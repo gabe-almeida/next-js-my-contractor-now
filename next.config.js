@@ -34,14 +34,14 @@ const nextConfig = {
               "font-src 'self' data:",
               // Allow connections to TrustedForm, Jornaya/LeadID, Radar, Meta/Facebook (Conversion API), and Sentry
               "connect-src 'self' https://*.radar.io https://*.radar.com https://radar-verify.com https://*.trustedform.com https://*.lidstatic.com https://*.leadid.com https://*.facebook.net https://graph.facebook.com https://*.sentry.io https://*.ingest.sentry.io" + (process.env.NODE_ENV === 'development' ? " wss://localhost:* ws://localhost:*" : ""),
-              // Allow iframes for TrustedForm, Jornaya/LeadID, and their CDNs
-              "frame-src 'self' https://*.trustedform.com https://*.leadid.com https://*.cloudfront.net",
+              // Allow iframes for TrustedForm, Jornaya/LeadID, their CDNs, and Facebook
+              "frame-src 'self' https://*.trustedform.com https://*.leadid.com https://*.cloudfront.net https://*.facebook.com https://*.facebook.net",
               // TrustedForm uses data: and blob: workers
               "worker-src 'self' blob: data:",
               "object-src 'none'",
               "base-uri 'self'",
-              // Jornaya/LeadID uses iframe form submissions
-              "form-action 'self' https://*.leadid.com",
+              // Jornaya/LeadID and Facebook use form submissions
+              "form-action 'self' https://*.leadid.com https://*.facebook.com https://*.facebook.net",
               "upgrade-insecure-requests"
             ].join('; ')
           },
