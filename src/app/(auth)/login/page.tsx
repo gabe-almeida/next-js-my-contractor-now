@@ -144,9 +144,9 @@ export default function UnifiedLoginPage() {
             </a>
           </p>
           <p className="text-sm text-white">
-            Need help?{' '}
-            <a href="mailto:support@mycontractornow.com" className="font-medium text-white underline hover:text-orange-100">
-              Contact support
+            Forgot your password?{' '}
+            <a href="/forgot-password" className="font-medium text-white underline hover:text-orange-100">
+              Reset password
             </a>
           </p>
         </div>
