@@ -322,3 +322,141 @@ These are automatically added to every service flow:
 | partial_remodel | No |
 | new_bathroom | Yes |
 | repair | No |
+
+---
+
+## IP Address Extraction
+
+**Location:** `src/app/api/leads/route.ts:240-244`
+
+When a lead is submitted, the client IP address is extracted for compliance tracking (sent to buyers like Koalaty Leads).
+
+**Gotcha:** The `x-forwarded-for` header contains multiple IPs when requests pass through proxies (e.g., Cloudflare → Render):
+```
+x-forwarded-for: "104.254.224.6, 172.69.59.152"
+```
+
+**Solution:** Extract only the first IP (the real client IP):
+```typescript
+const xForwardedFor = request.headers.get('x-forwarded-for');
+const clientIp = request.ip ||
+  (xForwardedFor ? xForwardedFor.split(',')[0].trim() : null) ||
+  request.headers.get('x-real-ip');
+```
+
+This ensures buyers who require a single IP address format (like Koalaty Leads) don't reject the lead.
+
+## Auction Result Tracking
+
+**Location:** `src/lib/auction/engine.ts:1221-1249`
+
+The `processBidResults` function collects ALL ping responses for accurate tracking:
+- Successful bids with amount > 0: Eligible for winner selection
+- Failed bids (success=false): Tracked for analytics but excluded from winner selection
+- Rejected promises: Recorded with error message
+
+This ensures `allBids` reflects all buyers who were actually pinged, making email notifications and analytics accurate.
+
+---
+
+## Per-Buyer Configuration Features
+
+The lead delivery system supports several per-buyer configuration options that allow customizing behavior without code changes.
+
+### Request Wrapper (`requestWrapper`)
+
+**Purpose:** Some buyers (like boberdoo-based platforms) expect the payload to be wrapped in a specific field.
+
+**Location:** `FieldMappingConfig.requestWrapper`
+
+**How it works:**
+```json
+// Without wrapper (default):
+{ "firstName": "John", "zipCode": "12345" }
+
+// With requestWrapper: "Request"
+{ "Request": { "firstName": "John", "zipCode": "12345" } }
+```
+
+**Implementation:** `src/lib/auction/engine.ts` - `wrapPayloadIfNeeded()` helper applied to all 3 fetch calls (PING, POST, cascade POST).
+
+**Isolation:** Only affects buyers with `requestWrapper` configured. No impact on other buyers.
+
+### Ping Token Configuration (`pingTokenConfig`)
+
+**Purpose:** Different buyers use different field names for the PING token returned in responses.
+
+**Location:** `FieldMappingConfig.pingTokenConfig`
+
+**Example:**
+```json
+{
+  "responseFields": ["response.lead_id", "pingToken"],  // Fields to check in PING response
+  "postFieldName": "Lead_ID",                            // Field name to use in POST
+  "buyerLeadIdResponseFields": ["leadId"],               // Optional buyer's lead ID
+  "buyerLeadIdPostField": "buyerLeadId"                  // Field name for buyer lead ID
+}
+```
+
+**Implementation:** `src/lib/auction/engine.ts` - `extractPingToken()` and `extractBuyerLeadId()` methods.
+
+### Response Mapping Configuration (`responseMappingConfig`)
+
+**Purpose:** Different buyers return different response formats. This allows configuring how to parse them.
+
+**Location:** `Buyer.responseMappingConfig` (JSON column)
+
+**Example for boberdoo:**
+```json
+{
+  "statusField": "response.status",           // Supports dot notation for nested paths
+  "bidAmountFields": ["response.price", "price"],
+  "pingMappings": {
+    "Matched": "accepted",
+    "matched": "accepted"
+  },
+  "postMappings": {
+    "Matched": "accepted",
+    "matched": "accepted"
+  }
+}
+```
+
+**Implementation:** `src/lib/buyers/response-parser.ts` - `BuyerResponseParser.parsePingResponse()`.
+
+### Static Fields (PING vs POST)
+
+**Purpose:** Different static fields for PING (minimal) vs POST (full).
+
+**Location:** `FieldMappingConfig.pingStaticFields` and `postStaticFields`
+
+**Example:**
+```json
+{
+  "pingStaticFields": {
+    "Mode": "ping",
+    "Key": "abc123"
+  },
+  "postStaticFields": {
+    "Mode": "post",
+    "Key": "abc123",
+    "homePhoneConsentLanguage": "By clicking submit..."
+  }
+}
+```
+
+---
+
+## Adding a New Network Buyer
+
+To add a new network lead buyer:
+
+1. **Create the buyer record** with API URL, auth config, and `responseMappingConfig` if non-standard
+2. **Create BuyerServiceConfig** for each service type with:
+   - `fieldMappings` JSON containing `FieldMappingConfig`
+   - `pingTokenConfig` if they use non-standard token fields
+   - `requestWrapper` if they need payload wrapping
+3. **Configure service zones** for geographic targeting
+4. **Test with their test endpoint** (many use ZIP 99999)
+
+See `docs/network-lead-buyers/` for specific buyer integration details.

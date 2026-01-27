@@ -196,6 +196,14 @@ export interface BuyerServiceConfig {
    * If not specified, uses default: pingToken/ping_token → pingToken
    */
   pingTokenConfig?: import('@/types/field-mapping').PingTokenConfig;
+
+  /**
+   * Optional wrapper field name for the entire request payload
+   * If set, payload is wrapped: { [requestWrapper]: payload }
+   * If not set, payload is sent flat/unwrapped
+   * Example: "Request" wraps as { "Request": { ...payload } }
+   */
+  requestWrapper?: string;
 }
 
 export interface PricingConfig {

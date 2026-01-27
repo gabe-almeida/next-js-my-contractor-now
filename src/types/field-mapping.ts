@@ -164,6 +164,23 @@ export interface FieldMappingConfig {
    */
   pingTokenConfig?: PingTokenConfig;
 
+  /**
+   * Optional wrapper field name for the entire request payload
+   *
+   * WHY: Some buyers (like boberdoo-based Home Appointments) expect the payload
+   *      to be wrapped in a specific field name, e.g., { "Request": { ...payload } }
+   *
+   * WHEN: Applied when serializing the final payload for PING and POST requests
+   *
+   * HOW: If set, the payload is wrapped: { [requestWrapper]: payload }
+   *      If not set (undefined), the payload is sent flat/unwrapped
+   *
+   * Example: requestWrapper: "Request"
+   *   Before: { "Mode": "ping", "Key": "..." }
+   *   After:  { "Request": { "Mode": "ping", "Key": "..." } }
+   */
+  requestWrapper?: string;
+
   /** Configuration metadata */
   meta: {
     createdAt: string;

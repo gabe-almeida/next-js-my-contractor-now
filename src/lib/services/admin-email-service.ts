@@ -319,7 +319,7 @@ function buildEmailHtml(data: AuctionEmailData): string {
           <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Buyers Pinged</div>
         </div>
         <div style="flex: 1; text-align: center; padding: 16px; background-color: white; border-radius: 8px;">
-          <div style="font-size: 28px; font-weight: bold; color: #3b82f6;">${data.bids.length}</div>
+          <div style="font-size: 28px; font-weight: bold; color: #3b82f6;">${data.bids.filter(b => b.bidAmount > 0).length}</div>
           <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Bids Received</div>
         </div>
         <div style="flex: 1; text-align: center; padding: 16px; background-color: white; border-radius: 8px;">
@@ -400,7 +400,7 @@ ${data.customerPhone ? `Phone: ${data.customerPhone}` : ''}
 AUCTION SUMMARY
 ---------------
 Buyers Pinged: ${data.participantCount}
-Bids Received: ${data.bids.length}
+Bids Received: ${data.bids.filter(b => b.bidAmount > 0).length}
 ${data.status === 'SOLD' ? `Revenue: $${data.winningBidAmount?.toFixed(2)}` : 'Revenue: $0'}
 
 BIDS

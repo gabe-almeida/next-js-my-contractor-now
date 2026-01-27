@@ -399,6 +399,33 @@ export class AuctionEngine {
   }
 
   /**
+   * Wrap payload in a wrapper field if requestWrapper is configured
+   *
+   * WHY: Some buyers (like boberdoo-based Home Appointments) expect the payload
+   *      to be wrapped in a specific field name, e.g., { "Request": { ...payload } }
+   * WHEN: Applied when serializing PING/POST payloads, before JSON.stringify
+   * HOW: If requestWrapper is set, wrap payload: { [requestWrapper]: payload }
+   *      If not set, return payload unchanged
+   *
+   * @param payload - The payload to potentially wrap
+   * @param requestWrapper - The wrapper field name (e.g., "Request"), or undefined
+   * @returns The wrapped payload if requestWrapper is set, or the original payload
+   */
+  private static wrapPayloadIfNeeded(
+    payload: Record<string, unknown>,
+    requestWrapper?: string
+  ): Record<string, unknown> {
+    if (requestWrapper) {
+      logger.debug('Wrapping payload with requestWrapper', {
+        wrapperField: requestWrapper,
+        originalKeys: Object.keys(payload).slice(0, 5)
+      });
+      return { [requestWrapper]: payload };
+    }
+    return payload;
+  }
+
+  /**
    * Extract a value from an object using dot notation path
    *
    * WHY: Support nested field paths like "data.pingToken" in PING responses
@@ -515,10 +542,12 @@ export class AuctionEngine {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       // Send PING request
+      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
+      const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
       const response = await fetch(serviceConfig.webhookConfig!.pingUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
         signal: controller.signal
       });
 
@@ -698,10 +727,12 @@ export class AuctionEngine {
       );
 
       // Send POST request
+      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
+      const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
       const response = await fetch(serviceConfig.webhookConfig!.postUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
         signal: controller.signal
       });
 
@@ -921,10 +952,12 @@ export class AuctionEngine {
       );
 
       // Send POST request
+      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
+      const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
       const response = await fetch(serviceConfig.webhookConfig!.postUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
         signal: controller.signal
       });
 
@@ -1217,25 +1250,30 @@ export class AuctionEngine {
 
   /**
    * Process bid results from Promise.allSettled
+   *
+   * WHY: Collect ALL ping responses for accurate reporting and cascade delivery
+   * WHEN: After all parallel PING requests complete
+   * HOW: Include both successful and failed bids - failures are tracked for analytics
+   *      but excluded from winner selection. This ensures allBids reflects all buyers
+   *      who were pinged, not just those with valid bids.
    */
   private static processBidResults(
     bidResults: PromiseSettledResult<BidResponse>[],
     buyers: EligibleBuyerWithConfig[]
   ): BidResponse[] {
-    const validBids: BidResponse[] = [];
+    const allBids: BidResponse[] = [];
 
     for (let i = 0; i < bidResults.length; i++) {
       const result = bidResults[i];
       const buyer = buyers[i];
 
       if (result.status === 'fulfilled') {
-        const bid = result.value;
-        if (bid.success && bid.bidAmount > 0) {
-          validBids.push(bid);
-        }
+        // Include ALL fulfilled responses - successful or not
+        // Failed responses (success=false) are tracked for analytics but won't be selected as winner
+        allBids.push(result.value);
       } else {
-        // Create error bid response
-        validBids.push({
+        // Promise rejected - create error bid response
+        allBids.push({
           buyerId: buyer.buyer.id,
           bidAmount: 0,
           success: false,
@@ -1245,7 +1283,7 @@ export class AuctionEngine {
       }
     }
 
-    return validBids;
+    return allBids;
   }
 
   /**

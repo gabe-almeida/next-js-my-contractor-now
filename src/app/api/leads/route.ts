@@ -237,8 +237,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract compliance data from request
+    // Get first IP from x-forwarded-for (proxy chain) - some buyers require single IP format
+    const xForwardedFor = request.headers.get('x-forwarded-for');
+    const clientIp = request.ip ||
+      (xForwardedFor ? xForwardedFor.split(',')[0].trim() : null) ||
+      request.headers.get('x-real-ip');
+
     const leadComplianceData = complianceData ? {
-      ipAddress: request.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      ipAddress: clientIp,
       userAgent: request.headers.get('user-agent'),
       timestamp: new Date().toISOString(),
       trustedFormData: complianceData.trustedFormCertUrl ? {
