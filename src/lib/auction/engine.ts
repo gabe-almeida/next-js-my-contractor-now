@@ -554,7 +554,7 @@ export class AuctionEngine {
         buyerName: buyer.name,
         pingUrl: serviceConfig.webhookConfig!.pingUrl,
         payloadKeys: Object.keys(finalPayload),
-        hasFormat: 'Format' in finalPayload || (finalPayload.Request && 'Format' in finalPayload.Request),
+        hasFormat: 'Format' in finalPayload || (typeof finalPayload.Request === 'object' && finalPayload.Request !== null && 'Format' in finalPayload.Request),
         requestWrapper: serviceConfig.requestWrapper || 'none',
       });
 
