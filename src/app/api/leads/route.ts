@@ -537,7 +537,7 @@ export async function POST(request: NextRequest) {
                 buyerName: buyerMap.get(bid.buyerId) || bid.buyerId,
                 buyerId: bid.buyerId,
                 bidAmount: bid.bidAmount || 0,
-                responseTimeMs: bid.responseTimeMs || 0,
+                responseTimeMs: bid.responseTime || 0,
                 isWinner: bid.buyerId === auctionResult.winningBuyerId,
                 postStatus: bid.buyerId === auctionResult.winningBuyerId
                   ? (auctionResult.postResult?.success ? 'SUCCESS' : 'FAILED')
