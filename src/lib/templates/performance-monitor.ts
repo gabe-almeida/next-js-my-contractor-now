@@ -31,7 +31,7 @@ export class PerformanceMonitor {
   };
 
   private static samples: PerformanceSample[] = [];
-  private static maxSamples = 10000;
+  private static maxSamples = 1000; // Reduced from 10000 to save memory on 512MB instance
   private static monitoringEnabled = true;
   private static alerts: PerformanceAlert[] = [];
   private static thresholds: PerformanceThresholds = {
@@ -344,9 +344,9 @@ export class PerformanceMonitor {
   private static addAlerts(alerts: PerformanceAlert[]): void {
     this.alerts.push(...alerts);
 
-    // Trim alerts to prevent memory issues
-    if (this.alerts.length > 1000) {
-      this.alerts = this.alerts.slice(-500); // Keep most recent 500 alerts
+    // Trim alerts to prevent memory issues (reduced for 512MB instance)
+    if (this.alerts.length > 200) {
+      this.alerts = this.alerts.slice(-100); // Keep most recent 100 alerts
     }
 
     // Log critical alerts immediately
