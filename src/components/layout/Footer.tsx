@@ -10,16 +10,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="relative w-8 h-8 flex-shrink-0">
-                <Image
-                  src="/assets/My-Contractor-Now-Logo-Orange-White.png"
-                  alt="My Contractor Now Logo"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-xl font-bold">My Contractor Now</span>
+            <div className="relative w-48 h-12 mb-4">
+              <Image
+                src="/assets/My-Contractor-Now-Logo-Orange-White.png"
+                alt="My Contractor Now"
+                fill
+                className="object-contain object-left"
+              />
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
               Connect with top-rated contractors in your area. Get instant quotes for roofing, windows, HVAC, and more home improvement projects.
@@ -62,7 +59,7 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; 2025 My Contractor Now. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} My Contractor Now. All rights reserved.</p>
         </div>
       </div>
     </footer>

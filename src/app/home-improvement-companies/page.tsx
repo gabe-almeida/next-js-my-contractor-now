@@ -121,7 +121,7 @@ export default function HomeImprovementCompaniesPage() {
               </div>
 
               <div className="mt-8 pt-6 border-t border-gray-200 text-center text-gray-600">
-                <p>&copy; 2025 My Contractor Now. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} My Contractor Now. All rights reserved.</p>
               </div>
             </div>
           </div>

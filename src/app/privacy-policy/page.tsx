@@ -1,6 +1,7 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import BackButton from '@/components/common/BackButton';
+import { DEFAULT_TCPA_TEXT } from '@/config/tcpa';
 
 export const metadata = {
   title: 'Privacy Policy - My Contractor Now',
@@ -95,6 +96,14 @@ export default function PrivacyPolicyPage() {
                   </p>
                 </section>
 
+                <section id="tcpa">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-3">Telephone Consumer Protection Act (TCPA)</h2>
+                  <p
+                    className="text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: DEFAULT_TCPA_TEXT }}
+                  />
+                </section>
+
                 <section>
                   <h2 className="text-xl font-semibold text-gray-800 mb-3">How to Opt-Out</h2>
                   <p className="text-gray-700 mb-3">
@@ -125,7 +134,7 @@ export default function PrivacyPolicyPage() {
               </div>
 
               <div className="mt-8 pt-6 border-t border-gray-200 text-center text-gray-600">
-                <p>&copy; 2025 My Contractor Now. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} My Contractor Now. All rights reserved.</p>
               </div>
             </div>
           </div>
