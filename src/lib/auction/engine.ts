@@ -520,6 +520,9 @@ export class AuctionEngine {
     const startTime = Date.now();
     const { buyer, serviceConfig } = buyerConfig;
 
+    // Define payload outside try so we can log it in error path
+    let payload: Record<string, any> = {};
+
     try {
       // Ensure pingTemplate exists
       if (!serviceConfig.pingTemplate) {
@@ -527,7 +530,7 @@ export class AuctionEngine {
       }
 
       // Transform lead data using buyer's PING template
-      const payload = await TemplateEngine.transform(
+      payload = await TemplateEngine.transform(
         lead,
         buyer,
         serviceConfig.pingTemplate,
@@ -544,6 +547,17 @@ export class AuctionEngine {
       // Send PING request
       // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
       const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
+
+      // Debug logging - capture what we're sending
+      logger.info('PING request payload', {
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        pingUrl: serviceConfig.webhookConfig!.pingUrl,
+        payloadKeys: Object.keys(finalPayload),
+        hasFormat: 'Format' in finalPayload || (finalPayload.Request && 'Format' in finalPayload.Request),
+        requestWrapper: serviceConfig.requestWrapper || 'none',
+      });
+
       const response = await fetch(serviceConfig.webhookConfig!.pingUrl, {
         method: 'POST',
         headers,
@@ -554,7 +568,23 @@ export class AuctionEngine {
       clearTimeout(timeoutId);
 
       const responseTime = Date.now() - startTime;
-      const responseData = await response.json();
+
+      // Try to parse as JSON, but capture raw text if it fails (e.g., XML response)
+      const responseText = await response.text();
+      let responseData: any;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        // Response is not valid JSON - log the raw response for debugging
+        logger.error('PING response not valid JSON', {
+          buyerId: buyer.id,
+          buyerName: buyer.name,
+          statusCode: response.status,
+          responsePreview: responseText.substring(0, 500),
+          contentType: response.headers.get('content-type'),
+        });
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
+      }
 
       // Use BuyerResponseParser to parse the response flexibly
       const parsedResponse = await BuyerResponseParser.parsePingResponse(
@@ -623,8 +653,20 @@ export class AuctionEngine {
       // Detect if this was a timeout (AbortController says "aborted")
       const isTimeout = this.isTimeoutError(error);
 
-      // Log failed transaction with proper timeout status
+      // Debug logging - capture what we tried to send when it failed
+      logger.error('PING request failed', {
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        error: errorMessage,
+        isTimeout,
+        payloadKeys: Object.keys(payload),
+        payloadSize: JSON.stringify(payload).length,
+        hasFormat: 'Format' in payload || (payload.Request && 'Format' in payload.Request),
+      });
+
+      // Log failed transaction with proper timeout status AND the payload we sent
       await this.logTransaction(lead.id, buyer.id, 'PING', {
+        request: payload, // Include payload so we can debug what was sent
         error: errorMessage,
         responseTime,
         success: false,
