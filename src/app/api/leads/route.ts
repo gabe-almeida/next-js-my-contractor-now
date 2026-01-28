@@ -61,7 +61,7 @@ import { sanitizeFormData } from '@/lib/security/sanitize';
 import { LeadStatus, LeadDisposition, ChangeSource } from '@/types/database';
 import { recordConversion } from '@/lib/services/affiliate-link-service';
 import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service';
-import { sendAuctionCompletionEmail, AuctionEmailData } from '@/lib/services/admin-email-service';
+import { sendAuctionCompletionEmail, buildEmailDataFromDatabase } from '@/lib/services/admin-email-service';
 import { AuctionEngine } from '@/lib/auction/engine';
 import { LeadData } from '@/lib/templates/types';
 import { trackLeadCAPI } from '@/lib/meta/conversion-api';
@@ -421,19 +421,25 @@ export async function POST(request: NextRequest) {
         trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
         trustedFormCertId: complianceData?.trustedFormCertId || undefined,
         jornayaLeadId: complianceData?.jornayaLeadId || undefined,
+        // IMPORTANT: Preserve full tcpaConsent object for field mapping access to .text
+        // The Modernize field mapping needs complianceData.tcpaConsent.text for homePhoneConsentLanguage
         complianceData: leadComplianceData ? {
           userAgent: leadComplianceData.userAgent || '',
           timestamp: leadComplianceData.timestamp || new Date().toISOString(),
           ipAddress: leadComplianceData.ipAddress,
-          tcpaConsent: leadComplianceData.tcpaConsent?.consented ?? true,
+          // Preserve full tcpaConsent object (not just boolean) for field mapping access
+          tcpaConsent: leadComplianceData.tcpaConsent || { consented: true, timestamp: new Date().toISOString(), text: '' },
           privacyPolicyAccepted: true,
           submissionSource: 'web',
           attribution: leadComplianceData.attribution,
+          // Also include trustedFormData and jornayaData for compliance field mapping access
+          trustedFormData: leadComplianceData.trustedFormData,
+          jornayaData: leadComplianceData.jornayaData,
         } : {
           userAgent: request.headers.get('user-agent') || '',
           timestamp: new Date().toISOString(),
           ipAddress: request.ip || request.headers.get('x-forwarded-for') || undefined,
-          tcpaConsent: complianceData?.tcpaConsent ?? true,
+          tcpaConsent: { consented: complianceData?.tcpaConsent ?? true, timestamp: new Date().toISOString(), text: '' },
           privacyPolicyAccepted: true,
           submissionSource: 'web',
         },
@@ -501,65 +507,21 @@ export async function POST(request: NextRequest) {
           console.log('[API /api/leads] Lead status updated:', { leadId: result.id, finalStatus });
 
           // Send admin notification email
+          // Uses database transactions as source of truth (not in-memory AuctionResult)
           try {
-            // Fetch buyer names for bids
-            const buyerIds = auctionResult.allBids?.map((bid: any) => bid.buyerId) || [];
-            const buyers = buyerIds.length > 0 ? await prisma.buyer.findMany({
-              where: { id: { in: buyerIds } },
-              select: { id: true, name: true, displayName: true }
-            }) : [];
-            const buyerMap = new Map(buyers.map(b => [b.id, b.displayName || b.name]));
+            const customerName = sanitizedFormData.firstName
+              ? `${sanitizedFormData.firstName} ${sanitizedFormData.lastName || ''}`.trim()
+              : sanitizedFormData.name;
 
-            // Fetch winning buyer name
-            let winningBuyerName: string | undefined;
-            if (auctionResult.winningBuyerId) {
-              const winningBuyer = await prisma.buyer.findUnique({
-                where: { id: auctionResult.winningBuyerId },
-                select: { name: true, displayName: true }
-              });
-              winningBuyerName = winningBuyer?.displayName || winningBuyer?.name;
-            }
-
-            const emailData: AuctionEmailData = {
-              leadId: result.id,
-              serviceType: serviceType.name,
+            const emailData = await buildEmailDataFromDatabase(
+              result.id,
+              serviceType.name,
               zipCode,
-              customerName: sanitizedFormData.firstName
-                ? `${sanitizedFormData.firstName} ${sanitizedFormData.lastName || ''}`.trim()
-                : sanitizedFormData.name,
-              customerEmail: sanitizedFormData.email,
-              customerPhone: sanitizedFormData.phone,
-              status: finalStatus === LeadStatus.SOLD ? 'SOLD'
-                : finalStatus === LeadStatus.DELIVERY_FAILED ? 'DELIVERY_FAILED'
-                : 'REJECTED',
-              participantCount: auctionResult.participantCount || 0,
-              bids: (auctionResult.allBids || []).map((bid: any) => ({
-                buyerName: buyerMap.get(bid.buyerId) || bid.buyerId,
-                buyerId: bid.buyerId,
-                bidAmount: bid.bidAmount || 0,
-                responseTimeMs: bid.responseTime || 0,
-                isWinner: bid.buyerId === auctionResult.winningBuyerId,
-                postStatus: bid.buyerId === auctionResult.winningBuyerId
-                  ? (auctionResult.postResult?.success ? 'SUCCESS' : 'FAILED')
-                  : 'NOT_ATTEMPTED',
-                // Include PING response/error for debugging
-                pingResponse: bid.metadata?.pingResponseData || null,
-                pingError: bid.error || null,
-                // Include POST response/error for winner
-                postResponse: bid.buyerId === auctionResult.winningBuyerId
-                  ? (auctionResult.postResult?.response || null)
-                  : null,
-                postError: bid.buyerId === auctionResult.winningBuyerId
-                  ? (auctionResult.postResult?.error || null)
-                  : null,
-              })),
-              winningBuyerId: auctionResult.winningBuyerId,
-              winningBuyerName,
-              winningBidAmount: auctionResult.winningBidAmount,
-              failureReason: finalStatus !== LeadStatus.SOLD ? statusReason : undefined,
-              createdAt: result.createdAt,
-              auctionCompletedAt: new Date()
-            };
+              customerName,
+              sanitizedFormData.email,
+              sanitizedFormData.phone,
+              result.createdAt
+            );
 
             await sendAuctionCompletionEmail(emailData);
             console.log('[API /api/leads] Admin notification email sent for lead:', result.id);

@@ -8,6 +8,7 @@ Documentation for all network lead buyer integrations (PING/POST auction partner
 |-------|------|----------|--------|
 | [Modernize](./modernize/) | NETWORK | Windows, Roofing, HVAC, Bathrooms | Active |
 | [Koalaty Leads](./koalaty-leads/) | NETWORK | Windows | **Inactive** |
+| [PX](./PX/) | NETWORK | Windows, Bathrooms | **Inactive** - Awaiting API Token |
 
 ## Directory Structure
 
@@ -16,8 +17,12 @@ network-lead-buyers/
 ├── README.md              # This file
 ├── modernize/
 │   └── windows.md         # (TODO: Add Modernize docs)
-└── koalaty-leads/
-    └── windows.md         # Koalaty Leads Windows integration
+├── koalaty-leads/
+│   └── windows.md         # Koalaty Leads Windows integration
+├── PX/
+│   └── README.md          # PX Windows & Bathrooms integration
+└── Home Appointments/
+    └── README.md          # Home Appointments integration
 ```
 
 ## Adding a New Buyer

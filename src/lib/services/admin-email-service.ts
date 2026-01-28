@@ -93,6 +93,173 @@ export interface AuctionEmailData {
 }
 
 /**
+ * Build AuctionEmailData from database transactions (source of truth)
+ *
+ * WHY: In-memory AuctionResult can be inaccurate due to bugs (e.g., contractor
+ *      fallback discarding network PING data). The database transactions table
+ *      is the source of truth for what actually happened during the auction.
+ * WHEN: Called before sending admin notification emails.
+ * HOW: Queries transactions table for all PING/POST records, then builds
+ *      the email data structure from actual saved records.
+ *
+ * @param leadId - The lead ID to build email data for
+ * @param serviceTypeName - The service type name (e.g., "windows")
+ * @param zipCode - The lead's ZIP code
+ * @param customerName - Customer name from form data
+ * @param customerEmail - Customer email from form data
+ * @param customerPhone - Customer phone from form data
+ * @param createdAt - When the lead was created
+ * @returns AuctionEmailData built from database records
+ */
+export async function buildEmailDataFromDatabase(
+  leadId: string,
+  serviceTypeName: string,
+  zipCode: string,
+  customerName?: string,
+  customerEmail?: string,
+  customerPhone?: string,
+  createdAt?: Date
+): Promise<AuctionEmailData> {
+  const { prisma } = await import('@/lib/db');
+
+  // Query all transactions for this lead from the database
+  const transactions = await prisma.transaction.findMany({
+    where: { leadId },
+    include: {
+      buyer: {
+        select: { id: true, name: true, displayName: true }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  // Query the lead for final status and winning buyer
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: {
+      status: true,
+      winningBuyerId: true,
+      winningBid: true,
+      createdAt: true
+    }
+  });
+
+  // Separate PING and POST transactions
+  const pingTransactions = transactions.filter(t => t.actionType === 'PING');
+  const postTransactions = transactions.filter(t => t.actionType === 'POST');
+
+  // Build a map of POST results by buyer ID
+  const postResultsByBuyer = new Map(
+    postTransactions.map(t => [t.buyerId, t])
+  );
+
+  // Determine email status from lead status
+  let emailStatus: 'SOLD' | 'REJECTED' | 'DELIVERY_FAILED' = 'REJECTED';
+  if (lead?.status === 'SOLD') {
+    emailStatus = 'SOLD';
+  } else if (lead?.status === 'DELIVERY_FAILED') {
+    emailStatus = 'DELIVERY_FAILED';
+  }
+
+  // Build bids array from PING transactions
+  const bids: AuctionEmailData['bids'] = pingTransactions.map(ping => {
+    const buyerName = ping.buyer?.displayName || ping.buyer?.name || ping.buyerId;
+    const postTransaction = postResultsByBuyer.get(ping.buyerId);
+    const isWinner = ping.buyerId === lead?.winningBuyerId;
+
+    // Parse response JSON safely
+    let pingResponse: Record<string, any> | null = null;
+    let postResponse: Record<string, any> | null = null;
+    try {
+      if (ping.response) {
+        pingResponse = typeof ping.response === 'string'
+          ? JSON.parse(ping.response)
+          : ping.response as Record<string, any>;
+      }
+      if (postTransaction?.response) {
+        postResponse = typeof postTransaction.response === 'string'
+          ? JSON.parse(postTransaction.response)
+          : postTransaction.response as Record<string, any>;
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+
+    // Determine POST status
+    let postStatus: 'SUCCESS' | 'FAILED' | 'NOT_ATTEMPTED' = 'NOT_ATTEMPTED';
+    if (postTransaction) {
+      postStatus = postTransaction.status === 'SUCCESS' ? 'SUCCESS' : 'FAILED';
+    }
+
+    return {
+      buyerName,
+      buyerId: ping.buyerId,
+      bidAmount: ping.bidAmount ? Number(ping.bidAmount) : 0,
+      responseTimeMs: ping.responseTime || 0,
+      isWinner,
+      postStatus,
+      pingResponse,
+      pingError: ping.errorMessage || null,
+      postResponse: postTransaction ? postResponse : null,
+      postError: postTransaction?.errorMessage || null,
+    };
+  });
+
+  // Get winning buyer name
+  let winningBuyerName: string | undefined;
+  if (lead?.winningBuyerId) {
+    const winningBuyer = await prisma.buyer.findUnique({
+      where: { id: lead.winningBuyerId },
+      select: { name: true, displayName: true }
+    });
+    winningBuyerName = winningBuyer?.displayName || winningBuyer?.name;
+  }
+
+  // Determine failure reason if not sold
+  let failureReason: string | undefined;
+  if (emailStatus !== 'SOLD') {
+    if (pingTransactions.length === 0) {
+      failureReason = 'No eligible buyers found for auction';
+    } else if (bids.every(b => b.bidAmount === 0)) {
+      failureReason = 'No winning bids received';
+    } else {
+      // Find the POST failure reason from the highest bidder
+      const failedPost = postTransactions.find(t => t.status === 'FAILED');
+      if (failedPost?.response) {
+        try {
+          const response = typeof failedPost.response === 'string'
+            ? JSON.parse(failedPost.response)
+            : failedPost.response;
+          failureReason = response.message || response.error || 'Delivery failed';
+        } catch {
+          failureReason = 'Delivery failed';
+        }
+      } else {
+        failureReason = 'All buyers rejected the lead';
+      }
+    }
+  }
+
+  return {
+    leadId,
+    serviceType: serviceTypeName,
+    zipCode,
+    customerName,
+    customerEmail,
+    customerPhone,
+    status: emailStatus,
+    participantCount: pingTransactions.length,
+    bids,
+    winningBuyerId: lead?.winningBuyerId || undefined,
+    winningBuyerName,
+    winningBidAmount: lead?.winningBid ? Number(lead.winningBid) : undefined,
+    failureReason,
+    createdAt: createdAt || lead?.createdAt || new Date(),
+    auctionCompletedAt: new Date()
+  };
+}
+
+/**
  * Send admin notification email after auction completes
  *
  * WHY: Keep admin informed of all lead auction outcomes in real-time.

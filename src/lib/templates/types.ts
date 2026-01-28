@@ -83,13 +83,38 @@ export interface LeadData {
   updatedAt: Date;
 }
 
+/**
+ * TCPA Consent object - stores consent status and the actual consent language text
+ * WHY: Buyers like Modernize require the full consent text (homePhoneConsentLanguage field)
+ * WHEN: Used during field mapping transformation to populate consent language fields
+ */
+export interface TcpaConsentData {
+  consented: boolean;
+  timestamp: string;
+  text: string; // The actual TCPA consent language shown to the user
+}
+
 export interface ComplianceData {
   userAgent: string;
   timestamp: string;
   ipAddress?: string;
-  tcpaConsent: boolean;
+  // tcpaConsent can be either a boolean (legacy) or full object (current)
+  // Field mappings access complianceData.tcpaConsent.text for consent language
+  tcpaConsent: boolean | TcpaConsentData;
   privacyPolicyAccepted: boolean;
   submissionSource: string;
+  // TrustedForm data for compliance
+  trustedFormData?: {
+    certUrl?: string;
+    certId?: string;
+    validated?: boolean;
+    validatedAt?: string;
+  };
+  // Jornaya data for compliance
+  jornayaData?: {
+    leadId?: string;
+    pixelFired?: boolean;
+  };
   geoLocation?: {
     latitude?: number;
     longitude?: number;

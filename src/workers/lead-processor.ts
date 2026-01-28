@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { AppError } from '@/lib/utils';
 import { AuctionEngine } from '@/lib/auction/engine';
 import { recordSystemStatusChange } from '@/lib/services/lead-accounting-service';
-import { sendAuctionCompletionEmail, AuctionEmailData } from '@/lib/services/admin-email-service';
+import { sendAuctionCompletionEmail, buildEmailDataFromDatabase } from '@/lib/services/admin-email-service';
 import { LeadStatus, ChangeSource } from '@/types/database';
 import type { LeadData, ServiceType, ComplianceData } from '@/lib/templates/types';
 
@@ -61,85 +61,37 @@ function convertToLeadData(lead: any): LeadData {
  *
  * WHY: Keep admin informed of all lead auction outcomes in real-time.
  * WHEN: Called after every auction completion (SOLD, REJECTED, DELIVERY_FAILED).
- * HOW: Gathers auction data, fetches buyer names, and sends formatted email.
+ * HOW: Queries database transactions (source of truth) and sends formatted email.
+ *      This ensures email always reflects actual saved data, not in-memory results.
  */
 async function sendAuctionNotification(
   lead: any,
-  leadData: LeadData,
-  auctionResult: any,
-  status: 'SOLD' | 'REJECTED' | 'DELIVERY_FAILED',
-  failureReason?: string
+  leadData: LeadData
 ): Promise<void> {
   try {
-    // Fetch buyer names for all bids
-    const buyerIds = auctionResult.allBids.map((bid: any) => bid.buyerId);
-    const buyers = await prisma.buyer.findMany({
-      where: { id: { in: buyerIds } },
-      select: { id: true, name: true, displayName: true }
-    });
-    const buyerMap = new Map(buyers.map(b => [b.id, b.displayName || b.name]));
-
-    // Fetch winning buyer name if applicable
-    let winningBuyerName: string | undefined;
-    if (auctionResult.winningBuyerId) {
-      const winningBuyer = await prisma.buyer.findUnique({
-        where: { id: auctionResult.winningBuyerId },
-        select: { name: true, displayName: true }
-      });
-      winningBuyerName = winningBuyer?.displayName || winningBuyer?.name;
-    }
-
     // Parse form data for customer info
     const formData = typeof lead.formData === 'string'
       ? JSON.parse(lead.formData)
       : lead.formData;
 
-    // Build bids array with buyer names, post status, and response data for debugging
-    const bids: AuctionEmailData['bids'] = auctionResult.allBids.map((bid: any) => ({
-      buyerName: buyerMap.get(bid.buyerId) || bid.buyerId,
-      buyerId: bid.buyerId,
-      bidAmount: bid.bidAmount || 0,
-      responseTimeMs: bid.responseTime || 0,
-      isWinner: bid.buyerId === auctionResult.winningBuyerId,
-      postStatus: bid.buyerId === auctionResult.winningBuyerId
-        ? (auctionResult.postResult?.success ? 'SUCCESS' : 'FAILED')
-        : 'NOT_ATTEMPTED',
-      // Include PING response/error for debugging
-      pingResponse: bid.metadata?.pingResponseData || null,
-      pingError: bid.error || null,
-      // Include POST response/error for winner
-      postResponse: bid.buyerId === auctionResult.winningBuyerId
-        ? (auctionResult.postResult?.response || null)
-        : null,
-      postError: bid.buyerId === auctionResult.winningBuyerId
-        ? (auctionResult.postResult?.error || null)
-        : null,
-    }));
+    const customerName = formData?.name || formData?.firstName
+      ? `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.name
+      : undefined;
 
-    // Build email data
-    const emailData: AuctionEmailData = {
-      leadId: lead.id,
-      serviceType: leadData.serviceType.name,
-      zipCode: leadData.zipCode,
-      customerName: formData?.name || formData?.firstName
-        ? `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.name
-        : undefined,
-      customerEmail: formData?.email,
-      customerPhone: formData?.phone,
-      status,
-      participantCount: auctionResult.participantCount,
-      bids,
-      winningBuyerId: auctionResult.winningBuyerId,
-      winningBuyerName,
-      winningBidAmount: auctionResult.winningBidAmount,
-      failureReason,
-      createdAt: new Date(lead.createdAt),
-      auctionCompletedAt: new Date()
-    };
+    // Build email data from database transactions (source of truth)
+    const emailData = await buildEmailDataFromDatabase(
+      lead.id,
+      leadData.serviceType.name,
+      leadData.zipCode,
+      customerName,
+      formData?.email,
+      formData?.phone,
+      new Date(lead.createdAt)
+    );
 
-    // Send email (non-blocking - don't wait for result)
+    // Send email
     await sendAuctionCompletionEmail(emailData);
-    console.log(`Admin notification email sent for lead ${lead.id} (${status})`);
+    console.log(`Admin notification email sent for lead ${lead.id} (${emailData.status})`);
   } catch (error) {
     // Log but don't throw - email failure shouldn't break lead processing
     console.error(`Failed to send admin notification email for lead ${lead.id}:`, error);
@@ -227,8 +179,8 @@ async function processLead(job: any) {
 
       console.log(`Lead ${leadId} sold to buyer ${auctionResult.winningBuyerId} for $${auctionResult.winningBidAmount}`);
 
-      // Send admin notification email
-      await sendAuctionNotification(lead, leadData, auctionResult, 'SOLD');
+      // Send admin notification email (queries DB for source of truth)
+      await sendAuctionNotification(lead, leadData);
     } else if (auctionResult.winningBuyerId && !auctionResult.postResult?.success) {
       // Auction had winner but POST failed
       const failedResult = await prisma.lead.updateMany({
@@ -252,9 +204,8 @@ async function processLead(job: any) {
 
       console.log(`Lead ${leadId} auction won by ${auctionResult.winningBuyerId} but delivery failed`);
 
-      // Send admin notification email
-      const deliveryFailureReason = `Delivery failed to buyer: ${auctionResult.postResult?.error || 'Unknown error'}`;
-      await sendAuctionNotification(lead, leadData, auctionResult, 'DELIVERY_FAILED', deliveryFailureReason);
+      // Send admin notification email (queries DB for source of truth)
+      await sendAuctionNotification(lead, leadData);
     } else {
       // No winner or no eligible buyers
       const rejectedResult = await prisma.lead.updateMany({
@@ -281,11 +232,8 @@ async function processLead(job: any) {
 
       console.log(`Lead ${leadId} rejected - ${auctionResult.participantCount === 0 ? 'no eligible buyers' : 'no winning bids'}`);
 
-      // Send admin notification email
-      const rejectionReason = auctionResult.participantCount === 0
-        ? 'No eligible buyers found for auction'
-        : 'No winning bids received';
-      await sendAuctionNotification(lead, leadData, auctionResult, 'REJECTED', rejectionReason);
+      // Send admin notification email (queries DB for source of truth)
+      await sendAuctionNotification(lead, leadData);
     }
 
     console.log(`Lead ${leadId} processing completed successfully`);
