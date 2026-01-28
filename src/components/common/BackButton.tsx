@@ -20,12 +20,14 @@ export default function BackButton({ className = '', label = 'Back' }: BackButto
   };
 
   return (
-    <button
-      onClick={handleBack}
-      className={`inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors ${className}`}
-    >
-      <ArrowLeftIcon className="w-5 h-5" />
-      {label}
-    </button>
+    <div className={`sticky top-0 z-10 bg-white py-3 ${className}`}>
+      <button
+        onClick={handleBack}
+        className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+      >
+        <ArrowLeftIcon className="w-5 h-5" />
+        {label}
+      </button>
+    </div>
   );
 }
