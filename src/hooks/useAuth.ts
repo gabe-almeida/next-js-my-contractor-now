@@ -99,7 +99,7 @@ export function useAuth(): UseAuthReturn {
       localStorage.removeItem('mcn-auth-token');
       localStorage.removeItem('mcn-auth-user');
       setUser(null);
-      router.push('/admin/login');
+      router.push('/login');
     }
   }, [router]);
 

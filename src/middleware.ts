@@ -2,8 +2,8 @@
  * Next.js Middleware - Route Protection
  *
  * WHY: Protect admin routes at the edge before page renders
- * WHEN: Every request to /admin/* routes (except /admin/login)
- * HOW: Verify JWT from cookie, redirect to login if invalid
+ * WHEN: Every request to /admin/* routes
+ * HOW: Verify JWT from cookie, redirect to unified /login if invalid
  */
 
 import { NextResponse } from 'next/server';
@@ -13,7 +13,7 @@ import type { NextRequest } from 'next/server';
 const PROTECTED_ROUTES = ['/admin'];
 
 // Routes that should NOT be protected (public auth routes)
-const PUBLIC_AUTH_ROUTES = ['/admin/login', '/api/auth/admin/login'];
+const PUBLIC_AUTH_ROUTES = ['/api/auth/admin/login', '/api/auth/login'];
 
 // Simple JWT decode (no verification - just to check expiry)
 // Full verification happens in API routes
@@ -43,12 +43,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get token from cookie
-  const token = request.cookies.get('mcn-auth-token')?.value;
+  // Get token from cookie (check both legacy and new cookie names)
+  const token = request.cookies.get('admin_token')?.value
+    || request.cookies.get('auth_token')?.value
+    || request.cookies.get('mcn-auth-token')?.value;
 
-  // No token - redirect to login
+  // No token - redirect to unified login
   if (!token) {
-    const loginUrl = new URL('/admin/login', request.url);
+    const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('returnUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -56,7 +58,7 @@ export function middleware(request: NextRequest) {
   // Decode token to check expiry (basic check)
   const payload = decodeJwtPayload(token);
   if (!payload || !payload.exp) {
-    const loginUrl = new URL('/admin/login', request.url);
+    const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('returnUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -64,10 +66,12 @@ export function middleware(request: NextRequest) {
   // Check if token is expired
   const now = Math.floor(Date.now() / 1000);
   if (payload.exp < now) {
-    // Token expired - clear cookie and redirect
-    const loginUrl = new URL('/admin/login', request.url);
+    // Token expired - clear cookies and redirect
+    const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('returnUrl', pathname);
     const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete('admin_token');
+    response.cookies.delete('auth_token');
     response.cookies.delete('mcn-auth-token');
     return response;
   }
