@@ -160,7 +160,8 @@ export class AuctionEngine {
             lead,
             networkResult.winningBidAmount, // Pass network bid for HYBRID pricing
             auctionId,
-            startTime
+            startTime,
+            networkResult // Pass network result to preserve PING data in email notifications
           );
         }
 
@@ -240,12 +241,25 @@ export class AuctionEngine {
 
   /**
    * Deliver to contractors and return AuctionResult format
+   *
+   * WHY: Converts contractor delivery results to unified AuctionResult format
+   * WHEN: Called when falling back to contractors after network auction fails,
+   *       or when only contractors are eligible for a lead
+   * HOW: Runs contractor delivery, then merges results with any network PING
+   *      data to preserve the full auction history for email notifications
+   *
+   * @param lead - The lead to deliver
+   * @param networkWinningBid - If network auction ran, their highest bid (for HYBRID pricing)
+   * @param auctionId - Unique auction identifier
+   * @param startTime - When auction started (for duration calculation)
+   * @param networkResult - Optional: Results from network auction (to preserve PING data)
    */
   private static async deliverToContractorsWithResult(
     lead: LeadData,
     networkWinningBid: number | undefined,
     auctionId: string,
-    startTime: number
+    startTime: number,
+    networkResult?: AuctionResult
   ): Promise<AuctionResult> {
     const leadForDelivery: LeadForDelivery = {
       id: lead.id,
@@ -265,19 +279,33 @@ export class AuctionEngine {
 
     const auctionDurationMs = Date.now() - startTime;
 
+    // Build contractor bids array
+    const contractorBids: BidResponse[] = contractorResult.deliveredTo.map(d => ({
+      buyerId: d.buyerId,
+      bidAmount: d.price,
+      success: true,
+      responseTime: 0,
+    }));
+
+    // Merge network bids with contractor bids to preserve full auction history
+    // This ensures email notifications show all PING attempts, not just contractors
+    const allBids = networkResult?.allBids
+      ? [...networkResult.allBids, ...contractorBids]
+      : contractorBids;
+
+    // Calculate total participant count (network + contractors)
+    const networkParticipantCount = networkResult?.participantCount || 0;
+    const contractorParticipantCount = contractorResult.deliveredTo.length;
+    const totalParticipantCount = networkParticipantCount + contractorParticipantCount;
+
     // Convert contractor result to AuctionResult format
     return {
       leadId: lead.id,
       winningBuyerId: contractorResult.deliveredTo[0]?.buyerId,
       winningBidAmount: contractorResult.totalRevenue,
-      allBids: contractorResult.deliveredTo.map(d => ({
-        buyerId: d.buyerId,
-        bidAmount: d.price,
-        success: true,
-        responseTime: 0,
-      })),
+      allBids,
       auctionDurationMs,
-      participantCount: contractorResult.deliveredTo.length,
+      participantCount: totalParticipantCount,
       status: contractorResult.success ? 'completed' : 'failed',
       postResult: contractorResult.success ? {
         success: true,
