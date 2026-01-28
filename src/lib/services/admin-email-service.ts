@@ -24,6 +24,16 @@ const sesClient = new SESClient({
 
 // Admin email recipient
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'gabe@mycontractornow.com';
+
+// Helper to escape HTML entities
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'notifications@mycontractornow.com';
 const FROM_NAME = 'My Contractor Now';
 const FROM_ADDRESS = `${FROM_NAME} <${FROM_EMAIL}>`;
@@ -62,6 +72,11 @@ export interface AuctionEmailData {
     responseTimeMs: number;
     isWinner: boolean;
     postStatus?: 'SUCCESS' | 'FAILED' | 'NOT_ATTEMPTED';
+    // PING/POST response data for debugging
+    pingResponse?: Record<string, any> | null;
+    pingError?: string | null;
+    postResponse?: Record<string, any> | null;
+    postError?: string | null;
   }>;
 
   // Winner info (if sold)
@@ -234,7 +249,20 @@ function buildEmailHtml(data: AuctionEmailData): string {
   const statusColor = data.status === 'SOLD' ? '#10b981' : data.status === 'DELIVERY_FAILED' ? '#f59e0b' : '#ef4444';
   const statusText = data.status === 'SOLD' ? 'SOLD' : data.status === 'DELIVERY_FAILED' ? 'DELIVERY FAILED' : 'NOT SOLD';
 
-  // Build bids table rows
+  // Helper to format response for display
+  const formatResponse = (response: Record<string, any> | null | undefined, error: string | null | undefined): string => {
+    if (error) {
+      return `<span style="color: #ef4444; font-size: 11px;">${escapeHtml(error.substring(0, 150))}${error.length > 150 ? '...' : ''}</span>`;
+    }
+    if (!response) {
+      return '<span style="color: #9ca3af; font-size: 11px;">No response</span>';
+    }
+    // Show key fields from response
+    const summary = JSON.stringify(response).substring(0, 200);
+    return `<code style="font-size: 10px; background: #f3f4f6; padding: 2px 4px; border-radius: 3px; word-break: break-all;">${escapeHtml(summary)}${summary.length >= 200 ? '...' : ''}</code>`;
+  };
+
+  // Build bids table rows with response details
   const bidsTableRows = data.bids.length > 0
     ? data.bids.map(bid => `
         <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -242,7 +270,7 @@ function buildEmailHtml(data: AuctionEmailData): string {
             ${bid.buyerName}
             ${bid.isWinner ? ' 🏆' : ''}
           </td>
-          <td style="padding: 12px; color: #10b981; font-weight: bold;">$${bid.bidAmount.toFixed(2)}</td>
+          <td style="padding: 12px; color: ${bid.bidAmount > 0 ? '#10b981' : '#ef4444'}; font-weight: bold;">$${bid.bidAmount.toFixed(2)}</td>
           <td style="padding: 12px; color: #6b7280;">${bid.responseTimeMs}ms</td>
           <td style="padding: 12px;">
             ${bid.postStatus === 'SUCCESS'
@@ -250,6 +278,16 @@ function buildEmailHtml(data: AuctionEmailData): string {
               : bid.postStatus === 'FAILED'
               ? '<span style="color: #ef4444;">✗ Failed</span>'
               : '<span style="color: #6b7280;">—</span>'}
+          </td>
+        </tr>
+        <tr style="background-color: #fafafa;">
+          <td colspan="4" style="padding: 8px 12px;">
+            <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">PING Response:</div>
+            ${formatResponse(bid.pingResponse, bid.pingError)}
+            ${bid.postStatus && bid.postStatus !== 'NOT_ATTEMPTED' ? `
+              <div style="font-size: 11px; color: #6b7280; margin-top: 8px; margin-bottom: 4px;">POST Response:</div>
+              ${formatResponse(bid.postResponse, bid.postError)}
+            ` : ''}
           </td>
         </tr>
       `).join('')
@@ -358,7 +396,7 @@ function buildEmailHtml(data: AuctionEmailData): string {
         Completed: ${data.auctionCompletedAt.toLocaleString()}
       </p>
       <p style="margin: 8px 0 0;">
-        <a href="https://mycontractornow.com/admin/leads" style="color: #f97316;">View in Admin Panel →</a>
+        <a href="https://mycontractornow.com/admin/leads/${data.leadId}" style="color: #f97316;">View in Admin Panel →</a>
       </p>
     </div>
 

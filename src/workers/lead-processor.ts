@@ -94,7 +94,7 @@ async function sendAuctionNotification(
       ? JSON.parse(lead.formData)
       : lead.formData;
 
-    // Build bids array with buyer names and post status
+    // Build bids array with buyer names, post status, and response data for debugging
     const bids: AuctionEmailData['bids'] = auctionResult.allBids.map((bid: any) => ({
       buyerName: buyerMap.get(bid.buyerId) || bid.buyerId,
       buyerId: bid.buyerId,
@@ -103,7 +103,17 @@ async function sendAuctionNotification(
       isWinner: bid.buyerId === auctionResult.winningBuyerId,
       postStatus: bid.buyerId === auctionResult.winningBuyerId
         ? (auctionResult.postResult?.success ? 'SUCCESS' : 'FAILED')
-        : 'NOT_ATTEMPTED'
+        : 'NOT_ATTEMPTED',
+      // Include PING response/error for debugging
+      pingResponse: bid.metadata?.pingResponseData || null,
+      pingError: bid.error || null,
+      // Include POST response/error for winner
+      postResponse: bid.buyerId === auctionResult.winningBuyerId
+        ? (auctionResult.postResult?.response || null)
+        : null,
+      postError: bid.buyerId === auctionResult.winningBuyerId
+        ? (auctionResult.postResult?.error || null)
+        : null,
     }));
 
     // Build email data

@@ -541,7 +541,17 @@ export async function POST(request: NextRequest) {
                 isWinner: bid.buyerId === auctionResult.winningBuyerId,
                 postStatus: bid.buyerId === auctionResult.winningBuyerId
                   ? (auctionResult.postResult?.success ? 'SUCCESS' : 'FAILED')
-                  : 'NOT_ATTEMPTED'
+                  : 'NOT_ATTEMPTED',
+                // Include PING response/error for debugging
+                pingResponse: bid.metadata?.pingResponseData || null,
+                pingError: bid.error || null,
+                // Include POST response/error for winner
+                postResponse: bid.buyerId === auctionResult.winningBuyerId
+                  ? (auctionResult.postResult?.response || null)
+                  : null,
+                postError: bid.buyerId === auctionResult.winningBuyerId
+                  ? (auctionResult.postResult?.error || null)
+                  : null,
               })),
               winningBuyerId: auctionResult.winningBuyerId,
               winningBuyerName,
