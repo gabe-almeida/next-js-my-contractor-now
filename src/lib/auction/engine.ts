@@ -426,6 +426,56 @@ export class AuctionEngine {
   }
 
   /**
+   * Serialize payload based on content type configuration
+   *
+   * WHY: Some buyers (like boberdoo) require form-urlencoded data instead of JSON
+   * WHEN: Sending PING and POST requests to buyers
+   * HOW: Check contentType config and serialize accordingly
+   *
+   * @param payload - The payload object to serialize
+   * @param contentType - The content type ("json" or "form-urlencoded")
+   * @returns Serialized string (JSON or URL-encoded form data)
+   */
+  private static serializePayload(
+    payload: Record<string, unknown>,
+    contentType?: "json" | "form-urlencoded"
+  ): string {
+    if (contentType === 'form-urlencoded') {
+      // Flatten nested objects for form encoding
+      const flatPayload = this.flattenForFormEncoding(payload);
+      return new URLSearchParams(flatPayload).toString();
+    }
+    // Default to JSON
+    return JSON.stringify(payload);
+  }
+
+  /**
+   * Flatten an object for form-urlencoded encoding
+   *
+   * WHY: URLSearchParams only handles string key-value pairs
+   * WHEN: Converting nested payload to form-urlencoded format
+   * HOW: Convert all values to strings, skip nested objects
+   */
+  private static flattenForFormEncoding(
+    obj: Record<string, unknown>
+  ): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null || value === undefined) {
+        continue; // Skip null/undefined values
+      }
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        // Skip nested objects - form-urlencoded doesn't support them
+        // The static fields should already be at the top level
+        continue;
+      }
+      // Convert to string
+      result[key] = String(value);
+    }
+    return result;
+  }
+
+  /**
    * Extract a value from an object using dot notation path
    *
    * WHY: Support nested field paths like "data.pingToken" in PING responses
@@ -529,18 +579,6 @@ export class AuctionEngine {
         throw new Error(`Missing pingTemplate for buyer ${buyer.id}`);
       }
 
-      // DEBUG: Log serviceConfig for Home Appointments
-      if (buyer.id === 'home-appointments-001') {
-        console.log('[DEBUG sendPingToBuyer] Home Appointments serviceConfig:', {
-          buyerId: buyer.id,
-          hasRequestWrapper: !!serviceConfig.requestWrapper,
-          requestWrapper: serviceConfig.requestWrapper,
-          hasAdditionalFields: !!serviceConfig.pingTemplate.additionalFields,
-          additionalFieldsKeys: serviceConfig.pingTemplate.additionalFields ? Object.keys(serviceConfig.pingTemplate.additionalFields) : [],
-          mappingsCount: serviceConfig.pingTemplate.mappings?.length || 0,
-        });
-      }
-
       // Transform lead data using buyer's PING template
       payload = await TemplateEngine.transform(
         lead,
@@ -549,7 +587,7 @@ export class AuctionEngine {
         serviceConfig.pingTemplate?.includeCompliance ?? false
       );
 
-      // Prepare request headers
+      // Prepare request headers (content-type depends on buyer config)
       const headers = this.prepareHeaders(buyer, serviceConfig, 'PING');
 
       // Create abort controller for timeout
@@ -557,23 +595,19 @@ export class AuctionEngine {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       // Send PING request
-      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
-      const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
+      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo JSON)
+      // Note: requestWrapper only applies to JSON format, not form-urlencoded
+      const finalPayload = serviceConfig.contentType === 'form-urlencoded'
+        ? payload  // Form-encoded doesn't use wrapper
+        : this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
 
-      // Debug logging - capture what we're sending
-      logger.info('PING request payload', {
-        buyerId: buyer.id,
-        buyerName: buyer.name,
-        pingUrl: serviceConfig.webhookConfig!.pingUrl,
-        payloadKeys: Object.keys(finalPayload),
-        hasFormat: 'Format' in finalPayload || (typeof finalPayload.Request === 'object' && finalPayload.Request !== null && 'Format' in finalPayload.Request),
-        requestWrapper: serviceConfig.requestWrapper || 'none',
-      });
+      // Serialize payload based on content type
+      const requestBody = this.serializePayload(finalPayload, serviceConfig.contentType);
 
       const response = await fetch(serviceConfig.webhookConfig!.pingUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(finalPayload),
+        body: requestBody,
         signal: controller.signal
       });
 
@@ -781,12 +815,18 @@ export class AuctionEngine {
       );
 
       // Send POST request
-      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
-      const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
+      // Apply requestWrapper if configured (only for JSON, not form-urlencoded)
+      const finalPayload = serviceConfig.contentType === 'form-urlencoded'
+        ? payload
+        : this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
+
+      // Serialize payload based on content type
+      const requestBody = this.serializePayload(finalPayload, serviceConfig.contentType);
+
       const response = await fetch(serviceConfig.webhookConfig!.postUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(finalPayload),
+        body: requestBody,
         signal: controller.signal
       });
 
@@ -1006,12 +1046,18 @@ export class AuctionEngine {
       );
 
       // Send POST request
-      // Apply requestWrapper if configured (e.g., { "Request": { ...payload } } for boberdoo)
-      const finalPayload = this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
+      // Apply requestWrapper if configured (only for JSON, not form-urlencoded)
+      const finalPayload = serviceConfig.contentType === 'form-urlencoded'
+        ? payload
+        : this.wrapPayloadIfNeeded(payload, serviceConfig.requestWrapper);
+
+      // Serialize payload based on content type
+      const requestBody = this.serializePayload(finalPayload, serviceConfig.contentType);
+
       const response = await fetch(serviceConfig.webhookConfig!.postUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(finalPayload),
+        body: requestBody,
         signal: controller.signal
       });
 
@@ -1461,8 +1507,13 @@ export class AuctionEngine {
     serviceConfig: BuyerServiceConfig,
     requestType: 'PING' | 'POST'
   ): Record<string, string> {
+    // Determine content type based on buyer config (default to JSON)
+    const contentType = serviceConfig.contentType === 'form-urlencoded'
+      ? 'application/x-www-form-urlencoded'
+      : 'application/json';
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Content-Type': contentType,
       'X-Request-Type': requestType,
       'X-Service-Type': serviceConfig.serviceTypeName,
       'X-Lead-Source': 'contractor-platform',

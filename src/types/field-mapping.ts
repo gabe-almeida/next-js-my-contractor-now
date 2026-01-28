@@ -181,6 +181,23 @@ export interface FieldMappingConfig {
    */
   requestWrapper?: string;
 
+  /**
+   * Content type for HTTP requests to this buyer
+   *
+   * WHY: Some buyers (like boberdoo-based systems) require form-urlencoded data
+   *      instead of JSON. Most buyers use JSON (the default).
+   *
+   * WHEN: Applied when sending PING and POST requests
+   *
+   * HOW: If "form-urlencoded", payload is sent as application/x-www-form-urlencoded
+   *      If not set (undefined) or "json", payload is sent as application/json (default)
+   *
+   * Example: contentType: "form-urlencoded"
+   *   Content-Type: application/x-www-form-urlencoded
+   *   Body: Key=abc123&Mode=ping&Zip=12345
+   */
+  contentType?: "json" | "form-urlencoded";
+
   /** Configuration metadata */
   meta: {
     createdAt: string;

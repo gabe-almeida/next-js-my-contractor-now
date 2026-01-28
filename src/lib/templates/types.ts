@@ -204,6 +204,13 @@ export interface BuyerServiceConfig {
    * Example: "Request" wraps as { "Request": { ...payload } }
    */
   requestWrapper?: string;
+
+  /**
+   * Content type for HTTP requests
+   * "form-urlencoded" sends as application/x-www-form-urlencoded
+   * "json" or undefined sends as application/json (default)
+   */
+  contentType?: "json" | "form-urlencoded";
 }
 
 export interface PricingConfig {

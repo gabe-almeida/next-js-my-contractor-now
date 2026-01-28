@@ -659,21 +659,9 @@ export function toServiceConfig(
   // Include static fields as additionalFields in the templates
   // Use pingStaticFields for PING and postStaticFields for POST
   // Fallback to legacy staticFields for backward compatibility with old configs
-  const { pingStaticFields, postStaticFields, staticFields, pingTokenConfig, requestWrapper } = dbConfig.fieldMappingConfig;
+  const { pingStaticFields, postStaticFields, staticFields, pingTokenConfig, requestWrapper, contentType } = dbConfig.fieldMappingConfig;
   const pingFields = pingStaticFields || staticFields || {};
   const postFields = postStaticFields || staticFields || {};
-
-  // DEBUG: Log static fields extraction for Home Appointments debugging
-  if (dbConfig.buyerId === 'home-appointments-001' || pingStaticFields?.API_Action) {
-    console.log('[DEBUG toServiceConfig] Home Appointments config extraction:', {
-      buyerId: dbConfig.buyerId,
-      hasPingStaticFields: !!pingStaticFields,
-      pingStaticFieldsKeys: pingStaticFields ? Object.keys(pingStaticFields) : [],
-      hasRequestWrapper: !!requestWrapper,
-      requestWrapper: requestWrapper,
-      fieldMappingConfigKeys: Object.keys(dbConfig.fieldMappingConfig),
-    });
-  }
 
   return {
     buyerId: dbConfig.buyerId,
@@ -715,6 +703,9 @@ export function toServiceConfig(
     // Pass through requestWrapper for auction engine to use
     // Allows per-buyer configuration of payload wrapping (e.g., { "Request": { ...payload } })
     requestWrapper: requestWrapper,
+    // Pass through contentType for auction engine to use
+    // Allows per-buyer configuration of HTTP content type (json or form-urlencoded)
+    contentType: contentType,
   };
 }
 
