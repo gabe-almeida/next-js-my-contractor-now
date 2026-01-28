@@ -51,6 +51,11 @@ export default function Footer() {
                   Home Improvement Companies
                 </Link>
               </li>
+              <li>
+                <Link href="/privacy-policy#contact" className="hover:text-orange-400 transition-colors">
+                  Contact Us
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

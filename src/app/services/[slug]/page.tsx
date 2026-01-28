@@ -23,6 +23,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { buildQuestionFlow, buildFallbackFlow, validateQuestionFlow } from '@/lib/questions/flow-builder';
 import DynamicFormWrapper from '@/components/forms/DynamicFormWrapper';
+import Footer from '@/components/layout/Footer';
 
 // Revalidate every hour (fallback if on-demand revalidation doesn't fire)
 export const revalidate = 3600;
@@ -141,5 +142,12 @@ export default async function ServicePage({
     notFound();
   }
 
-  return <DynamicFormWrapper flow={data.flow} serviceSlug={slug} />;
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1">
+        <DynamicFormWrapper flow={data.flow} serviceSlug={slug} />
+      </div>
+      <Footer />
+    </div>
+  );
 }

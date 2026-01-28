@@ -111,7 +111,7 @@ export default function PrivacyPolicyPage() {
                   </p>
                 </section>
 
-                <section>
+                <section id="contact">
                   <h2 className="text-xl font-semibold text-gray-800 mb-3">Contact Information</h2>
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="font-medium text-gray-800">My Contractor Now</p>
