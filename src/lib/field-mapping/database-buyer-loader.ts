@@ -663,6 +663,18 @@ export function toServiceConfig(
   const pingFields = pingStaticFields || staticFields || {};
   const postFields = postStaticFields || staticFields || {};
 
+  // DEBUG: Log static fields extraction for Home Appointments debugging
+  if (dbConfig.buyerId === 'home-appointments-001' || pingStaticFields?.API_Action) {
+    console.log('[DEBUG toServiceConfig] Home Appointments config extraction:', {
+      buyerId: dbConfig.buyerId,
+      hasPingStaticFields: !!pingStaticFields,
+      pingStaticFieldsKeys: pingStaticFields ? Object.keys(pingStaticFields) : [],
+      hasRequestWrapper: !!requestWrapper,
+      requestWrapper: requestWrapper,
+      fieldMappingConfigKeys: Object.keys(dbConfig.fieldMappingConfig),
+    });
+  }
+
   return {
     buyerId: dbConfig.buyerId,
     serviceTypeId: dbConfig.serviceTypeId,

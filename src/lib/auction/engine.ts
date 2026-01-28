@@ -529,6 +529,18 @@ export class AuctionEngine {
         throw new Error(`Missing pingTemplate for buyer ${buyer.id}`);
       }
 
+      // DEBUG: Log serviceConfig for Home Appointments
+      if (buyer.id === 'home-appointments-001') {
+        console.log('[DEBUG sendPingToBuyer] Home Appointments serviceConfig:', {
+          buyerId: buyer.id,
+          hasRequestWrapper: !!serviceConfig.requestWrapper,
+          requestWrapper: serviceConfig.requestWrapper,
+          hasAdditionalFields: !!serviceConfig.pingTemplate.additionalFields,
+          additionalFieldsKeys: serviceConfig.pingTemplate.additionalFields ? Object.keys(serviceConfig.pingTemplate.additionalFields) : [],
+          mappingsCount: serviceConfig.pingTemplate.mappings?.length || 0,
+        });
+      }
+
       // Transform lead data using buyer's PING template
       payload = await TemplateEngine.transform(
         lead,

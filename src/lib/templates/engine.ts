@@ -132,8 +132,20 @@ export class TemplateEngine {
       }
 
       // Add additional fields from template config
-      if (templateConfig.additionalFields) {
+      // DEBUG: Log additionalFields for Home Appointments
+      if (templateConfig.additionalFields && Object.keys(templateConfig.additionalFields).length > 0) {
+        console.log('[DEBUG TemplateEngine] Adding additionalFields:', {
+          buyerId: buyer.id,
+          additionalFieldsKeys: Object.keys(templateConfig.additionalFields),
+          hasAPIAction: 'API_Action' in templateConfig.additionalFields,
+        });
         Object.assign(result, templateConfig.additionalFields);
+      } else {
+        console.log('[DEBUG TemplateEngine] No additionalFields to add:', {
+          buyerId: buyer.id,
+          hasAdditionalFields: !!templateConfig.additionalFields,
+          additionalFieldsType: typeof templateConfig.additionalFields,
+        });
       }
 
       // Execute post-transform hooks
