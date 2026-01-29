@@ -311,6 +311,7 @@ export abstract class BaseAuctionEngine {
   ): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'X-Request-Type': requestType,
       'X-Timestamp': new Date().toISOString(),
     };

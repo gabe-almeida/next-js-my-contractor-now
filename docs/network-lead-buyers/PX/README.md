@@ -1,6 +1,6 @@
 # PX Integration
 
-> **Status:** INACTIVE - Awaiting API Token from PX integration team
+> **Status:** INACTIVE - Per-vertical API tokens configured (Windows + Bathrooms). Ready for testing.
 
 ## Overview
 
@@ -36,16 +36,9 @@ PX (PixelMEDIA) is a network lead buyer for Windows and Bathrooms verticals usin
 
 **IMPORTANT:** PX uses **body-based authentication**, not header-based. The `ApiToken` is stored in the `field_mappings` JSON column under `pingStaticFields` and `postStaticFields`, NOT in `auth_config`.
 
-**Status:** Awaiting API Token from PX integration team.
+**Status:** ✅ API Token configured: `148574A3-10CB-4BED-920B-776AB5AA7E60`
 
-### How to Update Token Once Received
-
-```sql
--- Update both Windows and Bathrooms configs with the real token
-UPDATE buyer_service_configs
-SET field_mappings = REPLACE(field_mappings::text, 'PLACEHOLDER_AWAITING_TOKEN_FROM_PX', 'ACTUAL_TOKEN_HERE')::jsonb
-WHERE buyer_id = 'px-network-001';
-```
+**Current Issue:** PX returns "Forbidden" - account needs to be activated/approved on their end. Payloads are structurally valid (TransactionId is returned).
 
 ## Services Configured
 
@@ -62,6 +55,67 @@ WHERE buyer_id = 'px-network-001';
 - **Nationwide:** Yes
 
 ## Field Mappings
+
+**IMPORTANT:** PX requires **nested JSON objects**, not flat fields. The system uses dot notation in `targetField` (e.g., `"ContactData.State"`) which is automatically converted to nested objects via `setNestedValue()`.
+
+### Expected Payload Structure (Windows)
+
+```json
+{
+  "ApiToken": "...",
+  "Vertical": "Windows",
+  "SubId": "mycontractornow",
+  "ContactData": {
+    "State": "CA",
+    "ZipCode": "90100",
+    "IpAddress": "192.168.1.100"
+  },
+  "Person": {
+    "Gender": "Unspecified",
+    "BirthDate": "1980-01-01",
+    "BestTimeToCall": "Any time"
+  },
+  "Home": {
+    "Ownership": "Own",
+    "ProjectType": "Replace Unit",
+    "NumberOfWindows": "8 windows",
+    "PurchaseTimeframe": "Immediately"
+  },
+  "UserAgent": "...",
+  "TcpaText": "...",
+  "TrustedForm": "...",
+  "JornayaLeadId": "..."
+}
+```
+
+### Expected Payload Structure (Bathrooms)
+
+```json
+{
+  "ApiToken": "...",
+  "Vertical": "bathroomremodeling",
+  "ContactData": {
+    "State": "CA",
+    "ZipCode": "90100",
+    "IpAddress": "192.168.1.100"
+  },
+  "Person": {
+    "Gender": "Unspecified",
+    "BirthDate": "1980-01-01"
+  },
+  "BathroomRemodeling": {
+    "Ownership": "Own",
+    "PropertyType": "Residential",
+    "ProjectType": "Replace",
+    "RequestTimeframe": "Within 1 week",
+    "AuthorizedToMakeChanges": "Yes"
+  },
+  "UserAgent": "...",
+  "TcpaText": "...",
+  "TrustedForm": "...",
+  "JornayaLeadId": "..."
+}
+```
 
 ### PING Payload (Windows)
 
@@ -187,9 +241,12 @@ WHERE buyer_id = 'px-network-001';
 
 ## Activation Checklist
 
-- [ ] Receive API Token from PX integration team
-- [ ] Update `field_mappings` in buyer_service_configs table (replace PLACEHOLDER_AWAITING_TOKEN_FROM_PX)
-- [ ] Test PING with ZIP 90100 (PX's test ZIP that forces success)
+- [x] Receive API Token from PX integration team
+- [x] Update `field_mappings` in buyer_service_configs table with API token
+- [x] Configure nested JSON structure (ContactData, Person, Home/BathroomRemodeling)
+- [x] Validate payload structure with PX API (TransactionId returned = valid structure)
+- [ ] **PX ACTION REQUIRED:** Account activation to resolve "Forbidden" response
+- [ ] Test PING with ZIP 90100 after account activation
 - [ ] Test POST with valid lead data
 - [ ] Verify TransactionId is extracted from PING and injected into POST
 - [ ] Verify response parsing works correctly (Success/Payout fields)
@@ -224,4 +281,4 @@ UPDATE buyer_service_configs SET active = true WHERE buyer_id = 'px-network-001'
 ---
 
 *Created: 2026-01-28*
-*Last Updated: 2026-01-28*
+*Last Updated: 2026-01-28 - Configured nested JSON structure, API token added, TemplateEngine updated to support nested targetFields, awaiting PX account activation*

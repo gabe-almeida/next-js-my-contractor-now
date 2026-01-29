@@ -355,6 +355,7 @@ function prepareHeaders(
 ): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     'X-Request-Type': 'CALL_PING',
     'X-Timestamp': new Date().toISOString(),
   };

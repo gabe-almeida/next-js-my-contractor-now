@@ -317,6 +317,7 @@ export class RetryHandler {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'X-Retry-Attempt': operation.attemptCount.toString(),
           'X-Original-Timestamp': context.originalTimestamp?.toISOString() || ''
         },
@@ -413,6 +414,7 @@ export class RetryHandler {
   ): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'X-Request-Type': requestType,
       'X-Retry-Attempt': attemptCount.toString(),
       'X-Service-Type': serviceConfig.serviceTypeName,
