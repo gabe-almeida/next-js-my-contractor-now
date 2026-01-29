@@ -207,7 +207,9 @@ export class TemplateEngine {
       if (mappingResult.status === 'fulfilled') {
         const { field, value } = mappingResult.value;
         if (value !== undefined) {
-          result[field] = value;
+          // Use setNestedValue to support nested targetField paths like "ContactData.State"
+          // This creates { "ContactData": { "State": "CA" } } instead of { "ContactData.State": "CA" }
+          this.setNestedValue(result, field, value);
         }
       } else {
         errors.push(mappingResult.reason.message);
@@ -273,8 +275,10 @@ export class TemplateEngine {
     // Apply valueMap if specified (database-driven value conversion)
     // This happens BEFORE transforms - converts "within_3_months" → "1-6 months"
     // This is ADMIN-CONFIGURABLE - no hardcoded transforms needed!
-    if (mapping.valueMap && typeof value === 'string') {
-      const mappedValue = mapping.valueMap[value];
+    // Convert value to string for lookup (handles booleans like ownsHome: true → "true")
+    if (mapping.valueMap && value !== null && value !== undefined) {
+      const lookupKey = String(value);
+      const mappedValue = mapping.valueMap[lookupKey];
       if (mappedValue !== undefined) {
         value = mappedValue;
       }
@@ -335,6 +339,10 @@ export class TemplateEngine {
       ...lead.formData,
       // Nested allows paths like "formData.windowType" (service-specific fields)
       formData: lead.formData,
+
+      // Network buyer required fields (IP and User Agent)
+      ipAddress: (lead as any).ipAddress,
+      userAgent: (lead as any).userAgent,
 
       // Compliance data
       trustedFormCertUrl: lead.trustedFormCertUrl,
@@ -418,16 +426,45 @@ export class TemplateEngine {
         }
       }
 
-      // TCPA consent
+      // TCPA consent - extract text if tcpaConsent is an object, otherwise use as-is
+      // WHY: Some buyers (Modernize) expect tcpa_consent to be just the consent text string,
+      //      not the full object { consented, timestamp, text }
+      // WHEN: tcpaConsent is an object with a "text" property
+      // HOW: Check if it's an object and extract .text, otherwise pass through
+      // IMPORTANT: Skip if field already set by field_mappings (to avoid overwriting correct values)
       if (compliance.tcpaConsent !== undefined && mappings.tcpa?.consent) {
+        const tcpaValue = typeof compliance.tcpaConsent === 'object' && compliance.tcpaConsent !== null
+          ? (compliance.tcpaConsent as { text?: string }).text ?? compliance.tcpaConsent
+          : compliance.tcpaConsent;
         for (const fieldName of mappings.tcpa.consent) {
-          result[fieldName] = compliance.tcpaConsent;
+          // Only set if not already set by field_mappings
+          if (result[fieldName] === undefined) {
+            result[fieldName] = tcpaValue;
+          }
         }
       }
 
       if (compliance.tcpaConsent !== undefined && mappings.tcpa?.timestamp) {
         for (const fieldName of mappings.tcpa.timestamp) {
-          result[fieldName] = compliance.timestamp;
+          if (result[fieldName] === undefined) {
+            result[fieldName] = compliance.timestamp;
+          }
+        }
+      }
+
+      // TCPA language - for buyers who want the consent text in a separate field
+      // WHY: Some buyers (Home Appointments) have separate fields for consent (Yes/No) and language (text)
+      // WHEN: tcpa.language is defined in compliance_field_mappings
+      if (compliance.tcpaConsent !== undefined && (mappings.tcpa as any)?.language) {
+        const tcpaText = typeof compliance.tcpaConsent === 'object' && compliance.tcpaConsent !== null
+          ? (compliance.tcpaConsent as { text?: string }).text
+          : compliance.tcpaConsent;
+        if (tcpaText) {
+          for (const fieldName of (mappings.tcpa as any).language) {
+            if (result[fieldName] === undefined) {
+              result[fieldName] = tcpaText;
+            }
+          }
         }
       }
 
@@ -581,7 +618,9 @@ export class TemplateEngine {
       .map(m => m.targetField);
 
     for (const field of requiredTargetFields) {
-      if (payload[field] === undefined || payload[field] === null || payload[field] === '') {
+      // Use getNestedValue to support nested paths like "ContactData.State"
+      const value = this.getNestedValue(payload, field);
+      if (value === undefined || value === null || value === '') {
         throw new ValidationError(
           field,
           `Required target field '${field}' is missing in final payload`
@@ -607,6 +646,33 @@ export class TemplateEngine {
     return path.split('.').reduce((current, key) => {
       return current && current[key] !== undefined ? current[key] : undefined;
     }, obj);
+  }
+
+  /**
+   * Set nested value in object using dot notation path
+   *
+   * WHY: Some buyers (like PX) require nested JSON structures
+   *      e.g., { "ContactData": { "State": "CA" } } instead of flat { "State": "CA" }
+   * WHEN: When targetField contains dots like "ContactData.State"
+   * HOW: Split path, create intermediate objects, set final value
+   */
+  private static setNestedValue(
+    obj: Record<string, any>,
+    path: string,
+    value: any
+  ): void {
+    const parts = path.split('.');
+    let current: Record<string, any> = obj;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!(part in current) || typeof current[part] !== 'object' || current[part] === null) {
+        current[part] = {};
+      }
+      current = current[part];
+    }
+
+    current[parts[parts.length - 1]] = value;
   }
 
   /**
