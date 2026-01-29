@@ -22,6 +22,7 @@ import {
 import { BuyerActivityTab } from '@/components/admin/BuyerActivityTab';
 import { BuyerServiceCoverageTab } from '@/components/admin/BuyerServiceCoverageTab';
 import { BuyerCallSettingsTab } from '@/components/admin/BuyerCallSettingsTab';
+import { BuyerPartnerOffersTab } from '@/components/admin/BuyerPartnerOffersTab';
 import {
   AlertCircle,
   RefreshCw,
@@ -35,10 +36,11 @@ import {
   User,
   Shield,
   FileText,
-  Award
+  Award,
+  Gift
 } from 'lucide-react';
 
-type TabType = 'details' | 'activity' | 'coverage' | 'call-settings';
+type TabType = 'details' | 'activity' | 'coverage' | 'call-settings' | 'partner-offers';
 
 interface BuyerData {
   id: string;
@@ -123,12 +125,18 @@ export default function BuyerDetailPage() {
     }
   }, [buyerId, fetchBuyer]);
 
-  const tabs = [
+  // Build tabs dynamically - only show Partner Offers for NETWORK buyers
+  const baseTabs = [
     { id: 'details' as TabType, label: 'Details', icon: <Building2 className="h-4 w-4" /> },
     { id: 'activity' as TabType, label: 'Activity', icon: <Activity className="h-4 w-4" /> },
     { id: 'coverage' as TabType, label: 'ZIP Coverage', icon: <MapPin className="h-4 w-4" /> },
     { id: 'call-settings' as TabType, label: 'Call Settings', icon: <Phone className="h-4 w-4" /> }
   ];
+
+  // Add Partner Offers tab for NETWORK buyers (e.g., PX with ADT offer)
+  const tabs = buyer?.type === 'NETWORK'
+    ? [...baseTabs, { id: 'partner-offers' as TabType, label: 'Partner Offers', icon: <Gift className="h-4 w-4" /> }]
+    : baseTabs;
 
   if (loading) {
     return (
@@ -279,6 +287,13 @@ export default function BuyerDetailPage() {
         <BuyerCallSettingsTab
           buyerId={buyer.id}
           buyerType={buyer.type}
+        />
+      )}
+
+      {activeTab === 'partner-offers' && buyer.type === 'NETWORK' && (
+        <BuyerPartnerOffersTab
+          buyerId={buyer.id}
+          buyerName={buyer.displayName || buyer.name}
         />
       )}
     </div>

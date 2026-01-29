@@ -2,14 +2,15 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { ADTOfferBanner } from '@/components/offers/ADTOfferBanner';
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const leadId = searchParams.get('leadId');
+  const isTestMode = searchParams.get('test') === 'true';
 
   return (
     <>
@@ -43,6 +44,13 @@ function ThankYouContent() {
               </div>
             )}
           </div>
+
+          {/* ADT Home Security Offer - Only show in test mode until ready for production */}
+          {isTestMode && (
+            <div className="mb-8">
+              <ADTOfferBanner leadId={leadId} isTestMode={isTestMode} />
+            </div>
+          )}
 
           {/* What Happens Next */}
           <div className="bg-white rounded-lg shadow-lg p-8 mb-8">

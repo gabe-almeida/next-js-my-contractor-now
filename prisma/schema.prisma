@@ -175,6 +175,8 @@ model Lead {
   affiliateCommissions   AffiliateCommission[]
   metaCapiLogs           MetaCapiLog[]
   invoiceLineItems       InvoiceLineItem[]
+  exitOfferClicks        ExitOfferClick[]
+  exitOfferConversions   ExitOfferConversion[]
 
   @@index([status])
   @@index([zipCode])
@@ -1217,4 +1219,77 @@ model InvoiceSequence {
 
   @@unique([prefix, year])
   @@map("invoice_sequences")
+}
+
+// ============================================
+// EXIT OFFER SYSTEM MODELS
+// ============================================
+// Track clicks and conversions from thank you page partner offers
+// (e.g., ADT Home Security through PX network)
+
+// Tracks when users click on exit offers (e.g., ADT banner on thank you page)
+model ExitOfferClick {
+  id             String    @id @default(uuid())
+  leadId         String?   @map("lead_id")
+
+  offerType      String    @map("offer_type")      // 'adt_home_security'
+  offerProvider  String    @map("offer_provider")  // 'px'
+  trafficSource  String    @map("traffic_source")  // aff_sub value sent
+  clickUrl       String    @map("click_url") @db.Text  // Full URL sent
+
+  userAgent      String?   @map("user_agent") @db.Text
+  ipAddress      String?   @map("ip_address")
+
+  clickedAt      DateTime  @default(now()) @map("clicked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  lead           Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  conversions    ExitOfferConversion[]
+
+  @@index([leadId])
+  @@index([clickedAt])
+  @@index([offerType])
+  @@map("exit_offer_clicks")
+}
+
+// Tracks conversions reported by partner networks via postback
+model ExitOfferConversion {
+  id                String    @id @default(uuid())
+  clickId           String?   @map("click_id")
+  leadId            String?   @map("lead_id")
+
+  // What we received
+  offerType         String    @map("offer_type")       // 'adt_home_security'
+  offerProvider     String    @map("offer_provider")   // 'px'
+  transactionId     String    @unique @map("transaction_id") // UNIQUE - prevents duplicates
+  payout            Decimal   @default(0) @db.Decimal(10, 2)
+  payoutCurrency    String    @default("USD") @map("payout_currency")
+
+  // Raw tracking params received
+  affSub            String?   @map("aff_sub")
+  affSub2           String?   @map("aff_sub2")         // raw value, even if lead not found
+
+  // Status tracking
+  status            String    @default("confirmed")    // pending, confirmed, reversed
+  leadNotFound      Boolean   @default(false) @map("lead_not_found")
+
+  // Debugging
+  rawPayload        Json?     @map("raw_payload")      // full query string/body
+  sourceIp          String?   @map("source_ip")
+
+  // Timestamps
+  convertedAt       DateTime? @map("converted_at")     // when conversion happened (if provided)
+  receivedAt        DateTime  @default(now()) @map("received_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  click             ExitOfferClick? @relation(fields: [clickId], references: [id], onDelete: SetNull)
+  lead              Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([receivedAt])
+  @@index([status])
+  @@index([transactionId])
+  @@map("exit_offer_conversions")
 }
