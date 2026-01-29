@@ -14,7 +14,7 @@
  * PERFORMANCE: Uses ISR (Incremental Static Regeneration)
  *   - Pages pre-built at deploy time for known services
  *   - New services built on first request
- *   - Revalidates hourly OR instantly via on-demand revalidation
+ *   - Revalidates every 5 minutes (matches homepage) OR instantly via on-demand revalidation
  *
  * ROUTE: /services/[slug] where slug is the service name (e.g., "windows", "roofing")
  */
@@ -25,8 +25,8 @@ import { buildQuestionFlow, buildFallbackFlow, validateQuestionFlow } from '@/li
 import DynamicFormWrapper from '@/components/forms/DynamicFormWrapper';
 import Footer from '@/components/layout/Footer';
 
-// Revalidate every hour (fallback if on-demand revalidation doesn't fire)
-export const revalidate = 3600;
+// Revalidate every 5 minutes (matches homepage for consistency)
+export const revalidate = 300;
 
 /**
  * Pre-build pages for all active services at deploy time
