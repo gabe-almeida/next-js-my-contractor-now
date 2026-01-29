@@ -2,6 +2,33 @@
 
 > **Status:** INACTIVE - Per-vertical API tokens configured (Windows + Bathrooms). Ready for testing.
 
+## Accept Header Change (2026-01-29)
+
+Added `Accept: application/json` header to all auction HTTP requests to ensure JSON responses from network buyers.
+
+### Impact Analysis
+
+| Buyer | Current Behavior | With Accept Header |
+|-------|------------------|-------------------|
+| Home Appointments | Returns JSON | No change - already JSON |
+| Modernize | Returns JSON | No change - already JSON |
+| PX | Was returning XML | Now returns JSON ✓ |
+| Contractors (internal) | Returns JSON | No change |
+
+### Why It's Safe
+
+1. **APIs that already return JSON** → continue returning JSON (no change)
+2. **APIs that support multiple formats** (like PX) → now return JSON instead of XML
+3. **APIs that only support one format** → ignore the header, return their format
+
+### Files Changed
+
+- `src/lib/auction/base-engine.ts` - Main auction header builder
+- `src/lib/auction/call-ping.ts` - Call PING header builder
+- `src/lib/auction/retry-handler.ts` - Retry request headers
+
+The change is backwards-compatible because our code already assumes JSON responses (`response.json()` and `JSON.parse()`).
+
 ## Overview
 
 PX (PixelMEDIA) is a network lead buyer for Windows and Bathrooms verticals using exclusive Ping/Post model.
@@ -238,6 +265,101 @@ PX (PixelMEDIA) is a network lead buyer for Windows and Bathrooms verticals usin
 ## Testing
 
 **Test ZIP Code:** `90100` - Forces successful API response during staging
+
+### Windows PING (Verified Working)
+
+```bash
+curl -X POST 'https://leadapi.px.com/api/lead/ping' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+  "ApiToken": "3157EF4B-1878-4443-962F-CCBEF0731AE7",
+  "Vertical": "Windows",
+  "SubId": "mycontractornow",
+  "Source": "mycontractornow",
+  "SessionLength": "120",
+  "OriginalUrl": "https://mycontractornow.com/services/windows",
+  "ContactData": {"State": "CA", "ZipCode": "90100", "IpAddress": "192.168.1.100"},
+  "Person": {"Gender": "Unspecified", "BirthDate": "1980-01-01", "BestTimeToCall": "Any time"},
+  "Home": {"Ownership": "Own", "ProjectType": "Replace Unit", "NumberOfWindows": "6 to 9 windows", "PurchaseTimeframe": "Immediately"},
+  "UserAgent": "Mozilla/5.0",
+  "TcpaText": "By clicking Get Free Quotes, I consent to receive marketing calls and texts."
+}'
+```
+
+### Windows POST (use TransactionId from PING)
+
+```bash
+curl -X POST 'https://leadapi.px.com/api/lead/post' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+  "ApiToken": "3157EF4B-1878-4443-962F-CCBEF0731AE7",
+  "Vertical": "Windows",
+  "SubId": "mycontractornow",
+  "Source": "mycontractornow",
+  "SessionLength": "120",
+  "TransactionId": "REPLACE_WITH_PING_TRANSACTION_ID",
+  "ContactData": {"FirstName": "Test", "LastName": "Lead", "EmailAddress": "test@mycontractornow.com", "PhoneNumber": "5551234567", "State": "CA", "ZipCode": "90100", "IpAddress": "192.168.1.100", "Address": "123 Test St", "City": "Los Angeles"},
+  "Person": {"FirstName": "Test", "LastName": "Lead", "Gender": "Unspecified", "BirthDate": "1980-01-01", "BestTimeToCall": "Any time"},
+  "Home": {"Ownership": "Own", "ProjectType": "Replace Unit", "NumberOfWindows": "6 to 9 windows", "PurchaseTimeframe": "Immediately"},
+  "UserAgent": "Mozilla/5.0",
+  "TcpaText": "By clicking Get Free Quotes, I consent."
+}'
+```
+
+### Bathrooms PING (Verified Working)
+
+```bash
+curl -X POST 'https://leadapi.px.com/api/lead/ping' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+  "ApiToken": "4F8521AC-0D22-43E0-8DCB-86CA013B7208",
+  "Vertical": "bathroomremodeling",
+  "SubId": "mycontractornow",
+  "Source": "mycontractornow",
+  "SessionLength": "120",
+  "OriginalUrl": "https://mycontractornow.com/services/bathrooms",
+  "ContactData": {"State": "CA", "ZipCode": "90100", "IpAddress": "192.168.1.100"},
+  "Person": {"Gender": "Unspecified", "BirthDate": "1980-01-01"},
+  "BathroomRemodeling": {"Ownership": "Own", "PropertyType": "Residential", "ProjectType": "Replace", "RequestTimeframe": "Within 1 week", "AuthorizedToMakeChanges": "Yes", "JobTypes": {"Floorplan": "Yes", "ShowerOrBath": "Yes", "Toilet": "Yes", "Cabinets": "Yes", "Countertops": "Yes", "Sinks": "Yes", "Flooring": "Yes"}},
+  "UserAgent": "Mozilla/5.0",
+  "TcpaText": "By clicking Get Free Quotes, I consent."
+}'
+```
+
+### Bathrooms POST (use TransactionId from PING)
+
+```bash
+curl -X POST 'https://leadapi.px.com/api/lead/post' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+  "ApiToken": "4F8521AC-0D22-43E0-8DCB-86CA013B7208",
+  "Vertical": "bathroomremodeling",
+  "SubId": "mycontractornow",
+  "Source": "mycontractornow",
+  "SessionLength": "120",
+  "TransactionId": "REPLACE_WITH_PING_TRANSACTION_ID",
+  "ContactData": {"FirstName": "Test", "LastName": "Lead", "EmailAddress": "test@mycontractornow.com", "PhoneNumber": "5551234567", "State": "CA", "ZipCode": "90100", "IpAddress": "192.168.1.100", "Address": "123 Test St", "City": "Los Angeles"},
+  "Person": {"FirstName": "Test", "LastName": "Lead", "Gender": "Unspecified", "BirthDate": "1980-01-01"},
+  "BathroomRemodeling": {"Ownership": "Own", "PropertyType": "Residential", "ProjectType": "Replace", "RequestTimeframe": "Within 1 week", "AuthorizedToMakeChanges": "Yes", "JobTypes": {"Floorplan": "Yes", "ShowerOrBath": "Yes", "Toilet": "Yes", "Cabinets": "Yes", "Countertops": "Yes", "Sinks": "Yes", "Flooring": "Yes"}},
+  "UserAgent": "Mozilla/5.0",
+  "TcpaText": "By clicking Get Free Quotes, I consent."
+}'
+```
+
+### Expected Success Response
+
+```json
+{
+  "TransactionId": "uuid-here",
+  "Success": true,
+  "Payout": 12.34,
+  "Environment": "Testing"
+}
+```
 
 ## Activation Checklist
 
