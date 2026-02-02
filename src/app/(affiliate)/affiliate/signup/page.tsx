@@ -45,9 +45,17 @@ export default function AffiliateSignupPage() {
       return;
     }
 
-    // Validate password strength
+    // Validate password strength (must match backend: affiliate-service.ts:466-476)
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters');
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError('Password must contain at least one number');
       return;
     }
 
@@ -190,7 +198,8 @@ export default function AffiliateSignupPage() {
               label="Password"
               required
               icon={<Lock className="h-5 w-5 text-gray-400" />}
-              placeholder="At least 8 characters"
+              placeholder="8+ chars, uppercase, number"
+              helperText="Must contain at least 8 characters, one uppercase letter, and one number"
             />
 
             <TextInput

@@ -94,6 +94,14 @@ const rateLimiters = {
     points: 3,
     duration: 600,
     blockDuration: 1800,
+  }),
+
+  // Signup rate limiter - 3 signups per hour per IP (stricter than lead submission)
+  signup: createRateLimiter({
+    keyPrefix: 'rl:signup',
+    points: 3,
+    duration: 3600,
+    blockDuration: 7200,
   })
 };
 

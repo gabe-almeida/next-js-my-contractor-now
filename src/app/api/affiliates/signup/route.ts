@@ -4,6 +4,11 @@
  * POST /api/affiliates/signup
  * Creates a new affiliate account with PENDING status
  * Requires admin approval before login is allowed
+ *
+ * SECURITY:
+ * - Rate limited to prevent spam registrations (5 signups/hour per IP)
+ * - Input validation via Zod schema
+ * - Password hashed with bcrypt (12 rounds)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,11 +16,15 @@ import { z } from 'zod';
 import { createAffiliate } from '@/lib/services/affiliate-service';
 import { captureApiError } from '@/lib/sentry';
 import { normalizePhoneNumber, US_PHONE_REGEX } from '@/lib/utils/phone';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 // Validation schema for signup
 const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
   firstName: z.string().min(1, 'First name is required').max(50),
   lastName: z.string().min(1, 'Last name is required').max(50),
   companyName: z.string().max(100).optional(),
@@ -28,6 +37,15 @@ const signupSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - prevent spam registrations (3 signups/hour per IP)
+    const rateLimitResult = await checkRateLimit(request, 'signup');
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json({
+        success: false,
+        error: 'Too many registration attempts. Please try again later.'
+      }, { status: 429 });
+    }
+
     const body = await request.json();
 
     // Validate request body

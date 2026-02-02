@@ -48,17 +48,16 @@ export default function UnifiedLoginPage() {
 
       const { token, userType, redirectPath } = data.data;
 
-      // Store token with user-type-specific key for backwards compatibility
-      // Also store as generic 'auth_token' for unified access
+      // Store token in localStorage for API calls that read from localStorage
+      // Note: Server also sets secure httpOnly cookies for middleware auth
       const tokenKey = getTokenKey(userType);
       localStorage.setItem(tokenKey, token);
       localStorage.setItem('auth_token', token);
       localStorage.setItem('user_type', userType);
 
-      // Set cookies for middleware auth
-      document.cookie = `${tokenKey}=${token}; path=/; max-age=604800`;
-      document.cookie = `auth_token=${token}; path=/; max-age=604800`;
-      document.cookie = `user_type=${userType}; path=/; max-age=604800`;
+      // Note: Secure httpOnly cookies are now set by the server response
+      // We only set user_type client-side for UI purposes (non-sensitive)
+      document.cookie = `user_type=${userType}; path=/; max-age=3600; SameSite=Lax`;
 
       // Redirect to appropriate dashboard
       router.push(redirectPath);

@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that require authentication
-const PROTECTED_ROUTES = ['/admin'];
+const PROTECTED_ROUTES = ['/admin', '/affiliate/dashboard', '/affiliate/links', '/affiliate/commissions', '/affiliate/withdrawals', '/affiliate/settings', '/affiliate/calls', '/affiliate/campaigns'];
 
 // Routes that should NOT be protected (public auth routes)
 const PUBLIC_AUTH_ROUTES = ['/api/auth/admin/login', '/api/auth/login'];
@@ -43,8 +43,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get token from cookie (check both legacy and new cookie names)
+  // Get token from cookie (check all possible cookie names)
   const token = request.cookies.get('admin_token')?.value
+    || request.cookies.get('affiliate_token')?.value
+    || request.cookies.get('contractor_token')?.value
     || request.cookies.get('auth_token')?.value
     || request.cookies.get('mcn-auth-token')?.value;
 
@@ -66,12 +68,15 @@ export function middleware(request: NextRequest) {
   // Check if token is expired
   const now = Math.floor(Date.now() / 1000);
   if (payload.exp < now) {
-    // Token expired - clear cookies and redirect
+    // Token expired - clear ALL auth cookies and redirect
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('returnUrl', pathname);
     const response = NextResponse.redirect(loginUrl);
     response.cookies.delete('admin_token');
+    response.cookies.delete('affiliate_token');
+    response.cookies.delete('contractor_token');
     response.cookies.delete('auth_token');
+    response.cookies.delete('user_type');
     response.cookies.delete('mcn-auth-token');
     return response;
   }
@@ -87,5 +92,13 @@ export const config = {
     '/admin/:path*',
     // Match admin API routes (for additional protection)
     '/api/admin/:path*',
+    // Match protected affiliate routes
+    '/affiliate/dashboard/:path*',
+    '/affiliate/links/:path*',
+    '/affiliate/commissions/:path*',
+    '/affiliate/withdrawals/:path*',
+    '/affiliate/settings/:path*',
+    '/affiliate/calls/:path*',
+    '/affiliate/campaigns/:path*',
   ],
 };

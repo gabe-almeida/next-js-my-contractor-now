@@ -3,6 +3,11 @@
  *
  * POST /api/admin/affiliates/[id]/approve - Approve pending affiliate
  * Requires admin authentication
+ *
+ * WHY: Approves pending affiliates and auto-creates their default tracking link.
+ * WHEN: Admin clicks "Approve" on a PENDING affiliate in the admin panel.
+ * HOW: Updates status to ACTIVE, then creates a default tracking link so
+ *      affiliates can immediately start sharing their link after approval.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,6 +16,7 @@ import {
   getAffiliateById,
   updateAffiliateStatus
 } from '@/lib/services/affiliate-service';
+import { createLink } from '@/lib/services/affiliate-link-service';
 import { AffiliateStatus } from '@/types/database';
 import { captureApiError } from '@/lib/sentry';
 
@@ -59,11 +65,28 @@ export async function POST(
       }, { status: 400 });
     }
 
+    // Auto-create default tracking link for newly approved affiliate
+    // This ensures they have a usable link immediately after approval
+    let defaultLinkCode: string | null = null;
+    try {
+      const linkResult = await createLink(params.id, {
+        name: 'Default Link',
+        targetPath: '/'
+      });
+      if (linkResult.success && linkResult.link) {
+        defaultLinkCode = linkResult.link.code;
+      }
+    } catch (linkError) {
+      // Log but don't fail the approval - link creation is a nice-to-have
+      console.warn('Failed to create default link for affiliate:', linkError);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         id: result.affiliate!.id,
-        status: result.affiliate!.status
+        status: result.affiliate!.status,
+        defaultLinkCode
       },
       message: 'Affiliate approved successfully'
     });
