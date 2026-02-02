@@ -395,36 +395,71 @@ export default function LeadDetailPage() {
               <Shield className="h-4 w-4 mr-2" />
               Compliance
             </h4>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Quality Score</span>
                 <span className="font-medium">
                   {lead.compliance.leadQualityScore ?? 'N/A'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">TrustedForm</span>
-                <span className="font-medium">
+
+              {/* TrustedForm Section */}
+              <div className="border-t border-gray-100 pt-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-gray-500">TrustedForm</span>
                   {lead.compliance.trustedFormCertId ? (
-                    <span className="text-green-600 flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1" /> Present
+                    <span className="text-green-600 flex items-center text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" /> Verified
                     </span>
                   ) : (
-                    <span className="text-gray-400">Missing</span>
+                    <span className="text-gray-400 text-xs">Missing</span>
                   )}
-                </span>
+                </div>
+                {lead.compliance.trustedFormCertId && (
+                  <div className="space-y-1 pl-2 border-l-2 border-green-200">
+                    <div>
+                      <span className="text-xs text-gray-400 block">Cert ID</span>
+                      <span className="font-mono text-xs text-gray-700 break-all">
+                        {lead.compliance.trustedFormCertId}
+                      </span>
+                    </div>
+                    {lead.compliance.trustedFormCertUrl && (
+                      <div>
+                        <span className="text-xs text-gray-400 block">Cert URL</span>
+                        <a
+                          href={lead.compliance.trustedFormCertUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                        >
+                          {lead.compliance.trustedFormCertUrl}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Jornaya</span>
-                <span className="font-medium">
+
+              {/* Jornaya Section */}
+              <div className="border-t border-gray-100 pt-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-gray-500">Jornaya</span>
                   {lead.compliance.jornayaLeadId ? (
-                    <span className="text-green-600 flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1" /> Present
+                    <span className="text-green-600 flex items-center text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" /> Verified
                     </span>
                   ) : (
-                    <span className="text-gray-400">Missing</span>
+                    <span className="text-gray-400 text-xs">Missing</span>
                   )}
-                </span>
+                </div>
+                {lead.compliance.jornayaLeadId && (
+                  <div className="pl-2 border-l-2 border-green-200">
+                    <span className="text-xs text-gray-400 block">Lead ID</span>
+                    <span className="font-mono text-xs text-gray-700 break-all">
+                      {lead.compliance.jornayaLeadId}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -515,6 +550,50 @@ export default function LeadDetailPage() {
             Marketing Attribution
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Landing Page & Referrer */}
+            {(lead.compliance.complianceData?.attribution?.landing_page ||
+              lead.compliance.complianceData?.attribution?.referrer) && (
+              <div className="space-y-2 text-sm col-span-full lg:col-span-2">
+                <h5 className="font-medium text-gray-600 flex items-center">
+                  <MousePointer className="h-3 w-3 mr-1" /> Traffic Source
+                </h5>
+                {lead.compliance.complianceData.attribution.landing_page && (
+                  <div>
+                    <span className="text-gray-500 block mb-1">Landing Page</span>
+                    <a
+                      href={lead.compliance.complianceData.attribution.landing_page}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-blue-600 hover:text-blue-800 break-all"
+                    >
+                      {lead.compliance.complianceData.attribution.landing_page}
+                    </a>
+                  </div>
+                )}
+                {lead.compliance.complianceData.attribution.referrer && (
+                  <div>
+                    <span className="text-gray-500 block mb-1">Referrer</span>
+                    <a
+                      href={lead.compliance.complianceData.attribution.referrer}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-blue-600 hover:text-blue-800 break-all"
+                    >
+                      {lead.compliance.complianceData.attribution.referrer}
+                    </a>
+                  </div>
+                )}
+                {lead.compliance.complianceData.attribution.referrer_domain && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Referrer Domain</span>
+                    <span className="font-medium text-gray-700">
+                      {lead.compliance.complianceData.attribution.referrer_domain}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Browser & Device Info */}
             {(lead.compliance.complianceData?.userAgent || lead.compliance.complianceData?.ipAddress) && (
               <div className="space-y-2 text-sm">
@@ -569,6 +648,39 @@ export default function LeadDetailPage() {
                     <span className="text-gray-500">Campaign</span>
                     <span className="font-medium">
                       {lead.compliance.complianceData.attribution.utm_campaign}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Ad Click IDs */}
+            {(lead.compliance.complianceData?.attribution?.gclid ||
+              lead.compliance.complianceData?.attribution?.fbclid ||
+              lead.compliance.complianceData?.attribution?.msclkid) && (
+              <div className="space-y-2 text-sm">
+                <h5 className="font-medium text-gray-600">Ad Click IDs</h5>
+                {lead.compliance.complianceData.attribution.gclid && (
+                  <div>
+                    <span className="text-gray-500 block">Google (gclid)</span>
+                    <span className="font-mono text-xs text-gray-700 break-all">
+                      {lead.compliance.complianceData.attribution.gclid}
+                    </span>
+                  </div>
+                )}
+                {lead.compliance.complianceData.attribution.fbclid && (
+                  <div>
+                    <span className="text-gray-500 block">Facebook (fbclid)</span>
+                    <span className="font-mono text-xs text-gray-700 break-all">
+                      {lead.compliance.complianceData.attribution.fbclid}
+                    </span>
+                  </div>
+                )}
+                {lead.compliance.complianceData.attribution.msclkid && (
+                  <div>
+                    <span className="text-gray-500 block">Microsoft (msclkid)</span>
+                    <span className="font-mono text-xs text-gray-700 break-all">
+                      {lead.compliance.complianceData.attribution.msclkid}
                     </span>
                   </div>
                 )}
