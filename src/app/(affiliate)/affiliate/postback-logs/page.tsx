@@ -11,7 +11,7 @@
  * HOW: Fetches postback logs from API with filtering and pagination.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import {
   RefreshCw,
@@ -64,11 +64,7 @@ export default function PostbackLogsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  useEffect(() => {
-    fetchLogs();
-  }, [page, statusFilter]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     const token = localStorage.getItem('affiliate_token');
     if (!token) return;
 
@@ -99,7 +95,11 @@ export default function PostbackLogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, statusFilter]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString();

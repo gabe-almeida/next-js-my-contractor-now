@@ -114,7 +114,7 @@ export default function AffiliatePayoutsPage() {
     setLoading(true);
     const token = localStorage.getItem('affiliate_token');
     if (!token) {
-      router.push('/affiliate/login');
+      router.push('/login');
       return;
     }
 

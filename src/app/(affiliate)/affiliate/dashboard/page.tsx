@@ -26,8 +26,7 @@ import {
   Phone,
   Play,
   Clock,
-  Shield,
-  Info
+  Shield
 } from 'lucide-react';
 
 interface StatsData {
@@ -147,11 +146,7 @@ export default function AffiliateDashboardPage() {
           // Merge lead stats with call stats
           const leadStats = statsData.data;
 
-          // Fetch call stats separately
-          const callStatsRes = await fetch('/api/affiliates/calls/stats', {
-            headers: { Authorization: `Bearer ${token}` }
-          }).catch(() => null);
-
+          // Calculate call stats from recent calls data
           let callStats = {
             callsToday: 0,
             callsThisWeek: 0,
@@ -164,14 +159,6 @@ export default function AffiliateDashboardPage() {
             qualifiedCallsThisMonth: 0
           };
 
-          if (callStatsRes) {
-            const callStatsData = await callStatsRes.json().catch(() => ({ success: false }));
-            if (callStatsData.success) {
-              callStats = callStatsData.data;
-            }
-          }
-
-          // If call stats endpoint doesn't exist, calculate from recent calls
           if (callsData.success && callsData.data) {
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
@@ -236,12 +223,6 @@ export default function AffiliateDashboardPage() {
               When someone clicks your link, you get credit for 30 days—even if they come back later through a different source. First click wins.
             </p>
           </div>
-          <button
-            className="flex-shrink-0 p-1 text-emerald-400 hover:text-emerald-600 transition-colors"
-            title="Learn more about attribution"
-          >
-            <Info className="h-4 w-4" />
-          </button>
         </div>
       </div>
 

@@ -62,11 +62,7 @@ interface AnalyticsData {
 
 interface Campaign {
   id: string;
-  campaignId: string;
-  campaign: {
-    id: string;
-    name: string;
-  };
+  name: string;
 }
 
 // =====================================
@@ -126,7 +122,7 @@ export default function AffiliateAnalyticsPage() {
       const data = await res.json();
 
       if (data.success) {
-        setCampaigns(data.data.campaigns || []);
+        setCampaigns(data.data || []);
       }
     } catch (err) {
       console.error('Error fetching campaigns:', err);
@@ -216,8 +212,8 @@ export default function AffiliateAnalyticsPage() {
   const campaignOptions = [
     { value: 'ALL', label: 'All Campaigns' },
     ...campaigns.map((c) => ({
-      value: c.campaign.id,
-      label: c.campaign.name,
+      value: c.id,
+      label: c.name,
     })),
   ];
 

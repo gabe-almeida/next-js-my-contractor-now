@@ -105,7 +105,7 @@ export function AffiliateLayout({ children, user }: AffiliateLayoutProps) {
     // Clear affiliate token and redirect to login
     document.cookie = 'affiliate_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     localStorage.removeItem('affiliate_token');
-    router.push('/affiliate/login');
+    router.push('/login');
   };
 
   return (
