@@ -25,7 +25,9 @@ import {
   ExternalLink,
   Phone,
   Play,
-  Clock
+  Clock,
+  Shield,
+  Info
 } from 'lucide-react';
 
 interface StatsData {
@@ -219,6 +221,29 @@ export default function AffiliateDashboardPage() {
     <div className="space-y-6">
       {/* Stats Overview with Call Stats */}
       <DashboardStats stats={stats} loading={loading} showCallStats={true} />
+
+      {/* Attribution Info Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 p-2 bg-emerald-100 rounded-lg">
+            <Shield className="h-5 w-5 text-emerald-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-emerald-900">
+              30-Day Attribution Window
+            </h4>
+            <p className="text-sm text-emerald-700 mt-1">
+              When someone clicks your link, you get credit for 30 days—even if they come back later through a different source. First click wins.
+            </p>
+          </div>
+          <button
+            className="flex-shrink-0 p-1 text-emerald-400 hover:text-emerald-600 transition-colors"
+            title="Learn more about attribution"
+          >
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Links Section */}
