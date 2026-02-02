@@ -30,7 +30,12 @@ import {
   TrendingUp,
   Globe,
   MousePointer,
-  Activity
+  Activity,
+  ChevronDown,
+  ChevronRight,
+  Trophy,
+  Ban,
+  Copy
 } from 'lucide-react';
 import { LeadStatusHistory } from './LeadStatusHistory';
 import { ChangeStatusModal } from './ChangeStatusModal';
@@ -73,6 +78,12 @@ interface TransactionItem {
   status: string;
   bidAmount: number | null;
   responseTime: number | null;
+  errorMessage: string | null;
+  payload: Record<string, unknown> | null;
+  response: Record<string, unknown> | null;
+  isWinner: boolean | null;
+  lostReason: string | null;
+  cascadePosition: number | null;
   createdAt: string;
 }
 
@@ -150,6 +161,23 @@ export function LeadDetailModal({
   const [showChangeStatus, setShowChangeStatus] = useState(false);
   const [showIssueCredit, setShowIssueCredit] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
+  const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set());
+
+  const toggleTransaction = (txId: string) => {
+    setExpandedTransactions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(txId)) {
+        newSet.delete(txId);
+      } else {
+        newSet.add(txId);
+      }
+      return newSet;
+    });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
 
   const fetchLeadDetails = useCallback(async () => {
     setLoading(true);
@@ -372,36 +400,71 @@ export function LeadDetailModal({
                         <Shield className="h-4 w-4 mr-2" />
                         Compliance
                       </h4>
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-500">Quality Score</span>
                           <span className="font-medium">
                             {lead.compliance.leadQualityScore ?? 'N/A'}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">TrustedForm</span>
-                          <span className="font-medium">
+
+                        {/* TrustedForm Section */}
+                        <div className="border-t border-gray-100 pt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-gray-500">TrustedForm</span>
                             {lead.compliance.trustedFormCertId ? (
-                              <span className="text-green-600 flex items-center">
-                                <CheckCircle className="h-3 w-3 mr-1" /> Present
+                              <span className="text-green-600 flex items-center text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" /> Verified
                               </span>
                             ) : (
-                              <span className="text-gray-400">Missing</span>
+                              <span className="text-gray-400 text-xs">Missing</span>
                             )}
-                          </span>
+                          </div>
+                          {lead.compliance.trustedFormCertId && (
+                            <div className="space-y-1 pl-2 border-l-2 border-green-200">
+                              <div>
+                                <span className="text-xs text-gray-400 block">Cert ID</span>
+                                <span className="font-mono text-xs text-gray-700 break-all">
+                                  {lead.compliance.trustedFormCertId}
+                                </span>
+                              </div>
+                              {lead.compliance.trustedFormCertUrl && (
+                                <div>
+                                  <span className="text-xs text-gray-400 block">Cert URL</span>
+                                  <a
+                                    href={lead.compliance.trustedFormCertUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                                  >
+                                    View Certificate
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Jornaya</span>
-                          <span className="font-medium">
+
+                        {/* Jornaya Section */}
+                        <div className="border-t border-gray-100 pt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-gray-500">Jornaya</span>
                             {lead.compliance.jornayaLeadId ? (
-                              <span className="text-green-600 flex items-center">
-                                <CheckCircle className="h-3 w-3 mr-1" /> Present
+                              <span className="text-green-600 flex items-center text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" /> Verified
                               </span>
                             ) : (
-                              <span className="text-gray-400">Missing</span>
+                              <span className="text-gray-400 text-xs">Missing</span>
                             )}
-                          </span>
+                          </div>
+                          {lead.compliance.jornayaLeadId && (
+                            <div className="pl-2 border-l-2 border-green-200">
+                              <span className="text-xs text-gray-400 block">Lead ID</span>
+                              <span className="font-mono text-xs text-gray-700 break-all">
+                                {lead.compliance.jornayaLeadId}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -740,114 +803,222 @@ export function LeadDetailModal({
                   </div>
                 )}
 
-                {/* Auction Participation / Transaction History */}
-                {lead.transactions && lead.transactions.length > 0 && (
-                  <div className="bg-white border rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
-                      <Activity className="h-4 w-4 mr-2" />
-                      Auction Participation ({lead.transactions.length} transactions)
-                    </h4>
+                {/* Buyer Transactions - Always show this section */}
+                <div className="bg-white border rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                    <Activity className="h-4 w-4 mr-2" />
+                    Buyer Transactions
+                    {lead.transactions && lead.transactions.length > 0 && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({lead.transactions.length} transactions)
+                      </span>
+                    )}
+                  </h4>
 
-                    {/* Auction Summary */}
-                    {lead.auctionResults && (
-                      <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500 block">Total Bids</span>
-                            <span className="font-semibold">{lead.auctionResults.allBids?.length || 0}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 block">Winning Bid</span>
-                            <span className="font-semibold text-green-600">
-                              {lead.auctionResults.winningBid ? `$${Number(lead.auctionResults.winningBid).toFixed(2)}` : '-'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 block">Total Response Time</span>
-                            <span className="font-semibold">{lead.auctionResults.totalResponseTime}ms</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 block">Auction Status</span>
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              lead.auctionResults.status === 'completed'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {lead.auctionResults.status}
-                            </span>
-                          </div>
+                  {/* Auction Summary */}
+                  {lead.auctionResults && (
+                    <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500 block">Total Bids</span>
+                          <span className="font-semibold">{lead.auctionResults.allBids?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block">Winning Bid</span>
+                          <span className="font-semibold text-green-600">
+                            {lead.auctionResults.winningBid ? `$${Number(lead.auctionResults.winningBid).toFixed(2)}` : '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block">Total Response Time</span>
+                          <span className="font-semibold">{lead.auctionResults.totalResponseTime}ms</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block">Auction Status</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            lead.auctionResults.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {lead.auctionResults.status}
+                          </span>
                         </div>
                       </div>
-                    )}
-
-                    {/* Transaction Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Type</th>
-                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Buyer</th>
-                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Status</th>
-                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Bid</th>
-                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Response</th>
-                            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lead.transactions.map((tx) => (
-                            <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-2">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  tx.actionType === 'PING'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : tx.actionType === 'POST'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : tx.actionType === 'PING_WEBHOOK'
-                                    ? 'bg-cyan-100 text-cyan-800'
-                                    : tx.actionType === 'POST_WEBHOOK'
-                                    ? 'bg-indigo-100 text-indigo-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {tx.actionType.replace('_', ' ')}
-                                </span>
-                              </td>
-                              <td className="py-2 px-2">
-                                <a
-                                  href={`/admin/buyers/${tx.buyerId}`}
-                                  className="text-blue-600 hover:text-blue-800 text-sm"
-                                >
-                                  {tx.buyerName || tx.buyerId.slice(0, 8) + '...'}
-                                </a>
-                              </td>
-                              <td className="py-2 px-2">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  tx.status === 'SUCCESS'
-                                    ? 'bg-green-100 text-green-800'
-                                    : tx.status === 'FAILED'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {tx.status === 'SUCCESS' && <CheckCircle className="h-3 w-3 mr-1" />}
-                                  {tx.status === 'FAILED' && <XCircle className="h-3 w-3 mr-1" />}
-                                  {tx.status}
-                                </span>
-                              </td>
-                              <td className="py-2 px-2 text-gray-900">
-                                {tx.bidAmount ? `$${Number(tx.bidAmount).toFixed(2)}` : '-'}
-                              </td>
-                              <td className="py-2 px-2 text-gray-600">
-                                {tx.responseTime ? `${tx.responseTime}ms` : '-'}
-                              </td>
-                              <td className="py-2 px-2 text-gray-500 text-xs">
-                                {new Date(tx.createdAt).toLocaleTimeString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {/* No Transactions Message */}
+                  {(!lead.transactions || lead.transactions.length === 0) ? (
+                    <div className="text-center py-6 bg-gray-50 rounded-lg">
+                      <Activity className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No buyer transactions recorded</p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        This lead may have been rejected before auction or had no eligible buyers
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {lead.transactions.map((tx) => (
+                        <div key={tx.id} className="border rounded-lg overflow-hidden">
+                          {/* Transaction Header - Clickable */}
+                          <button
+                            onClick={() => toggleTransaction(tx.id)}
+                            className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              {expandedTransactions.has(tx.id) ? (
+                                <ChevronDown className="h-4 w-4 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-gray-400" />
+                              )}
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                tx.actionType === 'PING'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : tx.actionType === 'POST'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {tx.actionType}
+                              </span>
+                              <span className="text-sm font-medium text-gray-700">
+                                {tx.buyerName || tx.buyerId.slice(0, 8) + '...'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                tx.status === 'SUCCESS'
+                                  ? 'bg-green-100 text-green-800'
+                                  : tx.status === 'FAILED'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {tx.status}
+                              </span>
+                              {tx.bidAmount && (
+                                <span className="text-green-600 font-medium">
+                                  ${Number(tx.bidAmount).toFixed(2)}
+                                </span>
+                              )}
+                              {tx.responseTime && (
+                                <span className="text-gray-500 text-xs">
+                                  {tx.responseTime}ms
+                                </span>
+                              )}
+                              {tx.isWinner === true && (
+                                <Trophy className="h-4 w-4 text-yellow-500" />
+                              )}
+                              {tx.isWinner === false && (
+                                <span className="text-gray-400 text-xs" title={tx.lostReason || 'Lost'}>
+                                  <Ban className="h-4 w-4" />
+                                </span>
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Expanded Content */}
+                          {expandedTransactions.has(tx.id) && (
+                            <div className="p-4 border-t bg-white space-y-4">
+                              {/* Transaction Summary */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                <div>
+                                  <span className="text-gray-500 block text-xs">Status</span>
+                                  <span className="font-medium">{tx.status}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block text-xs">Bid Amount</span>
+                                  <span className="font-medium">
+                                    {tx.bidAmount ? `$${Number(tx.bidAmount).toFixed(2)}` : '-'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block text-xs">Response Time</span>
+                                  <span className="font-medium">
+                                    {tx.responseTime ? `${tx.responseTime}ms` : '-'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block text-xs">Result</span>
+                                  {tx.isWinner === true ? (
+                                    <span className="text-green-600 font-medium flex items-center gap-1">
+                                      <Trophy className="h-3 w-3" /> Won
+                                    </span>
+                                  ) : tx.isWinner === false ? (
+                                    <span className="text-gray-500">
+                                      Lost: {tx.lostReason || 'Unknown'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Error Message */}
+                              {tx.errorMessage && (
+                                <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                                  <span className="font-medium">Error:</span> {tx.errorMessage}
+                                </div>
+                              )}
+
+                              {/* Cascade Position */}
+                              {tx.cascadePosition && tx.cascadePosition > 1 && (
+                                <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                                  Cascade Position: {tx.cascadePosition} (fallback attempt)
+                                </div>
+                              )}
+
+                              {/* Request Payload */}
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-gray-700">Request Payload</span>
+                                  {tx.payload && (
+                                    <button
+                                      onClick={() => copyToClipboard(JSON.stringify(tx.payload, null, 2))}
+                                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    >
+                                      <Copy className="h-3 w-3" /> Copy
+                                    </button>
+                                  )}
+                                </div>
+                                <pre className="bg-gray-900 text-emerald-400 p-3 rounded text-xs overflow-x-auto max-h-48 font-mono">
+                                  {tx.payload
+                                    ? JSON.stringify(tx.payload, null, 2)
+                                    : 'No request payload captured'}
+                                </pre>
+                              </div>
+
+                              {/* Response */}
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-gray-700">Response</span>
+                                  {tx.response && (
+                                    <button
+                                      onClick={() => copyToClipboard(JSON.stringify(tx.response, null, 2))}
+                                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    >
+                                      <Copy className="h-3 w-3" /> Copy
+                                    </button>
+                                  )}
+                                </div>
+                                <pre className="bg-gray-900 text-emerald-400 p-3 rounded text-xs overflow-x-auto max-h-48 font-mono">
+                                  {tx.response
+                                    ? JSON.stringify(tx.response, null, 2)
+                                    : tx.errorMessage
+                                    ? JSON.stringify({ error: tx.errorMessage }, null, 2)
+                                    : 'No response captured'}
+                                </pre>
+                              </div>
+
+                              {/* Timestamp */}
+                              <div className="text-xs text-gray-500 pt-2 border-t">
+                                Transaction time: {new Date(tx.createdAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Status History */}
                 <div className="border rounded-lg p-4">
