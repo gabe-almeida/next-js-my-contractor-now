@@ -65,7 +65,7 @@ import { sendAuctionCompletionEmail, buildEmailDataFromDatabase } from '@/lib/se
 import { AuctionEngine } from '@/lib/auction/engine';
 import { LeadData } from '@/lib/templates/types';
 import { trackLeadCAPI } from '@/lib/meta/conversion-api';
-import { captureApiError } from '@/lib/sentry';
+import { captureApiError, addBreadcrumb } from '@/lib/sentry';
 
 export async function POST(request: NextRequest) {
   try {
@@ -450,16 +450,31 @@ export async function POST(request: NextRequest) {
       // FIRE AND FORGET with setTimeout - ensures response is sent first
       // Using setTimeout(0) schedules as macrotask, running after current I/O (response send)
       console.log('[API /api/leads] Scheduling background auction for lead:', result.id);
+      addBreadcrumb('Scheduling background auction', 'auction', { leadId: result.id, serviceTypeId: leadDataForAuction.serviceTypeId, zipCode: leadDataForAuction.zipCode });
+
+      // Maximum time for entire auction process (60 seconds)
+      const AUCTION_TIMEOUT_MS = 60000;
 
       setTimeout(async () => {
-        try {
+        addBreadcrumb('setTimeout callback started', 'auction', { leadId: result.id });
+
+        // Helper to run auction with timeout protection
+        const runAuctionWithTimeout = async () => {
           // Mark as PROCESSING before auction starts
           await prisma.lead.update({
             where: { id: result.id },
             data: { status: LeadStatus.PROCESSING },
           });
+          addBreadcrumb('Lead status set to PROCESSING', 'auction', { leadId: result.id });
 
           const auctionResult = await AuctionEngine.runAuction(leadDataForAuction);
+          addBreadcrumb('Auction completed', 'auction', {
+            leadId: result.id,
+            status: auctionResult.status,
+            winningBuyerId: auctionResult.winningBuyerId,
+            winningBidAmount: auctionResult.winningBidAmount,
+            participantCount: auctionResult.participantCount,
+          });
           console.log('[API /api/leads] Background auction completed:', {
             leadId: result.id,
             status: auctionResult.status,
@@ -504,6 +519,7 @@ export async function POST(request: NextRequest) {
             ChangeSource.SYSTEM
           );
 
+          addBreadcrumb('Lead status updated', 'auction', { leadId: result.id, finalStatus, statusReason });
           console.log('[API /api/leads] Lead status updated:', { leadId: result.id, finalStatus });
 
           // Send admin notification email
@@ -524,14 +540,31 @@ export async function POST(request: NextRequest) {
             );
 
             await sendAuctionCompletionEmail(emailData);
+            addBreadcrumb('Admin notification email sent', 'auction', { leadId: result.id });
             console.log('[API /api/leads] Admin notification email sent for lead:', result.id);
           } catch (emailError) {
+            addBreadcrumb('Admin email failed', 'auction', { leadId: result.id, error: (emailError as Error).message });
             console.error('[API /api/leads] Failed to send admin notification email:', emailError);
           }
+        };
 
+        // Create timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('AUCTION_TIMEOUT: Exceeded 60 second limit')), AUCTION_TIMEOUT_MS);
+        });
+
+        try {
+          // Race the auction against the timeout
+          await Promise.race([runAuctionWithTimeout(), timeoutPromise]);
         } catch (auctionError) {
-          // Auction failed - update lead status to REJECTED
-          captureApiError(auctionError, { route: '/api/leads', action: 'background_auction', extra: { leadId: result.id } });
+          // Auction failed or timed out - update lead status to REJECTED
+          const isTimeout = (auctionError as Error).message.includes('AUCTION_TIMEOUT');
+          addBreadcrumb(isTimeout ? 'Auction timed out' : 'Auction error caught', 'auction', {
+            leadId: result.id,
+            error: (auctionError as Error).message,
+            isTimeout
+          });
+          captureApiError(auctionError, { route: '/api/leads', action: 'background_auction', extra: { leadId: result.id, isTimeout } });
           console.error('[API /api/leads] Background auction failed:', auctionError);
 
           try {
@@ -543,10 +576,12 @@ export async function POST(request: NextRequest) {
               result.id,
               LeadStatus.PROCESSING,
               LeadStatus.REJECTED,
-              `Auction error: ${(auctionError as Error).message}`,
+              isTimeout ? 'Auction timeout: Processing exceeded 60 seconds' : `Auction error: ${(auctionError as Error).message}`,
               ChangeSource.SYSTEM
             );
+            addBreadcrumb('Lead status set to REJECTED after error', 'auction', { leadId: result.id, isTimeout });
           } catch (updateError) {
+            addBreadcrumb('Failed to update lead status after error', 'auction', { leadId: result.id, error: (updateError as Error).message });
             console.error('[API /api/leads] Failed to update lead status after auction error:', updateError);
           }
         }

@@ -76,6 +76,7 @@ import { BuyerResponseParser } from '../buyers/response-parser';
 import { loadBuyerConfigForAuction } from '../field-mapping/database-buyer-loader';
 import { ContractorDeliveryService, LeadForDelivery } from '../services/contractor-delivery-service';
 import { logger } from '../logger';
+import { addBreadcrumb } from '@/lib/sentry';
 import { PingTokenConfig, DEFAULT_PING_TOKEN_CONFIG } from '@/types/field-mapping';
 
 export class AuctionEngine {
@@ -106,6 +107,7 @@ export class AuctionEngine {
 
     try {
       // Get eligible buyers for this service type
+      addBreadcrumb('AuctionEngine.runAuction started', 'auction', { leadId: lead.id, serviceTypeId: lead.serviceTypeId, zipCode: lead.zipCode });
       logger.info('[AuctionEngine] Getting eligible buyers', {
         leadId: lead.id,
         serviceTypeId: lead.serviceTypeId,
@@ -113,6 +115,7 @@ export class AuctionEngine {
       });
 
       const eligibleBuyers = await this.getEligibleBuyers(lead, config);
+      addBreadcrumb('Eligible buyers found', 'auction', { leadId: lead.id, count: eligibleBuyers.length, buyers: eligibleBuyers.map(b => b.buyer.name) });
 
       logger.info('[AuctionEngine] Eligible buyers result', {
         leadId: lead.id,
@@ -138,7 +141,9 @@ export class AuctionEngine {
 
       // If we have network buyers, run the network auction first
       if (networkBuyers.length > 0) {
+        addBreadcrumb('Running network auction', 'auction', { leadId: lead.id, networkBuyerCount: networkBuyers.length });
         const networkResult = await this.runNetworkAuction(lead, networkBuyers, config, auctionId, startTime);
+        addBreadcrumb('Network auction completed', 'auction', { leadId: lead.id, status: networkResult.status, winningBuyerId: networkResult.winningBuyerId, postSuccess: networkResult.postResult?.success });
 
         // If network auction succeeded, return the result
         if (networkResult.status === 'completed' && networkResult.postResult?.success) {
@@ -174,9 +179,11 @@ export class AuctionEngine {
       }
 
       // No eligible buyers at all
+      addBreadcrumb('No eligible buyers found', 'auction', { leadId: lead.id });
       return this.createFailedResult(lead.id, 'No eligible buyers found', []);
 
     } catch (error) {
+      addBreadcrumb('Auction error', 'auction', { leadId: lead.id, error: (error as Error).message });
       this.activeAuctions.delete(auctionId);
 
       throw new AuctionError(
