@@ -24,13 +24,15 @@ import {
   XCircle,
   User,
   Mail,
-  Phone,
+  Phone as PhoneIcon,
   Globe,
   Calendar,
   DollarSign,
   Link as LinkIcon,
   MousePointerClick,
-  Award
+  Award,
+  PhoneCall,
+  CreditCard
 } from 'lucide-react';
 
 interface Affiliate {
@@ -54,6 +56,13 @@ interface Stats {
   totalClicks: number;
   totalConversions: number;
   totalLinks: number;
+  // Tracking number stats
+  trackingNumbers: number;
+  trackingNumbersTollFree: number;
+  trackingNumbersLocal: number;
+  trackingNumbersMonthlyCost: number;
+  totalTrackingCalls: number;
+  totalQualifiedCalls: number;
 }
 
 export default function AdminAffiliateDetailPage() {
@@ -222,21 +231,22 @@ export default function AdminAffiliateDetailPage() {
       accent: 'blue' as const,
     },
     {
-      label: 'Links',
-      value: stats.totalLinks.toString(),
-      icon: LinkIcon,
-      accent: 'orange' as const,
+      label: 'Tracking #s',
+      value: stats.trackingNumbers.toString(),
+      icon: PhoneCall,
+      accent: 'purple' as const,
     },
     {
-      label: 'Clicks',
-      value: stats.totalClicks.toLocaleString(),
-      icon: MousePointerClick,
+      label: 'Twilio Cost/mo',
+      value: formatCurrency(stats.trackingNumbersMonthlyCost),
+      icon: CreditCard,
+      accent: 'red' as const,
     },
     {
-      label: 'Conversions',
-      value: stats.totalConversions.toLocaleString(),
-      icon: Award,
-      accent: 'green' as const,
+      label: 'Total Calls',
+      value: stats.totalTrackingCalls.toLocaleString(),
+      icon: PhoneIcon,
+      accent: 'blue' as const,
     },
   ] : [];
 
@@ -244,7 +254,7 @@ export default function AdminAffiliateDetailPage() {
   const profileInfoItems = [
     { label: 'Name', value: `${affiliate.firstName} ${affiliate.lastName}`, icon: User },
     { label: 'Email', value: affiliate.email, icon: Mail },
-    { label: 'Phone', value: affiliate.phone || '-', icon: Phone },
+    { label: 'Phone', value: affiliate.phone || '-', icon: PhoneIcon },
     {
       label: 'Website',
       value: affiliate.website ? (
@@ -256,7 +266,20 @@ export default function AdminAffiliateDetailPage() {
     },
     { label: 'Commission Rate', value: `${(affiliate.commissionRate * 100).toFixed(0)}%`, icon: DollarSign },
     { label: 'Joined', value: formatDate(affiliate.createdAt), icon: Calendar },
-    ...(affiliate.approvedAt ? [{ label: 'Approved', value: formatDate(affiliate.approvedAt), icon: CheckCircle }] : [])
+    ...(affiliate.approvedAt ? [{ label: 'Approved', value: formatDate(affiliate.approvedAt), icon: CheckCircle }] : []),
+    // Tracking number breakdown if they have any
+    ...(stats && stats.trackingNumbers > 0 ? [
+      {
+        label: 'Tracking Numbers',
+        value: `${stats.trackingNumbers} (${stats.trackingNumbersTollFree} toll-free, ${stats.trackingNumbersLocal} local)`,
+        icon: PhoneCall
+      },
+      {
+        label: 'Call Stats',
+        value: `${stats.totalTrackingCalls.toLocaleString()} total / ${stats.totalQualifiedCalls.toLocaleString()} qualified`,
+        icon: Award
+      }
+    ] : [])
   ];
 
   // Map status to StatusBadge status type

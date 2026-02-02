@@ -16,8 +16,13 @@ import {
   updateAffiliateStatus
 } from '@/lib/services/affiliate-service';
 import { getAffiliateStats } from '@/lib/services/affiliate-commission-service';
+import { getTrackingNumbersByAffiliate } from '@/lib/services/tracking-number-service';
 import { AffiliateStatus } from '@/types/database';
 import { captureApiError } from '@/lib/sentry';
+
+// Twilio pricing (approximate monthly cost per number)
+const TWILIO_LOCAL_MONTHLY_COST = 1.15;
+const TWILIO_TOLL_FREE_MONTHLY_COST = 2.15;
 
 // Validation schema for updating affiliate
 const updateAffiliateSchema = z.object({
@@ -43,10 +48,11 @@ export async function GET(
       }, { status: 401 });
     }
 
-    // Get affiliate with stats
-    const [affiliate, stats] = await Promise.all([
+    // Get affiliate with stats and tracking numbers
+    const [affiliate, stats, trackingNumbers] = await Promise.all([
       getAffiliateById(params.id),
-      getAffiliateStats(params.id)
+      getAffiliateStats(params.id),
+      getTrackingNumbersByAffiliate(params.id)
     ]);
 
     if (!affiliate) {
@@ -55,6 +61,24 @@ export async function GET(
         error: 'Affiliate not found'
       }, { status: 404 });
     }
+
+    // Calculate tracking number costs
+    const activeTrackingNumbers = trackingNumbers.filter(tn => tn.provisioningStatus === 'ACTIVE');
+    const tollFreeCount = activeTrackingNumbers.filter(tn =>
+      tn.phoneNumber.startsWith('+1800') ||
+      tn.phoneNumber.startsWith('+1833') ||
+      tn.phoneNumber.startsWith('+1844') ||
+      tn.phoneNumber.startsWith('+1855') ||
+      tn.phoneNumber.startsWith('+1866') ||
+      tn.phoneNumber.startsWith('+1877') ||
+      tn.phoneNumber.startsWith('+1888')
+    ).length;
+    const localCount = activeTrackingNumbers.length - tollFreeCount;
+    const estimatedMonthlyCost = (tollFreeCount * TWILIO_TOLL_FREE_MONTHLY_COST) + (localCount * TWILIO_LOCAL_MONTHLY_COST);
+
+    // Calculate total calls across all tracking numbers
+    const totalTrackingCalls = activeTrackingNumbers.reduce((sum, tn) => sum + tn.totalCalls, 0);
+    const totalQualifiedCalls = activeTrackingNumbers.reduce((sum, tn) => sum + tn.totalQualifiedCalls, 0);
 
     return NextResponse.json({
       success: true,
@@ -78,7 +102,14 @@ export async function GET(
           totalClicks: stats.totalClicks,
           totalConversions: stats.totalConversions,
           conversionRate: Math.round(stats.conversionRate * 10000) / 100,
-          totalLinks: stats.activeLinks
+          totalLinks: stats.activeLinks,
+          // Tracking number stats
+          trackingNumbers: activeTrackingNumbers.length,
+          trackingNumbersTollFree: tollFreeCount,
+          trackingNumbersLocal: localCount,
+          trackingNumbersMonthlyCost: Math.round(estimatedMonthlyCost * 100) / 100,
+          totalTrackingCalls,
+          totalQualifiedCalls
         }
       }
     });
