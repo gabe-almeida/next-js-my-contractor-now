@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   Phone,
+  PhoneCall,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AdminUser } from '@/types';
@@ -80,6 +81,11 @@ const navigationItems: NavigationItem[] = [
     name: 'Affiliates',
     href: '/admin/affiliates',
     icon: UserPlus,
+  },
+  {
+    name: 'Tracking Numbers',
+    href: '/admin/tracking-numbers',
+    icon: PhoneCall,
   },
   {
     name: 'Finance',
