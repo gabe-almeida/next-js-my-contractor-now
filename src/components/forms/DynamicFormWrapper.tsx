@@ -93,5 +93,5 @@ export default function DynamicFormWrapper({ flow, serviceSlug }: DynamicFormWra
     window.location.href = '/';
   };
 
-  return <DynamicForm flow={flow} onComplete={handleFormComplete} onBack={handleBack} />;
+  return <DynamicForm flow={flow} onComplete={handleFormComplete} onBack={handleBack} serviceSlug={serviceSlug} />;
 }

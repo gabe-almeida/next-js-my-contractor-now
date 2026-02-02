@@ -13,16 +13,19 @@ import { TrustedFormProvider, useTrustedForm } from '@/components/forms/complian
 import { JornayaProvider, useJornaya } from '@/components/forms/compliance/JornayaProvider';
 import { ComplianceStatus } from '@/types/forms/index';
 import { TextInput, PhoneInput, EmailInput } from '@/components/ui/fields';
+import { CallButton } from '@/components/ui/CallButton';
+import { DEFAULT_PHONE } from '@/config/site';
 
 interface DynamicFormProps {
   flow: QuestionFlow;
   onComplete: (answers: { [key: string]: any }) => void;
   onBack?: () => void;
   buyerId?: string; // For TCPA configuration
+  serviceSlug?: string; // For DNI call button
 }
 
 // Inner form component that uses compliance hooks
-function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', complianceStatus }: DynamicFormProps & { complianceStatus: { trustedForm: ComplianceStatus; jornaya: ComplianceStatus } }) {
+function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', serviceSlug, complianceStatus }: DynamicFormProps & { complianceStatus: { trustedForm: ComplianceStatus; jornaya: ComplianceStatus } }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -325,6 +328,30 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
               {currentQuestion.question}
             </h2>
 
+            {/* Call Option - DNI enabled */}
+            {serviceSlug && (
+              <div className="text-center py-4 px-6 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-3">Prefer to talk to someone?</p>
+                <CallButton
+                  service={serviceSlug}
+                  fallbackNumber={DEFAULT_PHONE.number}
+                  fallbackDisplayNumber={DEFAULT_PHONE.display}
+                  variant="outline"
+                  size="md"
+                  showNumber={true}
+                />
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">or fill out the form below</span>
+              </div>
+            </div>
+
             <EmailInput
               value={formData.email}
               onChange={(value) => updateField('email', value)}
@@ -382,6 +409,30 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
               {currentQuestion.question}
             </h2>
+
+            {/* Call Option - DNI enabled */}
+            {serviceSlug && (
+              <div className="text-center py-4 px-6 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-3">Prefer to talk to someone?</p>
+                <CallButton
+                  service={serviceSlug}
+                  fallbackNumber={DEFAULT_PHONE.number}
+                  fallbackDisplayNumber={DEFAULT_PHONE.display}
+                  variant="outline"
+                  size="md"
+                  showNumber={true}
+                />
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">or fill out the form below</span>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TextInput
@@ -517,7 +568,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', compl
 }
 
 // Main wrapper component that provides compliance context
-export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'default' }: DynamicFormProps) {
+export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'default', serviceSlug }: DynamicFormProps) {
   // Track compliance status from providers
   const [complianceStatus, setComplianceStatus] = useState({
     trustedForm: { initialized: false } as ComplianceStatus,
@@ -608,6 +659,7 @@ export default function DynamicForm({ flow, onComplete, onBack, buyerId = 'defau
           onComplete={onComplete}
           onBack={onBack}
           buyerId={buyerId}
+          serviceSlug={serviceSlug}
           complianceStatus={complianceStatus}
         />
       </JornayaProvider>
