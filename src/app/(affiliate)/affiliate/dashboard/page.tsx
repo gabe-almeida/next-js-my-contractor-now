@@ -66,7 +66,7 @@ interface RecentCall {
   affiliatePayout: number | null;
   connectedDurationSeconds: number | null;
   recordingStatus: string;
-  campaign: { name: string } | null;
+  campaign: { name: string; serviceType?: string } | null;
 }
 
 /**
@@ -342,7 +342,14 @@ export default function AffiliateDashboardPage() {
                           <Clock className="h-3 w-3" />
                           {formatDuration(call.connectedDurationSeconds)}
                           {call.campaign && (
-                            <span className="text-gray-400">- {call.campaign.name}</span>
+                            <span className="text-gray-400">
+                              - {call.campaign.name}
+                              {call.campaign.serviceType && (
+                                <span className="ml-1 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                                  {call.campaign.serviceType}
+                                </span>
+                              )}
+                            </span>
                           )}
                         </p>
                       </div>

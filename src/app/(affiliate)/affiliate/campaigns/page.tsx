@@ -253,6 +253,23 @@ export default function AffiliateCampaignsPage() {
       {/* Summary Stats */}
       <AdminStatGrid stats={summaryStats} columns={4} />
 
+      {/* Service-Type Explanation Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="bg-emerald-100 rounded-full p-2 flex-shrink-0">
+            <Phone className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-emerald-800">Each Service Gets Its Own Tracking Number</h4>
+            <p className="mt-1 text-sm text-emerald-700">
+              When you provision a number for a campaign, it&apos;s tied to that specific <strong>service type</strong> (e.g., Windows, Roofing, Bathrooms).
+              This means calls are routed to contractors who specialize in that exact service,
+              and you earn commission for each qualified call.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Campaign Cards */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -338,7 +355,12 @@ function CampaignCard({
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
-            <p className="text-sm text-gray-500">{campaign.serviceType.displayName}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <AdminBadge color="blue">
+                {campaign.serviceType.displayName}
+              </AdminBadge>
+              <span className="text-xs text-gray-400">Service Type</span>
+            </div>
           </div>
           <AdminBadge color={campaign.status === 'APPROVED' ? 'green' : 'yellow'}>
             {campaign.status}
