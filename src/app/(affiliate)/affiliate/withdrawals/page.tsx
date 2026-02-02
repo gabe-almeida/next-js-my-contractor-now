@@ -80,11 +80,12 @@ export default function AffiliateWithdrawalsPage() {
         // Also get availableBalance from same response (more efficient)
         if (withdrawalsData.data.availableBalance !== undefined) {
           setStats({ availableBalance: withdrawalsData.data.availableBalance });
+        } else if (statsData.success) {
+          // Fallback: use stats endpoint if withdrawals response doesn't include balance
+          setStats({ availableBalance: statsData.data.availableBalance || 0 });
         }
-      }
-
-      // Fallback: use stats endpoint if available
-      if (statsData.success && !stats) {
+      } else if (statsData.success) {
+        // Fallback: use stats endpoint if withdrawals request failed
         setStats({ availableBalance: statsData.data.availableBalance || 0 });
       }
     } catch (error) {

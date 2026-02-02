@@ -11,7 +11,7 @@
  * HOW: Fetches current API key status, allows generation/revocation of credentials.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import {
   Key,
@@ -45,11 +45,7 @@ export default function ApiAccessSettings({ token }: ApiAccessSettingsProps) {
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState<'key' | 'secret' | null>(null);
 
-  useEffect(() => {
-    fetchApiStatus();
-  }, []);
-
-  const fetchApiStatus = async () => {
+  const fetchApiStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/affiliates/api-credentials', {
         headers: { Authorization: `Bearer ${token}` }
@@ -65,7 +61,11 @@ export default function ApiAccessSettings({ token }: ApiAccessSettingsProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchApiStatus();
+  }, [fetchApiStatus]);
 
   const handleGenerate = async () => {
     setError('');

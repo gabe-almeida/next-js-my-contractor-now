@@ -11,7 +11,7 @@
  * HOW: Fetches current postback config, allows testing and updating.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import {
   Webhook,
@@ -57,11 +57,7 @@ export default function PostbackSettings({ token }: PostbackSettingsProps) {
   const [postbackMethod, setPostbackMethod] = useState('POST');
   const [enabled, setEnabled] = useState(false);
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const response = await fetch('/api/affiliates/postback', {
         headers: { Authorization: `Bearer ${token}` }
@@ -79,7 +75,11 @@ export default function PostbackSettings({ token }: PostbackSettingsProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   const handleSave = async () => {
     setError('');
