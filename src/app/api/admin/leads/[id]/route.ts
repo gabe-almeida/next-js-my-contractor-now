@@ -152,6 +152,12 @@ async function handleGetLead(
         status: tx.status,
         bidAmount: tx.bidAmount,
         responseTime: tx.responseTime,
+        errorMessage: tx.errorMessage,
+        payload: tx.payload ? safeJsonParse(tx.payload) : null,
+        response: tx.response ? safeJsonParse(tx.response) : null,
+        isWinner: tx.isWinner,
+        lostReason: tx.lostReason,
+        cascadePosition: tx.cascadePosition,
         createdAt: tx.createdAt
       })),
       auctionResults,
@@ -308,6 +314,18 @@ async function handleUpdateLeadStatus(
 }
 
 // Helper functions
+
+/**
+ * Safely parse JSON string, returning null on failure
+ */
+function safeJsonParse(jsonString: string): any {
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return jsonString; // Return raw string if not valid JSON
+  }
+}
+
 function calculateAuctionResults(transactions: any[]) {
   // Filter ping transactions with successful bids
   const pingTransactions = transactions.filter(

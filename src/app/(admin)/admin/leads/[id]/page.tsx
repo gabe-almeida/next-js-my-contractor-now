@@ -32,7 +32,11 @@ import {
   TrendingUp,
   Globe,
   MousePointer,
-  Activity
+  Activity,
+  Eye,
+  X,
+  Trophy,
+  Ban
 } from 'lucide-react';
 import { LeadStatusHistory } from '@/components/admin/LeadStatusHistory';
 import { ChangeStatusModal } from '@/components/admin/ChangeStatusModal';
@@ -78,6 +82,12 @@ interface TransactionItem {
   status: string;
   bidAmount: number | null;
   responseTime: number | null;
+  errorMessage: string | null;
+  payload: Record<string, unknown> | null;
+  response: Record<string, unknown> | null;
+  isWinner: boolean | null;
+  lostReason: string | null;
+  cascadePosition: number | null;
   createdAt: string;
 }
 
@@ -147,6 +157,8 @@ export default function LeadDetailPage() {
   const [showChangeStatus, setShowChangeStatus] = useState(false);
   const [showIssueCredit, setShowIssueCredit] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionItem | null>(null);
+  const [activePayloadTab, setActivePayloadTab] = useState<'request' | 'response'>('request');
 
   const fetchLeadDetails = useCallback(async () => {
     setLoading(true);
@@ -616,12 +628,18 @@ export default function LeadDetailPage() {
                   <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Status</th>
                   <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Bid</th>
                   <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Response</th>
+                  <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Result</th>
                   <th className="text-left py-2 px-2 text-xs font-medium text-gray-500">Time</th>
+                  <th className="text-left py-2 px-2 text-xs font-medium text-gray-500"></th>
                 </tr>
               </thead>
               <tbody>
                 {lead.transactions.map((tx) => (
-                  <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr
+                    key={tx.id}
+                    className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={() => setSelectedTransaction(tx)}
+                  >
                     <td className="py-2 px-2">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         tx.actionType === 'PING'
@@ -641,6 +659,7 @@ export default function LeadDetailPage() {
                       <Link
                         href={`/admin/buyers/${tx.buyerId}`}
                         className="text-blue-600 hover:text-blue-800 text-sm"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {tx.buyerName || tx.buyerId.slice(0, 8) + '...'}
                       </Link>
@@ -664,14 +683,42 @@ export default function LeadDetailPage() {
                     <td className="py-2 px-2 text-gray-600">
                       {tx.responseTime ? `${tx.responseTime}ms` : '-'}
                     </td>
+                    <td className="py-2 px-2">
+                      {tx.isWinner === true ? (
+                        <span className="inline-flex items-center text-green-600" title="Won auction">
+                          <Trophy className="h-4 w-4" />
+                        </span>
+                      ) : tx.isWinner === false ? (
+                        <span className="inline-flex items-center text-gray-400" title={tx.lostReason || 'Lost'}>
+                          <Ban className="h-4 w-4" />
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
                     <td className="py-2 px-2 text-gray-500 text-xs">
                       {new Date(tx.createdAt).toLocaleTimeString()}
+                    </td>
+                    <td className="py-2 px-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTransaction(tx);
+                        }}
+                        className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                        title="View payload details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Click any row to view the full request payload and response
+          </p>
         </div>
       )}
 
@@ -705,6 +752,186 @@ export default function LeadDetailPage() {
           onClose={() => setShowIssueCredit(false)}
           onSuccess={handleCreditSuccess}
         />
+      )}
+
+      {/* Transaction Payload Detail Modal */}
+      {selectedTransaction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-xl">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <div className="flex items-center gap-3">
+                <span className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${
+                  selectedTransaction.actionType === 'PING'
+                    ? 'bg-blue-100 text-blue-800'
+                    : selectedTransaction.actionType === 'POST'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedTransaction.actionType}
+                </span>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Transaction Details
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {selectedTransaction.buyerName || selectedTransaction.buyerId}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTransaction(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Transaction Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <span className="text-xs text-gray-500 block">Status</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium mt-1 ${
+                    selectedTransaction.status === 'SUCCESS'
+                      ? 'bg-green-100 text-green-800'
+                      : selectedTransaction.status === 'FAILED'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedTransaction.status}
+                  </span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <span className="text-xs text-gray-500 block">Bid Amount</span>
+                  <span className="text-lg font-semibold text-gray-900">
+                    {selectedTransaction.bidAmount ? `$${Number(selectedTransaction.bidAmount).toFixed(2)}` : '-'}
+                  </span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <span className="text-xs text-gray-500 block">Response Time</span>
+                  <span className="text-lg font-semibold text-gray-900">
+                    {selectedTransaction.responseTime ? `${selectedTransaction.responseTime}ms` : '-'}
+                  </span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <span className="text-xs text-gray-500 block">Result</span>
+                  {selectedTransaction.isWinner === true ? (
+                    <span className="inline-flex items-center text-green-600 font-semibold mt-1">
+                      <Trophy className="h-4 w-4 mr-1" /> Won
+                    </span>
+                  ) : selectedTransaction.isWinner === false ? (
+                    <span className="inline-flex items-center text-gray-500 mt-1">
+                      <Ban className="h-4 w-4 mr-1" /> {selectedTransaction.lostReason || 'Lost'}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {selectedTransaction.errorMessage && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <span className="text-xs text-red-600 font-medium block mb-1">Error Message</span>
+                  <span className="text-sm text-red-700">{selectedTransaction.errorMessage}</span>
+                </div>
+              )}
+
+              {/* Cascade Position */}
+              {selectedTransaction.cascadePosition && selectedTransaction.cascadePosition > 1 && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <span className="text-xs text-yellow-700">
+                    Cascade Position: {selectedTransaction.cascadePosition} (fallback attempt)
+                  </span>
+                </div>
+              )}
+
+              {/* Tabs for Request/Response */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setActivePayloadTab('request')}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activePayloadTab === 'request'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Request Payload
+                </button>
+                <button
+                  onClick={() => setActivePayloadTab('response')}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activePayloadTab === 'response'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Response
+                </button>
+              </div>
+
+              {/* Payload/Response Content */}
+              {activePayloadTab === 'request' && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Request sent to buyer
+                    </span>
+                    {selectedTransaction.payload && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(JSON.stringify(selectedTransaction.payload, null, 2));
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Copy to clipboard
+                      </button>
+                    )}
+                  </div>
+                  <pre className="bg-gray-900 text-emerald-400 p-4 rounded-lg text-xs overflow-x-auto max-h-96 font-mono">
+                    {selectedTransaction.payload
+                      ? JSON.stringify(selectedTransaction.payload, null, 2)
+                      : 'No request payload captured'}
+                  </pre>
+                </div>
+              )}
+
+              {activePayloadTab === 'response' && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Response from buyer
+                    </span>
+                    {selectedTransaction.response && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(JSON.stringify(selectedTransaction.response, null, 2));
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Copy to clipboard
+                      </button>
+                    )}
+                  </div>
+                  <pre className="bg-gray-900 text-emerald-400 p-4 rounded-lg text-xs overflow-x-auto max-h-96 font-mono">
+                    {selectedTransaction.response
+                      ? JSON.stringify(selectedTransaction.response, null, 2)
+                      : selectedTransaction.errorMessage
+                      ? JSON.stringify({ error: selectedTransaction.errorMessage }, null, 2)
+                      : 'No response captured'}
+                  </pre>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              <div className="mt-4 text-xs text-gray-500">
+                Transaction time: {new Date(selectedTransaction.createdAt).toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
