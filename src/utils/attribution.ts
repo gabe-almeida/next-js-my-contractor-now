@@ -43,10 +43,11 @@ export interface AttributionData {
   rdt_cid?: string; // Reddit
   irclickid?: string; // Impact Radius
 
-  // Affiliate tracking
+  // Affiliate tracking (FIRST-TOUCH attribution)
   affiliate_id?: string; // Affiliate tracking code
   aff?: string; // Short alias for affiliate_id
-  ref?: string; // Referral code alias
+  ref?: string; // Referral code alias (from aff_ref cookie - first affiliate)
+  affiliate_first_touch_ts?: string; // Timestamp when first affiliate was recorded
 
   // Page context
   landing_page?: string;
@@ -104,10 +105,24 @@ const ATTRIBUTION_COOKIES = [
   '_ga', // Google Analytics
   '_gid', // Google Analytics session
   'aff_ref', // Affiliate tracking cookie (set by /r/[code] redirect)
+  'aff_ref_ts', // Timestamp when first affiliate was recorded
 ] as const;
 
 /**
+ * Affiliate-specific params that should use FIRST-TOUCH attribution
+ * (existing cookie takes precedence over URL params)
+ */
+const FIRST_TOUCH_PARAMS = ['ref', 'aff', 'affiliate_id'] as const;
+
+/**
  * Extracts attribution data from current page URL and cookies
+ *
+ * ATTRIBUTION MODEL:
+ * - Affiliate params (ref, aff, affiliate_id): FIRST-TOUCH - cookie takes precedence
+ * - Other params (UTM, click IDs): LAST-TOUCH - URL takes precedence
+ *
+ * This ensures the original referring affiliate gets credit even if the user
+ * later clicks a different affiliate link or comes back via retargeting.
  *
  * @returns AttributionData object with all captured attribution info
  */
@@ -120,16 +135,26 @@ export function extractAttributionData(): AttributionData {
   const url = new URL(window.location.href);
   const params = url.searchParams;
 
+  // First, extract cookies (we need this to check for first-touch affiliate)
+  const cookies = parseCookies();
+
+  // Check if we have an existing affiliate cookie (first-touch)
+  const existingAffiliateRef = cookies['aff_ref'];
+
   // Extract known attribution parameters from URL
   for (const param of ATTRIBUTION_PARAMS) {
     const value = params.get(param);
     if (value) {
+      // FIRST-TOUCH for affiliate params: if cookie exists, use cookie instead of URL
+      if (FIRST_TOUCH_PARAMS.includes(param as any) && existingAffiliateRef) {
+        // Skip URL param - we'll use the cookie value below
+        continue;
+      }
       (attribution as any)[param] = value;
     }
   }
 
   // Extract cookies (client-side only)
-  const cookies = parseCookies();
   for (const cookieName of ATTRIBUTION_COOKIES) {
     const value = cookies[cookieName];
     if (value) {
@@ -138,6 +163,9 @@ export function extractAttributionData(): AttributionData {
       if (cookieName === 'aff_ref') {
         // Map aff_ref cookie to 'ref' field for affiliate tracking
         fieldName = 'ref';
+      } else if (cookieName === 'aff_ref_ts') {
+        // Map timestamp cookie
+        fieldName = 'affiliate_first_touch_ts';
       } else if (cookieName.startsWith('_')) {
         // Remove leading underscore for analytics cookies
         fieldName = cookieName.slice(1);
@@ -145,8 +173,12 @@ export function extractAttributionData(): AttributionData {
         fieldName = cookieName;
       }
 
-      // Only set if not already captured from URL params (URL takes precedence)
-      if (!(attribution as any)[fieldName]) {
+      // For affiliate ref (first-touch): ALWAYS use cookie if it exists
+      // For other cookies: only set if not already captured from URL
+      if (cookieName === 'aff_ref') {
+        // First-touch: cookie ALWAYS wins for affiliate attribution
+        (attribution as any)[fieldName] = value;
+      } else if (!(attribution as any)[fieldName]) {
         (attribution as any)[fieldName] = value;
       }
     }
