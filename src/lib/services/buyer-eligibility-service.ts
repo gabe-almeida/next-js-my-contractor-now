@@ -8,6 +8,7 @@ import { BuyerServiceConfig } from '../templates/types';
 import { BuyerConfigurationRegistry } from '../buyers/configurations';
 import { logger } from '../logger';
 import { RedisCache } from '../../config/redis';
+import { addBreadcrumb } from '../sentry';
 
 export interface EligibilityFilter {
   serviceTypeId: string;
@@ -72,9 +73,22 @@ export class BuyerEligibilityService {
         filter.zipCode
       );
 
+      addBreadcrumb('Service zones retrieved', 'eligibility', {
+        serviceTypeId: filter.serviceTypeId,
+        zipCode: filter.zipCode,
+        zoneCount: serviceZones.length,
+        buyers: serviceZones.map(sz => ({ id: sz.buyerId, name: sz.buyer?.name }))
+      });
+
       // Always get nationwide buyers (they participate regardless of zip code)
       // This includes buyers with nationwide=true OR no zip code restrictions
       const nationwideBuyers = await this.getNationwideBuyers(filter.serviceTypeId);
+
+      addBreadcrumb('Nationwide buyers retrieved', 'eligibility', {
+        serviceTypeId: filter.serviceTypeId,
+        nationwideCount: nationwideBuyers.length,
+        buyers: nationwideBuyers.map(nb => ({ id: nb.buyerId, name: nb.buyerName }))
+      });
 
       // Get buyer IDs from zip-matched service zones to avoid duplicates
       const zipMatchedBuyerIds = new Set(serviceZones.map(sz => sz.buyerId));
@@ -85,6 +99,15 @@ export class BuyerEligibilityService {
       );
 
       if (serviceZones.length === 0 && uniqueNationwideBuyers.length === 0) {
+        addBreadcrumb('No buyers found for eligibility', 'eligibility', {
+          serviceTypeId: filter.serviceTypeId,
+          zipCode: filter.zipCode,
+          serviceZonesCount: serviceZones.length,
+          nationwideBuyersCount: nationwideBuyers.length,
+          uniqueNationwideBuyersCount: uniqueNationwideBuyers.length,
+          zipMatchedBuyerIds: Array.from(zipMatchedBuyerIds)
+        });
+
         const result: EligibilityResult = {
           eligible: [],
           excluded: [],
@@ -120,6 +143,13 @@ export class BuyerEligibilityService {
           if (eligibilityCheck.eligible) {
             eligible.push(eligibilityCheck.buyer!);
           } else {
+            addBreadcrumb('Buyer excluded from eligibility', 'eligibility', {
+              buyerId: serviceZone.buyerId,
+              buyerName: serviceZone.buyer?.name || 'Unknown',
+              reason: eligibilityCheck.reason,
+              details: eligibilityCheck.details
+            });
+
             excluded.push({
               buyerId: serviceZone.buyerId,
               buyerName: serviceZone.buyer?.name || 'Unknown',
@@ -170,6 +200,19 @@ export class BuyerEligibilityService {
         eligibleCount: limitedEligible.length,
         excludedCount: excluded.length
       };
+
+      addBreadcrumb('Buyer eligibility result', 'eligibility', {
+        serviceTypeId: filter.serviceTypeId,
+        zipCode: filter.zipCode,
+        totalFound: result.totalFound,
+        eligibleCount: result.eligibleCount,
+        excludedCount: result.excludedCount,
+        eligibleBuyers: limitedEligible.map(b => ({ id: b.buyerId, name: b.buyerName, score: b.eligibilityScore })),
+        excludedReasons: excluded.reduce((acc, ex) => {
+          acc[ex.reason] = (acc[ex.reason] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      });
 
       // Cache the result
       await RedisCache.set(cacheKey, result, this.CACHE_TTL);
@@ -640,7 +683,21 @@ export class BuyerEligibilityService {
         }
       });
 
+      addBreadcrumb('Service configs retrieved for nationwide check', 'eligibility', {
+        serviceTypeId,
+        configCount: serviceConfigs.length,
+        buyers: serviceConfigs.map(c => ({
+          id: c.buyerId,
+          name: c.buyer.name,
+          nationwide: c.nationwide,
+          active: c.active
+        }))
+      });
+
       if (serviceConfigs.length === 0) {
+        addBreadcrumb('No service configs found for nationwide check', 'eligibility', {
+          serviceTypeId
+        });
         return [];
       }
 
@@ -657,6 +714,14 @@ export class BuyerEligibilityService {
             buyerId: config.buyerId,
             serviceTypeId
           }
+        });
+
+        addBreadcrumb('Checking buyer for nationwide eligibility', 'eligibility', {
+          buyerId: config.buyerId,
+          buyerName: config.buyer.name,
+          isExplicitlyNationwide,
+          zipCount,
+          willInclude: isExplicitlyNationwide || zipCount === 0
         });
 
         // Include if explicitly nationwide OR no zip restrictions (implicit nationwide)
@@ -695,6 +760,16 @@ export class BuyerEligibilityService {
           });
         }
       }
+
+      addBreadcrumb('Nationwide buyers result', 'eligibility', {
+        serviceTypeId,
+        nationwideCount: eligibleBuyers.length,
+        buyers: eligibleBuyers.map(b => ({
+          id: b.buyerId,
+          name: b.buyerName,
+          dailyCount: b.constraints.currentDailyCount
+        }))
+      });
 
       logger.info('Found nationwide buyers for service type', {
         serviceTypeId,
