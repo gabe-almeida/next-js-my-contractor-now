@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { AffiliateLayout } from '@/components/affiliate/AffiliateLayout';
+import { ToastProvider } from '@/components/ui/Toast';
 
 interface AffiliateUser {
   id: string;
@@ -94,24 +95,28 @@ export default function AffiliateRootLayout({
   // Show loading state
   if (loading && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-500">Loading...</p>
+      <ToastProvider>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-500">Loading...</p>
+          </div>
         </div>
-      </div>
+      </ToastProvider>
     );
   }
 
   // Public routes (login, signup) - render without layout
   if (isPublicRoute) {
-    return <>{children}</>;
+    return <ToastProvider>{children}</ToastProvider>;
   }
 
   // Authenticated routes - render with affiliate layout
   return (
-    <AffiliateLayout user={user || undefined}>
-      {children}
-    </AffiliateLayout>
+    <ToastProvider>
+      <AffiliateLayout user={user || undefined}>
+        {children}
+      </AffiliateLayout>
+    </ToastProvider>
   );
 }

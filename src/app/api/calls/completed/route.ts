@@ -59,6 +59,7 @@ import {
 } from '@/lib/twilio/logging';
 import { buildEmptyResponse } from '@/lib/twilio/twiml-builder';
 import { sendCallAuctionEmail, CallAuctionEmailData } from '@/lib/services/admin-email-service';
+import { incrementTrackingNumberStats } from '@/lib/services/tracking-number-service';
 import {
   validateTransition,
   mapDialStatus,
@@ -99,6 +100,7 @@ interface CallWithCampaign {
   winningBuyerId: string | null;
   affiliateId: string | null;
   campaignId: string | null;
+  trackingNumberId: string | null;
   version: number;
   campaign: {
     id: string;
@@ -112,6 +114,8 @@ interface CallWithCampaign {
     postbackUrl: string | null;
     postbackMethod: string;
   } | null;
+  // Custom affiliate payout override (from AffiliateCampaign junction)
+  affiliateCampaignPayout: Decimal | null;
 }
 
 /**
@@ -232,7 +236,8 @@ async function handleCompletionWithCallId(
   // ─────────────────────────────────────────────────────────────
   // Step 3: Load call with campaign and affiliate data
   // ─────────────────────────────────────────────────────────────
-  const call = await prisma.call.findUnique({
+  // First fetch the call with campaign and affiliate
+  const rawCall = await prisma.call.findUnique({
     where: { id: callId },
     include: {
       campaign: {
@@ -252,7 +257,27 @@ async function handleCompletionWithCallId(
         },
       },
     },
-  }) as CallWithCampaign | null;
+  });
+
+  // Fetch custom affiliate payout if affiliate and campaign exist
+  let affiliateCampaignPayout: Decimal | null = null;
+  if (rawCall?.affiliateId && rawCall?.campaignId) {
+    const affiliateCampaign = await prisma.affiliateCampaign.findUnique({
+      where: {
+        affiliateId_campaignId: {
+          affiliateId: rawCall.affiliateId,
+          campaignId: rawCall.campaignId,
+        },
+      },
+      select: { customCallPayout: true },
+    });
+    affiliateCampaignPayout = affiliateCampaign?.customCallPayout ?? null;
+  }
+
+  const call = rawCall ? {
+    ...rawCall,
+    affiliateCampaignPayout,
+  } as CallWithCampaign : null;
 
   if (!call) {
     logger.error({
@@ -360,6 +385,22 @@ async function handleCompletionWithCallId(
   // Step 9: Log activity for affiliate visibility
   // ─────────────────────────────────────────────────────────────
   await logCallCompletion(callId, parsedPayload, payoutResult);
+
+  // ─────────────────────────────────────────────────────────────
+  // Step 9b: Update tracking number stats (denormalized counters)
+  // ─────────────────────────────────────────────────────────────
+  if (call.trackingNumberId) {
+    // Fire-and-forget - don't block completion on stats update
+    incrementTrackingNumberStats(call.trackingNumberId, payoutResult.isBillable).catch((error) => {
+      logger.warn({
+        event: 'completion.tracking_stats_error',
+        message: 'Failed to increment tracking number stats',
+        callId,
+        trackingNumberId: call.trackingNumberId,
+        error: (error as Error).message,
+      });
+    });
+  }
 
   // ─────────────────────────────────────────────────────────────
   // Step 10: Fire postback to affiliate if configured
@@ -525,8 +566,11 @@ function calculatePayout(
   }
 
   // Calculate payouts
+  // Use custom affiliate payout if set, otherwise fall back to campaign default
   const buyerCharge = call.winningBid.toNumber();
-  const affiliatePayout = campaign?.callBasePayout?.toNumber() ?? 0;
+  const affiliatePayout = call.affiliateCampaignPayout?.toNumber()
+    ?? campaign?.callBasePayout?.toNumber()
+    ?? 0;
   const platformMargin = buyerCharge - affiliatePayout;
 
   return {

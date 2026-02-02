@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AdminStatGrid, StatItem } from '@/components/admin/ui/AdminStatGrid';
 import { AdminBadge } from '@/components/admin/ui/AdminBadge';
 import { Button } from '@/components/ui/Button';
+import { useToastNotifications } from '@/components/ui/Toast';
 import {
   Copy,
   Check,
@@ -25,7 +26,8 @@ import {
   Clock,
   DollarSign,
   Loader2,
-  Megaphone
+  Megaphone,
+  Info
 } from 'lucide-react';
 
 interface Campaign {
@@ -86,6 +88,7 @@ export default function AffiliateCampaignsPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
+  const toast = useToastNotifications();
 
   /**
    * WHY: Fetch campaigns from API.
@@ -138,9 +141,13 @@ export default function AffiliateCampaignsPage() {
       campaign.trackingNumber.phoneNumberDisplay
     );
 
-    await navigator.clipboard.writeText(displayNumber);
-    setCopiedId(campaign.id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await navigator.clipboard.writeText(displayNumber);
+      setCopiedId(campaign.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast.error('Copy Failed', 'Could not copy to clipboard');
+    }
   };
 
   /**
@@ -165,14 +172,21 @@ export default function AffiliateCampaignsPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert(data.error || 'Failed to provision number');
+        toast.error('Provisioning Failed', data.error || 'Failed to provision number');
         return;
       }
+
+      // Success! Show toast with the new number
+      const displayNumber = data.data.phoneNumberDisplay || data.data.phoneNumber;
+      toast.success(
+        'Tracking Number Ready!',
+        `Your number ${displayNumber} is active. Use it in your marketing to track calls.`
+      );
 
       // Refresh campaigns to show new number
       await fetchCampaigns();
     } catch (err) {
-      alert('Failed to provision tracking number. Please try again.');
+      toast.error('Provisioning Failed', 'Failed to provision tracking number. Please try again.');
       console.error('Error provisioning number:', err);
     } finally {
       setProvisioningId(null);
@@ -245,13 +259,30 @@ export default function AffiliateCampaignsPage() {
           <h2 className="text-lg font-semibold text-gray-900">Your Campaigns</h2>
         </div>
 
+        {/* Show how-it-works banner if no tracking numbers provisioned yet */}
+        {campaigns.length > 0 && !campaigns.some(c => c.trackingNumber?.provisioningStatus === 'ACTIVE') && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-800">How Call Tracking Works</h4>
+                <ol className="mt-2 text-sm text-blue-700 list-decimal list-inside space-y-1">
+                  <li>Click &quot;Get Tracking Number&quot; on a campaign below</li>
+                  <li>Use that number in your ads, landing pages, or marketing</li>
+                  <li>When someone calls, you earn commission for qualified calls</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
         {campaigns.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
             <Megaphone className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Campaigns Yet</h3>
             <p className="text-gray-500 mb-4">
               You haven&apos;t been assigned to any campaigns yet. Contact your account manager
-              to get started.
+              to get started with call tracking campaigns.
             </p>
           </div>
         ) : (
@@ -367,6 +398,14 @@ function CampaignCard({
                 )}
               </Button>
             </div>
+
+            {/* Tip for first-time users - show only if no calls yet */}
+            {campaign.trackingNumber.totalCalls === 0 && (
+              <p className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1.5">
+                <span className="font-medium">Tip:</span> Use this number in your ads and marketing.
+                Calls forwarded here earn you commissions.
+              </p>
+            )}
 
             {/* Today's Stats */}
             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100">
