@@ -1289,11 +1289,31 @@ export class AuctionEngine {
         }
 
         // Additional compliance and restriction checks
-        if (!this.meetsComplianceRequirements(lead, buyerConfig, serviceConfig)) {
+        const complianceResult = this.checkComplianceRequirements(lead, buyerConfig, serviceConfig);
+        if (!complianceResult.passes) {
+          addBreadcrumb('Buyer skipped - compliance', 'auction', {
+            leadId: lead.id,
+            buyerId: buyerConfig.id,
+            buyerName: buyerConfig.name,
+            reason: complianceResult.reason,
+            hasTcpaConsent: !!lead.complianceData?.tcpaConsent,
+            hasTrustedForm: !!lead.trustedFormCertId,
+            hasJornaya: !!lead.jornayaLeadId
+          });
+          logger.info('Buyer skipped due to compliance', {
+            leadId: lead.id,
+            buyerId: buyerConfig.id,
+            reason: complianceResult.reason
+          });
           continue;
         }
 
         if (!this.meetsTimeRestrictions(serviceConfig)) {
+          addBreadcrumb('Buyer skipped - time restriction', 'auction', {
+            leadId: lead.id,
+            buyerId: buyerConfig.id,
+            buyerName: buyerConfig.name
+          });
           continue;
         }
 
@@ -1583,28 +1603,43 @@ export class AuctionEngine {
   }
 
   /**
-   * Check compliance requirements
+   * Check compliance requirements (returns boolean for backwards compatibility)
    */
   private static meetsComplianceRequirements(
     lead: LeadData,
     buyer: BuyerConfig,
     serviceConfig: BuyerServiceConfig
   ): boolean {
-    const requirements = buyer.globalSettings.complianceRequirements;
+    return this.checkComplianceRequirements(lead, buyer, serviceConfig).passes;
+  }
+
+  /**
+   * Check compliance requirements with detailed reason for failures
+   */
+  private static checkComplianceRequirements(
+    lead: LeadData,
+    buyer: BuyerConfig,
+    serviceConfig: BuyerServiceConfig
+  ): { passes: boolean; reason?: string } {
+    const requirements = buyer.globalSettings?.complianceRequirements;
+
+    if (!requirements) {
+      return { passes: true };
+    }
 
     if (requirements.requireTrustedForm && !lead.trustedFormCertId) {
-      return false;
+      return { passes: false, reason: 'Missing TrustedForm certificate' };
     }
 
     if (requirements.requireJornaya && !lead.jornayaLeadId) {
-      return false;
+      return { passes: false, reason: 'Missing Jornaya lead ID' };
     }
 
     if (requirements.requireTcpaConsent && !lead.complianceData?.tcpaConsent) {
-      return false;
+      return { passes: false, reason: 'Missing TCPA consent' };
     }
 
-    return true;
+    return { passes: true };
   }
 
   /**
