@@ -436,6 +436,9 @@ export async function POST(request: NextRequest) {
         trustedFormCertUrl: complianceData?.trustedFormCertUrl || undefined,
         trustedFormCertId: complianceData?.trustedFormCertId || undefined,
         jornayaLeadId: complianceData?.jornayaLeadId || undefined,
+        // Network buyer required fields - pass through from database record
+        ipAddress: result.ipAddress || undefined,
+        userAgent: result.userAgent || undefined,
         // IMPORTANT: Preserve full tcpaConsent object for field mapping access to .text
         // The Modernize field mapping needs complianceData.tcpaConsent.text for homePhoneConsentLanguage
         complianceData: leadComplianceData ? {
