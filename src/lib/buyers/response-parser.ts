@@ -291,6 +291,7 @@ export class BuyerResponseParser {
   /**
    * Extract field value from response body
    * Supports dot notation for nested fields (e.g., "result.status")
+   * Supports array notation for array access (e.g., "bids[0].payout")
    */
   private static extractField(body: Record<string, unknown>, fieldPath: string): unknown {
     if (!body || typeof body !== 'object') {
@@ -304,7 +305,34 @@ export class BuyerResponseParser {
       if (current === null || current === undefined || typeof current !== 'object') {
         return null;
       }
-      current = (current as Record<string, unknown>)[part];
+
+      // Check if part contains array notation: fieldName[index]
+      const arrayMatch = part.match(/^([^\[]+)\[(\d+)\]$/);
+
+      if (arrayMatch) {
+        // Extract array field name and index
+        const fieldName = arrayMatch[1];
+        const index = parseInt(arrayMatch[2], 10);
+
+        // Get the array field
+        const arrayField = (current as Record<string, unknown>)[fieldName];
+
+        // Check if it's actually an array
+        if (!Array.isArray(arrayField)) {
+          return null;
+        }
+
+        // Check if index is in bounds
+        if (index < 0 || index >= arrayField.length) {
+          return null;
+        }
+
+        // Access array element
+        current = arrayField[index];
+      } else {
+        // Standard object property access
+        current = (current as Record<string, unknown>)[part];
+      }
     }
 
     return current;
