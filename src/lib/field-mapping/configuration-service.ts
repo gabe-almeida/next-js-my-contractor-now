@@ -355,8 +355,10 @@ export function generatePayloadPreview(
 
       // Apply valueMap if specified (database-driven value conversion)
       // This happens BEFORE transforms - converts "within_3_months" → "1-3 Months"
-      if (mapping.valueMap && typeof value === "string") {
-        const mappedValue = mapping.valueMap[value];
+      // Supports string and boolean values (converts booleans to "true"/"false" for lookup)
+      if (mapping.valueMap && (typeof value === "string" || typeof value === "boolean")) {
+        const lookupKey = String(value); // Convert to string for lookup (boolean true → "true")
+        const mappedValue = mapping.valueMap[lookupKey];
         if (mappedValue !== undefined) {
           value = mappedValue;
         }
@@ -470,8 +472,10 @@ export function applyFieldMappings(
 
       // Apply valueMap if specified (database-driven value conversion)
       // This happens BEFORE transforms - converts "within_3_months" → "1-3 Months"
-      if (mapping.valueMap && typeof value === "string") {
-        const mappedValue = mapping.valueMap[value];
+      // Supports string and boolean values (converts booleans to "true"/"false" for lookup)
+      if (mapping.valueMap && (typeof value === "string" || typeof value === "boolean")) {
+        const lookupKey = String(value); // Convert to string for lookup (boolean true → "true")
+        const mappedValue = mapping.valueMap[lookupKey];
         if (mappedValue !== undefined) {
           value = mappedValue;
         }
