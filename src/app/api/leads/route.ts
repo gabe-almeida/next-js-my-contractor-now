@@ -37,7 +37,7 @@
  * 8. Add lead to 'lead-processing' queue for async auction
  *
  * DATABASE STORAGE:
- * - Lead.formData = JSON.stringify(sanitizedFormData)  ← RAW form values!
+ * - Lead.formData = JSON.stringify(finalFormData)  ← RAW form values!
  * - Lead.status = 'PENDING'
  * - Lead.trustedFormCertUrl = from compliance data
  * - Lead.jornayaLeadId = from compliance data
@@ -175,6 +175,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Auto-inject service-specific fields to reduce user friction
+    // These fields are removed from the form UI but still required by buyer field mappings
+    // See: /docs/forms-system.md#auto-injected-fields
+    let finalFormData = { ...sanitizedFormData };
+
+    if (serviceType.name === 'windows') {
+      // Windows: Always set projectScope to "install" (repair/install question removed)
+      // All buyer field mappings with sourceField="formData.projectScope" will receive "install"
+      // and transform via their valueMaps (e.g., "install" → "New Unit Installed" for PX)
+      finalFormData.projectScope = 'install';
+    }
+
     // Validate formData against service-specific schema from database
     // Schema is generated dynamically from ServiceType.formSchema
     if (!serviceType.formSchema) {
@@ -205,7 +217,7 @@ export async function POST(request: NextRequest) {
       zipCode,
       ownsHome,
       timeframe,
-      ...sanitizedFormData,
+      ...finalFormData,
       complianceData,
     };
     console.log('[API /api/leads] DEBUG - Data being validated:', {
@@ -335,7 +347,7 @@ export async function POST(request: NextRequest) {
       const lead = await tx.lead.create({
         data: {
           serviceTypeId: serviceType.id,
-          formData: JSON.stringify(sanitizedFormData),
+          formData: JSON.stringify(finalFormData),
           zipCode,
           ownsHome,
           timeframe,
@@ -378,7 +390,7 @@ export async function POST(request: NextRequest) {
               zipCode,
               ownsHome,
               timeframe,
-              formFields: Object.keys(sanitizedFormData).length,
+              formFields: Object.keys(finalFormData).length,
               complianceScore: leadQualityScore,
             }),
             ipAddress: leadComplianceData.ipAddress,
@@ -417,7 +429,7 @@ export async function POST(request: NextRequest) {
         serviceTypeId: serviceType.id,
         serviceType: serviceType as any, // Prisma type differs from LeadData.ServiceType
         zipCode,
-        formData: sanitizedFormData,
+        formData: finalFormData,
         ownsHome,
         timeframe,
         status: 'PENDING',
@@ -528,17 +540,17 @@ export async function POST(request: NextRequest) {
           // Send admin notification email
           // Uses database transactions as source of truth (not in-memory AuctionResult)
           try {
-            const customerName = sanitizedFormData.firstName
-              ? `${sanitizedFormData.firstName} ${sanitizedFormData.lastName || ''}`.trim()
-              : sanitizedFormData.name;
+            const customerName = finalFormData.firstName
+              ? `${finalFormData.firstName} ${finalFormData.lastName || ''}`.trim()
+              : finalFormData.name;
 
             const emailData = await buildEmailDataFromDatabase(
               result.id,
               serviceType.name,
               zipCode,
               customerName,
-              sanitizedFormData.email,
-              sanitizedFormData.phone,
+              finalFormData.email,
+              finalFormData.phone,
               result.createdAt
             );
 
@@ -607,7 +619,7 @@ export async function POST(request: NextRequest) {
     // Fire and forget - don't block lead response for Meta tracking
     try {
       // Extract form data for customer information
-      const formDataObj = sanitizedFormData as any;
+      const formDataObj = finalFormData as any;
 
       // Build Meta CAPI user data
       const metaUserData = {

@@ -404,6 +404,87 @@ console.log('Validation error:', error);
 - Check for unnecessary re-renders
 - Optimize field validation frequency
 
+---
+
+## Auto-Injected Form Fields
+
+Some form fields are automatically injected by the system to reduce user friction while maintaining data consistency for buyer field mappings.
+
+### Why Auto-Inject Fields?
+
+**Problem**: Some form questions add friction but the data is still required by lead buyer APIs.
+
+**Solution**: Remove the question from the form UI, but automatically inject a sensible default value during lead submission. This maintains compatibility with all existing buyer field mappings while improving conversion rates.
+
+### Windows Service Type
+
+**Field:** `projectScope`
+**Auto-Injected Value:** `"install"`
+**Reason:** Reduces form friction by removing the "repair vs install" question
+**Impact:** All buyer field mappings with `sourceField: "formData.projectScope"` continue to work
+
+**Implementation:**
+- **Form Schema**: `projectScope` field removed from `service_types.form_schema` (database)
+- **API Injection**: Value auto-injected in `/api/leads/route.ts` (line ~181)
+- **Field Transformations**: All buyer mappings work unchanged
+
+**Buyer Transformations:**
+| Buyer | ValueMap Transformation | Result |
+|-------|------------------------|--------|
+| PX | `"install"` → `"New Unit Installed"` | `"Home.ProjectType": "New Unit Installed"` |
+| Modernize | `"install"` → `"Install"` | `"WindowsProjectScope": "Install"` |
+| Koalaty | `"install"` → `"Install"` | `"project_type": "Install"` |
+| Home Appointments | `"install"` → `"Replacement"` | `"Project_Type": "Replacement"` |
+
+**Data Flow:**
+```
+User submits form (no projectScope question)
+  ↓
+API receives formData: { numberOfWindows: "2", windowType: "sliding" }
+  ↓
+API auto-injects: { ...formData, projectScope: "install" }
+  ↓
+Saved to database: lead.formData = "{...projectScope: 'install'...}"
+  ↓
+Auction engine loads lead
+  ↓
+Template engine: sourceData.formData.projectScope = "install"
+  ↓
+Field mapping reads: getNestedValue("formData.projectScope") → "install"
+  ↓
+ValueMap transforms: "install" → buyer-specific value
+  ↓
+Payload sent to buyer with correct value ✅
+```
+
+**To Change Default Value:**
+1. Edit `/api/leads/route.ts` around line 187
+2. Change `finalFormData.projectScope = 'install'` to desired value
+3. Ensure value exists in all buyer valueMaps
+
+**To Re-Enable Question:**
+1. Add `projectScope` field back to `service_types.form_schema`
+2. Remove auto-injection logic from `/api/leads/route.ts`
+3. No buyer config changes needed
+
+### Future Auto-Injected Fields
+
+Document additional auto-injected fields here as they're added.
+
+**Candidate Fields for Auto-Injection:**
+- Homeowner status (if targeting only homeowners)
+- Project timeline (if focusing on immediate projects)
+- Property type (if residential-only)
+
+**Guidelines for Adding Auto-Injected Fields:**
+1. Confirm the field has low variability in responses
+2. Verify all buyer field mappings use the field
+3. Test that valueMaps handle the injected value
+4. Document the change in this file
+5. Consider A/B testing before removing the question
+
+---
+
 ## Future Enhancements
 
 ### Planned Features

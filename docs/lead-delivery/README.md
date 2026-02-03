@@ -44,7 +44,11 @@ All breadcrumbs use one of these categories:
 ```
 User submits form
   ↓
-API validates and saves lead to DB (status: PENDING)
+API validates and sanitizes form data
+  ↓
+API auto-injects service-specific fields (e.g., projectScope: "install" for windows)
+  ↓ See: /docs/forms-system.md#auto-injected-form-fields
+API saves lead to DB (status: PENDING)
   ↓
 setTimeout(async () => { ... }, 0)  ← Fire-and-forget background process
   ↓
@@ -54,6 +58,8 @@ Lead status → PROCESSING
   ↓
 breadcrumb: "Lead status set to PROCESSING"
 ```
+
+**Note:** Some form fields are auto-injected to reduce user friction while maintaining buyer compatibility. All buyer field mappings continue to work with these injected values. See [Forms System: Auto-Injected Fields](../forms-system.md#auto-injected-form-fields) for details.
 
 **Breadcrumbs captured**:
 - `setTimeout callback started` - Confirms setTimeout executed
