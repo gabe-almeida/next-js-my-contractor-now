@@ -346,6 +346,9 @@ export async function POST(request: NextRequest) {
           jornayaLeadId: complianceData?.jornayaLeadId || null,
           complianceData: leadComplianceData ? JSON.stringify(leadComplianceData) : null,
           leadQualityScore,
+          // Network buyer required fields - populate top-level columns for field mapping access
+          ipAddress: leadComplianceData?.ipAddress || clientIp || null,
+          userAgent: leadComplianceData?.userAgent || request.headers.get('user-agent') || null,
         },
       });
 
