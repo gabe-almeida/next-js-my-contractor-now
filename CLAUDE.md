@@ -121,6 +121,8 @@ Test credentials: `docs/how-to-login-for-testing-ui/README.md`
 3. Field mappings are per-buyer in `buyer_service_configs.field_mappings`
 4. Changes to shared transforms (`src/lib/transforms/`) affect ALL buyers
 
+**NEVER send PING/POST to lead buyers without explicit user permission.**
+
 ## UI Changes
 
 **Before ANY UI work:**
