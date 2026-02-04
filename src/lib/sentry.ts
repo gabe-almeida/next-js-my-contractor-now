@@ -107,10 +107,20 @@ export function addBreadcrumb(
 export function isBuyerApiError(response: Record<string, unknown>): boolean {
   const status = String(response.status || '').toLowerCase();
   const code = response.code;
-  const message = String(response.message || response.error || '').toLowerCase();
+  // Handle error as string, object with message, or boolean
+  const errorField = response.error;
+  const errorMessage = typeof errorField === 'object' && errorField !== null
+    ? String((errorField as Record<string, unknown>).message || '')
+    : String(errorField || '');
+  const message = String(response.message || errorMessage || '').toLowerCase();
 
   // Error status indicators
   if (status === 'error' || status === 'failed') {
+    return true;
+  }
+
+  // Error object present (e.g., { error: { message: "Bad Request" } })
+  if (typeof response.error === 'object' && response.error !== null) {
     return true;
   }
 

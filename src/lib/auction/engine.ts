@@ -1342,6 +1342,8 @@ export class AuctionEngine {
       responseData.status === 'FAILED',
       responseData.status === 'failed',
       responseData.error === true,
+      // Some APIs return error as object: { error: { message: "..." } }
+      (typeof responseData.error === 'object' && responseData.error !== null),
       responseData.rejected === true,
       responseData.accepted === false,
       responseData.success === false,
