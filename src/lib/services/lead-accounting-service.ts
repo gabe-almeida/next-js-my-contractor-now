@@ -17,6 +17,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { addBreadcrumb } from '@/lib/sentry';
 import {
   LeadStatus,
   LeadDisposition,
@@ -134,6 +135,14 @@ export async function changeLeadStatus(
     ipAddress
   } = params;
 
+  addBreadcrumb('changeLeadStatus called', 'lead.status', {
+    leadId,
+    newStatus,
+    newDisposition,
+    changeSource,
+    hasAdminUserId: !!adminUserId,
+  });
+
   try {
     // Get current lead
     const currentLead = await prisma.lead.findUnique({
@@ -211,6 +220,13 @@ export async function changeLeadStatus(
       return { lead: updatedLead, historyEntry };
     });
 
+    addBreadcrumb('changeLeadStatus completed', 'lead.status', {
+      leadId,
+      oldStatus: currentStatus,
+      newStatus,
+      changeSource,
+    });
+
     logger.info('Lead status changed', {
       leadId,
       oldStatus: currentStatus,
@@ -240,15 +256,23 @@ export async function changeLeadStatus(
     };
 
   } catch (error) {
+    const errorMessage = (error as Error).message;
+
+    addBreadcrumb('changeLeadStatus failed', 'lead.status', {
+      leadId,
+      newStatus,
+      error: errorMessage,
+    });
+
     logger.error('Failed to change lead status', {
       leadId,
       newStatus,
-      error: (error as Error).message
+      error: errorMessage
     });
 
     return {
       success: false,
-      error: `Failed to change status: ${(error as Error).message}`
+      error: `Failed to change status: ${errorMessage}`
     };
   }
 }
