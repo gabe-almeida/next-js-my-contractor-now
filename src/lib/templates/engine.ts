@@ -76,6 +76,7 @@ import {
 } from './types';
 import { Transformations } from './transformations';
 import { DataValidator } from './validator';
+import { addBreadcrumb } from '@/lib/sentry';
 
 export class TemplateEngine {
   private static performanceMetrics: PerformanceMetrics['templateEngineMetrics'] = {
@@ -96,6 +97,16 @@ export class TemplateEngine {
     includeCompliance: boolean = false
   ): Promise<Record<string, any>> {
     const startTime = Date.now();
+
+    addBreadcrumb('TemplateEngine.transform started', 'template.transform', {
+      leadId: lead.id,
+      buyerId: buyer.id,
+      buyerName: buyer.name,
+      serviceType: lead.serviceType?.name,
+      mappingCount: templateConfig.mappings?.length || 0,
+      includeCompliance,
+      hasAdditionalFields: !!templateConfig.additionalFields,
+    });
 
     try {
       // Validate input data
@@ -152,10 +163,28 @@ export class TemplateEngine {
       this.performanceMetrics.totalProcessingTime += totalTime;
       this.performanceMetrics.throughput++;
 
+      addBreadcrumb('TemplateEngine.transform completed', 'template.transform', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        resultFieldCount: Object.keys(finalResult).length,
+        resultFields: Object.keys(finalResult).slice(0, 15), // Sample of fields
+        totalTimeMs: totalTime,
+      });
+
       return finalResult;
 
     } catch (error) {
       this.performanceMetrics.errorRate++;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      addBreadcrumb('TemplateEngine.transform failed', 'template.transform', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        error: errorMessage,
+        errorType: error instanceof TemplateEngineError ? 'TemplateEngineError' : 'Unknown',
+        mappingCount: templateConfig.mappings?.length || 0,
+      });
 
       // Execute error hook if available
       if (templateConfig.hooks?.onError) {
@@ -168,7 +197,7 @@ export class TemplateEngine {
       }
 
       throw new TemplateEngineError(
-        `Transformation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Transformation failed: ${errorMessage}`,
         'TRANSFORM_FAILED',
         { leadId: lead.id, buyerId: buyer.id, error }
       );

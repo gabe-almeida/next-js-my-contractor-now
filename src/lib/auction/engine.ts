@@ -608,9 +608,18 @@ export class AuctionEngine {
     // Define payload outside try so we can log it in error path
     let payload: Record<string, any> = {};
 
+    addBreadcrumb('sendPingToBuyer started', 'auction.ping', {
+      leadId: lead.id,
+      buyerId: buyer.id,
+      buyerName: buyer.name,
+      timeoutMs,
+      pingUrl: serviceConfig.webhookConfig?.pingUrl,
+    });
+
     try {
       // Ensure pingTemplate exists
       if (!serviceConfig.pingTemplate) {
+        addBreadcrumb('sendPingToBuyer missing template', 'auction.ping', { buyerId: buyer.id });
         throw new Error(`Missing pingTemplate for buyer ${buyer.id}`);
       }
 
@@ -680,6 +689,18 @@ export class AuctionEngine {
       // Determine success: parser says accepted AND bid is valid
       const isSuccess = parsedResponse.status === 'accepted' && validatedBid > 0;
 
+      addBreadcrumb('sendPingToBuyer response parsed', 'auction.ping', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        statusCode: response.status,
+        parsedStatus: parsedResponse.status,
+        rawStatus: parsedResponse.rawStatus,
+        bidAmount: validatedBid,
+        isSuccess,
+        responseTime,
+      });
+
       // Log transaction with parsed data
       await this.logTransaction(lead.id, buyer.id, 'PING', {
         request: payload,
@@ -704,6 +725,18 @@ export class AuctionEngine {
         responseData as Record<string, unknown>,
         pingTokenConfig
       );
+
+      addBreadcrumb('sendPingToBuyer token extracted', 'auction.ping', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        hasPingToken: !!extractedPingToken,
+        pingTokenPreview: extractedPingToken ? extractedPingToken.substring(0, 20) + '...' : null,
+        hasBuyerLeadId: !!extractedBuyerLeadId,
+        pingTokenConfig: pingTokenConfig ? {
+          responseFields: pingTokenConfig.responseFields,
+          postFieldName: pingTokenConfig.postFieldName,
+        } : 'default',
+      });
 
       return {
         buyerId: buyer.id,
@@ -733,6 +766,16 @@ export class AuctionEngine {
 
       // Detect if this was a timeout (AbortController says "aborted")
       const isTimeout = this.isTimeoutError(error);
+
+      addBreadcrumb('sendPingToBuyer failed', 'auction.ping', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        error: errorMessage,
+        isTimeout,
+        responseTime,
+        payloadKeys: Object.keys(payload),
+      });
 
       // Debug logging - capture what we tried to send when it failed
       logger.error('PING request failed', {
@@ -944,8 +987,17 @@ export class AuctionEngine {
       .sort((a, b) => b.bidAmount - a.bidAmount);
 
     if (rankedBids.length === 0) {
+      addBreadcrumb('deliverWithCascade no valid bids', 'auction.cascade', { leadId: lead.id });
       return { postResult: undefined, acceptedBid: undefined };
     }
+
+    addBreadcrumb('deliverWithCascade started', 'auction.cascade', {
+      leadId: lead.id,
+      totalBids: rankedBids.length,
+      topBid: rankedBids[0]?.bidAmount,
+      bottomBid: rankedBids[rankedBids.length - 1]?.bidAmount,
+      bidderOrder: rankedBids.map(b => b.buyerId),
+    });
 
     logger.info('Starting cascade delivery', {
       leadId: lead.id,
@@ -988,6 +1040,15 @@ export class AuctionEngine {
 
       if (postResult.success) {
         // Winner found! Mark them and return
+        addBreadcrumb('deliverWithCascade succeeded', 'auction.cascade', {
+          leadId: lead.id,
+          buyerId: bid.buyerId,
+          buyerName: buyerConfig.buyer.name,
+          cascadePosition,
+          bidAmount: bid.bidAmount,
+          totalAttempts: cascadePosition,
+        });
+
         logger.info('Cascade delivery succeeded', {
           leadId: lead.id,
           buyerId: bid.buyerId,
@@ -1014,6 +1075,12 @@ export class AuctionEngine {
     }
 
     // All bidders rejected - cascade exhausted
+    addBreadcrumb('deliverWithCascade exhausted', 'auction.cascade', {
+      leadId: lead.id,
+      totalAttempts: cascadePosition,
+      allBidders: rankedBids.map(b => b.buyerId),
+    });
+
     logger.warn('Cascade exhausted - all bidders rejected', {
       leadId: lead.id,
       totalAttempts: cascadePosition
@@ -1043,9 +1110,20 @@ export class AuctionEngine {
     const startTime = Date.now();
     const { buyer, serviceConfig } = buyerConfig;
 
+    addBreadcrumb('sendPostToBuyerWithCascade started', 'auction.post', {
+      leadId: lead.id,
+      buyerId: buyer.id,
+      buyerName: buyer.name,
+      cascadePosition,
+      bidAmount: bid.bidAmount,
+      hasPingToken: !!bid.metadata?.pingToken,
+      postUrl: serviceConfig.webhookConfig?.postUrl,
+    });
+
     try {
       // Ensure postTemplate exists
       if (!serviceConfig.postTemplate) {
+        addBreadcrumb('sendPostToBuyerWithCascade missing template', 'auction.post', { buyerId: buyer.id });
         throw new Error(`Missing postTemplate for buyer ${buyer.id}`);
       }
 
@@ -1088,6 +1166,18 @@ export class AuctionEngine {
 
         payload[buyerLeadIdFieldName] = bid.metadata.buyerLeadId;
       }
+
+      addBreadcrumb('sendPostToBuyerWithCascade payload built', 'auction.post', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        cascadePosition,
+        payloadKeys: Object.keys(payload),
+        hasPingToken: !!bid.metadata?.pingToken,
+        pingTokenFieldName: bid.metadata?.pingToken
+          ? ((bid.metadata.pingTokenConfig as PingTokenConfig)?.postFieldName || DEFAULT_PING_TOKEN_CONFIG.postFieldName)
+          : null,
+        hasBuyerLeadId: !!bid.metadata?.buyerLeadId,
+      });
 
       // Prepare request headers
       const headers = this.prepareHeaders(buyer, serviceConfig, 'POST');
@@ -1135,6 +1225,20 @@ export class AuctionEngine {
         deliveryTime
       });
 
+      addBreadcrumb('sendPostToBuyerWithCascade response received', 'auction.post', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        cascadePosition,
+        statusCode: response.status,
+        isAccepted,
+        lostReason,
+        deliveryTime,
+        responseStatus: responseData?.status,
+        responseCode: responseData?.code,
+        responseLeadId: responseData?.lead_id,
+      });
+
       // Log transaction with cascade tracking
       await this.logTransaction(lead.id, buyer.id, 'POST', {
         request: payload,
@@ -1163,6 +1267,17 @@ export class AuctionEngine {
 
       // Detect if this was a timeout (AbortController says "aborted")
       const isTimeout = this.isTimeoutError(error);
+
+      addBreadcrumb('sendPostToBuyerWithCascade failed', 'auction.post', {
+        leadId: lead.id,
+        buyerId: buyer.id,
+        buyerName: buyer.name,
+        cascadePosition,
+        error: errorMessage,
+        isTimeout,
+        deliveryTime,
+        bidAmount: bid.bidAmount,
+      });
 
       // Log failed transaction with proper timeout tracking
       await this.logTransaction(lead.id, buyer.id, 'POST', {

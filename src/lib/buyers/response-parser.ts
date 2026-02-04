@@ -28,6 +28,7 @@ import {
 } from './default-response-mappings';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { addBreadcrumb } from '@/lib/sentry';
 
 /**
  * Cache for response mapping configurations
@@ -56,6 +57,13 @@ export class BuyerResponseParser {
     httpStatus: number,
     responseBody: unknown
   ): Promise<ParsedPingResponse> {
+    addBreadcrumb('BuyerResponseParser.parsePingResponse started', 'buyer.response', {
+      buyerId,
+      httpStatus,
+      hasResponseBody: !!responseBody,
+      responseType: typeof responseBody,
+    });
+
     const config = await this.getConfig(buyerId);
     const body = responseBody as Record<string, unknown>;
 
@@ -86,7 +94,18 @@ export class BuyerResponseParser {
       ? this.extractBidAmount(body, config)
       : 0;
 
-    return this.createPingResponse(normalizedStatus, bidAmount, httpStatus, body, config, rawStatus);
+    const result = this.createPingResponse(normalizedStatus, bidAmount, httpStatus, body, config, rawStatus);
+
+    addBreadcrumb('BuyerResponseParser.parsePingResponse completed', 'buyer.response', {
+      buyerId,
+      httpStatus,
+      normalizedStatus,
+      rawStatus: String(rawStatus),
+      bidAmount,
+      parsedStatus: result.status,
+    });
+
+    return result;
   }
 
   /**

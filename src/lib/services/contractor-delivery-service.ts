@@ -10,6 +10,7 @@
 
 import { prisma } from '../db';
 import { logger } from '../logger';
+import { addBreadcrumb } from '@/lib/sentry';
 import { LeadNotificationService, LeadNotificationData, ContractorInfo } from './lead-notification-service';
 
 // Types
@@ -73,6 +74,14 @@ export class ContractorDeliveryService {
     lead: LeadForDelivery,
     networkWinningBid?: number
   ): Promise<ContractorDeliveryResult> {
+    addBreadcrumb('ContractorDeliveryService.deliverToContractors started', 'contractor.delivery', {
+      leadId: lead.id,
+      serviceTypeId: lead.serviceTypeId,
+      zipCode: lead.zipCode,
+      hasNetworkWinningBid: !!networkWinningBid,
+      networkWinningBid,
+    });
+
     const result: ContractorDeliveryResult = {
       success: false,
       deliveredTo: [],
@@ -134,10 +143,25 @@ export class ContractorDeliveryService {
         deliveryMode
       );
 
+      addBreadcrumb('ContractorDeliveryService.deliverToContractors completed', 'contractor.delivery', {
+        leadId: lead.id,
+        success: result.success,
+        deliveredCount: result.deliveredTo.length,
+        totalRevenue: result.totalRevenue,
+        deliveryMode,
+        contractorIds: result.deliveredTo.map(d => d.buyerId),
+      });
+
       return result;
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      addBreadcrumb('ContractorDeliveryService.deliverToContractors failed', 'contractor.delivery', {
+        leadId: lead.id,
+        error: errorMessage,
+      });
+
       logger.error('Contractor delivery failed', {
         leadId: lead.id,
         error: errorMessage,

@@ -57,6 +57,7 @@ import {
   createEmptyFieldMappingConfig,
 } from "@/types/field-mapping";
 import { decrypt } from "@/lib/security/encryption";
+import { addBreadcrumb } from '@/lib/sentry';
 import {
   BuyerConfig,
   BuyerServiceConfig,
@@ -724,20 +725,34 @@ export async function loadBuyerConfigForAuction(
   buyerId: string,
   serviceTypeId: string
 ): Promise<{ buyerConfig: BuyerConfig; serviceConfig: BuyerServiceConfig } | null> {
+  addBreadcrumb('loadBuyerConfigForAuction started', 'buyer.config', {
+    buyerId,
+    serviceTypeId,
+  });
+
   // Load buyer from database
   const dbBuyerConfig = await loadBuyerConfig(buyerId);
   if (!dbBuyerConfig) {
+    addBreadcrumb('loadBuyerConfigForAuction buyer not found', 'buyer.config', { buyerId });
     return null;
   }
 
   // Load service config from database
   const dbServiceConfig = await loadServiceConfig(buyerId, serviceTypeId);
   if (!dbServiceConfig) {
+    addBreadcrumb('loadBuyerConfigForAuction service config not found', 'buyer.config', {
+      buyerId,
+      serviceTypeId,
+    });
     return null;
   }
 
   // Skip inactive service configs - buyer shouldn't receive PINGs
   if (!dbServiceConfig.active) {
+    addBreadcrumb('loadBuyerConfigForAuction service config inactive', 'buyer.config', {
+      buyerId,
+      serviceTypeId,
+    });
     return null;
   }
 
@@ -753,6 +768,17 @@ export async function loadBuyerConfigForAuction(
   // Convert to auction engine types
   const serviceConfig = toServiceConfig(dbServiceConfig);
   const buyerConfig = toBuyerConfig(dbBuyerConfig, [serviceConfig]);
+
+  addBreadcrumb('loadBuyerConfigForAuction completed', 'buyer.config', {
+    buyerId,
+    buyerName: dbBuyerConfig.name,
+    serviceTypeId,
+    pingTimeout: dbServiceConfig.webhookConfig.timeouts.ping,
+    postTimeout: dbServiceConfig.webhookConfig.timeouts.post,
+    hasPingTemplate: !!serviceConfig.pingTemplate,
+    hasPostTemplate: !!serviceConfig.postTemplate,
+    hasPingTokenConfig: !!serviceConfig.pingTokenConfig,
+  });
 
   return { buyerConfig, serviceConfig };
 }
