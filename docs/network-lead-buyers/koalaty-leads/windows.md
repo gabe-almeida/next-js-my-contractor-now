@@ -178,6 +178,132 @@ These fields are sent to `/post` endpoint AFTER a successful ping (includes PII)
 | `lead_id` | Their internal lead ID |
 | `payout` | Final payout amount |
 
+### Error Response
+
+```json
+{
+  "status": "ERROR",
+  "code": 1001,
+  "message": "Missing required parameter lp_ping_id",
+  "lead_id": "wwh5KpwB8G-3h53l8RBQ",
+  "payout": 0
+}
+```
+
+**Important:** Koalaty returns `lead_id` even in error responses. Our system checks for error indicators (`status: "ERROR"`, `code != 0`) BEFORE checking for success indicators to avoid false positives.
+
+---
+
+## PING/POST Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Database: pingTokenConfig                                        │
+│   responseFields: ["ping_id"]                                   │
+│   postFieldName: "lp_ping_id"                                   │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+        ┌──────────────────┴──────────────────┐
+        ▼                                      ▼
+   PING Request                           POST Request
+   ────────────                           ────────────
+   1. TemplateEngine.transform()          1. TemplateEngine.transform()
+   2. Apply field mappings + valueMap     2. Apply field mappings + valueMap
+   3. Add static fields                   3. Add static fields
+   4. Serialize as JSON                   4. Inject lp_ping_id from metadata
+   5. Send to /ping                       5. Serialize as JSON
+        │                                 6. Send to /post
+        ▼                                      │
+   Koalaty Response:                           ▼
+   {                                      Koalaty Response:
+     "status": "ACCEPTED",                {
+     "ping_id": "abc123...",                "status": "ACCEPTED",
+     "bids": [{"payout": 35.70}]            "lead_id": "xyz789",
+   }                                         "payout": 35.70
+        │                                 }
+        ▼
+   extractPingToken()
+   using responseFields: ["ping_id"]
+        │
+        ▼
+   Store in bid.metadata:
+   {
+     pingToken: "abc123...",
+     pingTokenConfig: { postFieldName: "lp_ping_id" }
+   }
+```
+
+### Data Flow Summary
+
+| Step | Action | Code Location |
+|------|--------|---------------|
+| 1 | Load pingTokenConfig from DB | `database-buyer-loader.ts:662` |
+| 2 | Build PING payload with field mappings | `templates/engine.ts:180-294` |
+| 3 | Send PING, extract `ping_id` | `auction/engine.ts:699-706` |
+| 4 | Store in `bid.metadata.pingToken` | `auction/engine.ts:719-720` |
+| 5 | Build POST payload | `auction/engine.ts:1053-1058` |
+| 6 | Inject using `postFieldName: "lp_ping_id"` | `auction/engine.ts:1068-1080` |
+| 7 | Send POST with `lp_ping_id` included | `auction/engine.ts:1092-1097` |
+
+---
+
+## Error Detection Logic
+
+Our system correctly handles Koalaty error responses that include `lead_id`:
+
+```typescript
+// src/lib/auction/engine.ts - isPostAccepted()
+
+// FIRST: Check for error indicators (these override success indicators)
+const errorIndicators = [
+  responseData.status === 'ERROR',
+  responseData.status === 'REJECTED',
+  responseData.status === 'FAILED',
+  responseData.code !== undefined && responseData.code !== 0,  // Non-zero = error
+  responseData.error === true,
+  responseData.accepted === false,
+  responseData.success === false,
+];
+
+if (errorIndicators.some(indicator => indicator === true)) {
+  return false;  // Reject - don't be fooled by lead_id in error response
+}
+
+// THEN: Check for success indicators (only if no errors)
+const acceptIndicators = [
+  responseData.status === 'ACCEPTED',
+  responseData.status === 'SUCCESS',
+  responseData.lead_id !== undefined,  // Safe now - errors already filtered
+  // ... more indicators
+];
+```
+
+**Why this matters:** Koalaty returns `lead_id` in both success AND error responses. Without checking errors first, we'd falsely mark errors as successful deliveries.
+
+---
+
+## pingTokenConfig (Database Configuration)
+
+This configuration is stored in `BuyerServiceConfig.fieldMappings`:
+
+```json
+{
+  "pingTokenConfig": {
+    "responseFields": ["ping_id"],
+    "postFieldName": "lp_ping_id",
+    "buyerLeadIdResponseFields": ["lead_id", "id"],
+    "buyerLeadIdPostField": "lead_id"
+  }
+}
+```
+
+| Field | Purpose | Value |
+|-------|---------|-------|
+| `responseFields` | Fields to check in PING response for token | `["ping_id"]` |
+| `postFieldName` | Field name to use when injecting into POST | `"lp_ping_id"` |
+| `buyerLeadIdResponseFields` | Fields to check for buyer's lead ID | `["lead_id", "id"]` |
+| `buyerLeadIdPostField` | Field name for buyer lead ID in POST | `"lead_id"` |
+
 ---
 
 ## Database IDs
@@ -213,4 +339,4 @@ These optional fields are available in the API but not currently sent:
 
 ---
 
-*Last Updated: 2026-01-24*
+*Last Updated: 2026-02-04*

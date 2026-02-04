@@ -845,6 +845,54 @@ Result: "Immediately"  (transform not applied here since no transform specified)
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### POST Response Error Detection
+
+**Critical:** Some buyers (like Koalaty/LeadProsper) return `lead_id` even in error responses. Our system checks for error indicators FIRST before checking success indicators.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│               POST RESPONSE ERROR DETECTION LOGIC                    │
+├─────────────────────────────────────────────────────────────────────┤
+│  File: src/lib/auction/engine.ts → isPostAccepted()                 │
+│                                                                      │
+│  STEP 1: Check for ERROR indicators (these override everything)     │
+│  ───────────────────────────────────────────────────────────────    │
+│  If ANY of these are true → REJECT (return false):                  │
+│                                                                      │
+│  • responseData.status === 'ERROR' or 'error'                       │
+│  • responseData.status === 'REJECTED' or 'rejected'                 │
+│  • responseData.status === 'FAILED' or 'failed'                     │
+│  • responseData.code !== 0 (non-zero error code)                    │
+│  • responseData.error === true                                      │
+│  • responseData.rejected === true                                   │
+│  • responseData.accepted === false                                  │
+│  • responseData.success === false                                   │
+│                                                                      │
+│  STEP 2: Check for SUCCESS indicators (only if no errors)           │
+│  ───────────────────────────────────────────────────────────────    │
+│  If ANY of these are true → ACCEPT (return true):                   │
+│                                                                      │
+│  • responseData.accepted === true                                   │
+│  • responseData.success === true                                    │
+│  • responseData.status === 'ACCEPTED' or 'SUCCESS'                  │
+│  • responseData.leadId or lead_id present                           │
+│  • responseData.confirmation present                                │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Example: Koalaty Error Response (correctly rejected)**
+```json
+{
+  "status": "ERROR",
+  "code": 1001,
+  "message": "Missing required parameter lp_ping_id",
+  "lead_id": "wwh5KpwB8G-3h53l8RBQ",
+  "payout": 0
+}
+```
+This is correctly rejected because `status: "ERROR"` and `code: 1001` are checked BEFORE `lead_id`.
+
 ### PING Token Flow (Automatic)
 
 The `pingToken` is a critical field that correlates PING and POST requests. This is handled **automatically** by the auction engine for all standard PING/POST buyers.
@@ -952,8 +1000,37 @@ Navigate to: **Admin → Buyers → [Buyer Name] → Field Mapping → PING Toke
 **Key Files:**
 - Type definition: `src/types/field-mapping.ts` → `PingTokenConfig`
 - Extraction logic: `src/lib/auction/engine.ts` → `extractPingToken()`
-- Injection logic: `src/lib/auction/engine.ts` → `sendPostToWinner()`
+- Injection logic: `src/lib/auction/engine.ts` → `sendPostToWinner()` and `sendPostToBuyerWithCascade()`
 - Admin UI: `src/components/admin/field-mapping/FieldMappingEditor.tsx`
+
+#### Cascade Delivery Uses Same Logic
+
+When cascade delivery tries multiple bidders, each bidder gets their own `pingToken` from THEIR PING response:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│             CASCADE PING TOKEN HANDLING                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  // Each bid stored its own pingToken during PING phase             │
+│  bid1.metadata = { pingToken: "abc123", pingTokenConfig: {...} }    │
+│  bid2.metadata = { pingToken: "def456", pingTokenConfig: {...} }    │
+│  bid3.metadata = { pingToken: "ghi789", pingTokenConfig: {...} }    │
+│                                                                      │
+│  // Cascade uses each bid's own pingToken and config                │
+│  for (const bid of rankedBids) {                                    │
+│    const postFieldName = bid.metadata.pingTokenConfig?.postFieldName│
+│                       || DEFAULT_PING_TOKEN_CONFIG.postFieldName;   │
+│                                                                      │
+│    payload[postFieldName] = bid.metadata.pingToken;                 │
+│    // Koalaty: payload.lp_ping_id = "abc123"                        │
+│    // Modernize: payload.pingToken = "def456"                       │
+│  }                                                                   │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key File:** `src/lib/auction/engine.ts` → `sendPostToBuyerWithCascade()` (lines 1068-1090)
 
 #### Why This Works
 
