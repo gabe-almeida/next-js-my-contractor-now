@@ -141,6 +141,18 @@ Test credentials: `docs/how-to-login-for-testing-ui/README.md`
 
 ---
 
+# Token Efficiency
+
+**Query DB directly instead of writing scripts:**
+```bash
+# Use psql directly - faster and less tokens than creating script files
+PGPASSWORD="CgDWlr8Bk9O6DVoX" psql -h aws-0-us-east-2.pooler.supabase.com -p 6543 -U postgres.cnogfaqqilmutqhpjhgl -d postgres -c "SELECT * FROM table LIMIT 10;"
+```
+
+**NEVER create throwaway script files** for one-off queries or debugging. Query directly.
+
+---
+
 # Project Notes
 
 <!-- START_PROJECT_NOTES -->

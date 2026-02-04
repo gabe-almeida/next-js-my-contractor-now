@@ -87,3 +87,89 @@ export function addBreadcrumb(
     level: 'info',
   });
 }
+
+/**
+ * Check if a buyer API response indicates an actual error vs normal rejection
+ *
+ * WHY: Distinguish between API/system errors (should alert) vs business rejections (normal)
+ * WHEN: After receiving PING/POST responses from buyers
+ * HOW: Check for error indicators in response (status=ERROR, non-zero code, error keywords)
+ *
+ * ACTUAL ERRORS (should trigger Sentry):
+ * - status: "ERROR", "error", "FAILED"
+ * - code: any non-zero value (1001, 1003, 1033, etc.)
+ * - messages containing: "Missing required", "wrong format", "wrong value", "invalid field"
+ *
+ * NORMAL REJECTIONS (just breadcrumbs, no alert):
+ * - status: "rejected", "REJECTED"
+ * - messages: "No Matches", "Vendors rejected", "no buyers available"
+ */
+export function isBuyerApiError(response: Record<string, unknown>): boolean {
+  const status = String(response.status || '').toLowerCase();
+  const code = response.code;
+  const message = String(response.message || response.error || '').toLowerCase();
+
+  // Error status indicators
+  if (status === 'error' || status === 'failed') {
+    return true;
+  }
+
+  // Non-zero error code (most buyer APIs use 0 for success)
+  if (code !== undefined && code !== null && code !== 0) {
+    return true;
+  }
+
+  // Error keywords in message (API/config problems, not business rejections)
+  const errorKeywords = [
+    'missing required',
+    'wrong format',
+    'wrong value',
+    'invalid field',
+    'invalid parameter',
+    'unauthorized',
+    'authentication failed',
+    'internal error',
+    'server error',
+    'exception',
+  ];
+
+  if (errorKeywords.some(keyword => message.includes(keyword))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Report a buyer API error to Sentry
+ *
+ * WHY: Track configuration/API issues that need fixing (vs normal rejections)
+ * WHEN: When isBuyerApiError() returns true
+ * HOW: Capture as warning with full context for debugging
+ */
+export function reportBuyerApiError(
+  actionType: 'PING' | 'POST',
+  buyerId: string,
+  buyerName: string,
+  leadId: string,
+  response: Record<string, unknown>,
+  extra?: Record<string, unknown>
+): void {
+  const message = `Buyer API Error: ${buyerName} ${actionType} - ${response.message || response.error || response.status}`;
+
+  Sentry.withScope((scope) => {
+    scope.setTag('buyer.id', buyerId);
+    scope.setTag('buyer.name', buyerName);
+    scope.setTag('action.type', actionType);
+    scope.setTag('error.type', 'buyer_api_error');
+    scope.setExtras({
+      leadId,
+      responseStatus: response.status,
+      responseCode: response.code,
+      responseMessage: response.message || response.error,
+      ...extra,
+    });
+
+    Sentry.captureMessage(message, 'warning');
+  });
+}

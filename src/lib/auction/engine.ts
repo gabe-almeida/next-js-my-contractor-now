@@ -76,7 +76,7 @@ import { BuyerResponseParser } from '../buyers/response-parser';
 import { loadBuyerConfigForAuction } from '../field-mapping/database-buyer-loader';
 import { ContractorDeliveryService, LeadForDelivery } from '../services/contractor-delivery-service';
 import { logger } from '../logger';
-import { addBreadcrumb } from '@/lib/sentry';
+import { addBreadcrumb, isBuyerApiError, reportBuyerApiError } from '@/lib/sentry';
 import { PingTokenConfig, DEFAULT_PING_TOKEN_CONFIG } from '@/types/field-mapping';
 
 export class AuctionEngine {
@@ -714,6 +714,15 @@ export class AuctionEngine {
         rawStatus: parsedResponse.rawStatus
       });
 
+      // Report actual buyer API errors (not normal rejections) to Sentry
+      // This helps detect config issues like wrong field formats, missing parameters
+      if (!isSuccess && responseData && isBuyerApiError(responseData)) {
+        reportBuyerApiError('PING', buyer.id, buyer.name, lead.id, responseData, {
+          payloadKeys: Object.keys(payload),
+          responseTime,
+        });
+      }
+
       // Extract ping token using configurable field names
       // Uses serviceConfig.pingTokenConfig if set, otherwise defaults
       const pingTokenConfig = serviceConfig.pingTokenConfig;
@@ -1252,6 +1261,17 @@ export class AuctionEngine {
         winningBidAmount: bid.bidAmount,
         cascadePosition,
       });
+
+      // Report actual buyer API errors (not normal rejections) to Sentry
+      // This helps detect config issues like missing ping_id, wrong parameters
+      if (!isAccepted && responseData && isBuyerApiError(responseData)) {
+        reportBuyerApiError('POST', buyer.id, buyer.name, lead.id, responseData, {
+          cascadePosition,
+          bidAmount: bid.bidAmount,
+          hasPingToken: !!bid.metadata?.pingToken,
+          deliveryTime,
+        });
+      }
 
       return {
         success: isAccepted,
