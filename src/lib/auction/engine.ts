@@ -1062,12 +1062,31 @@ export class AuctionEngine {
       payload.auction_timestamp = new Date().toISOString();
       payload.cascade_position = cascadePosition;
 
-      // Include pingToken if present
+      // CRITICAL: Include pingToken from PING response if present
+      // Uses configurable field name from pingTokenConfig (default: "pingToken")
+      // This allows buyers like LeadProsper/Koalaty to use "lp_ping_id" instead
       if (bid.metadata?.pingToken) {
-        payload.pingToken = bid.metadata.pingToken;
+        // Get the configured POST field name, or use default
+        const pingTokenConfig = bid.metadata.pingTokenConfig as PingTokenConfig | undefined;
+        const postFieldName = pingTokenConfig?.postFieldName || DEFAULT_PING_TOKEN_CONFIG.postFieldName;
+
+        payload[postFieldName] = bid.metadata.pingToken;
+        logger.info('Including ping token in cascade POST payload', {
+          leadId: lead.id,
+          buyerId: buyer.id,
+          fieldName: postFieldName,
+          pingToken: bid.metadata.pingToken,
+          configSource: pingTokenConfig ? 'custom' : 'default'
+        });
       }
+
+      // Include buyerLeadId if present (some buyers return their own lead ID in PING)
+      // Uses configurable field name from pingTokenConfig
       if (bid.metadata?.buyerLeadId) {
-        payload.buyerLeadId = bid.metadata.buyerLeadId;
+        const pingTokenConfig = bid.metadata.pingTokenConfig as PingTokenConfig | undefined;
+        const buyerLeadIdFieldName = pingTokenConfig?.buyerLeadIdPostField || DEFAULT_PING_TOKEN_CONFIG.buyerLeadIdPostField || 'buyerLeadId';
+
+        payload[buyerLeadIdFieldName] = bid.metadata.buyerLeadId;
       }
 
       // Prepare request headers
@@ -1170,16 +1189,43 @@ export class AuctionEngine {
   /**
    * Check if POST response indicates acceptance
    * Different buyers have different response formats
+   *
+   * WHY: Each buyer API has different response formats for success/failure
+   * WHEN: Called after POST to determine if lead was accepted
+   * HOW: First check for error indicators, then check for success indicators
    */
   private static isPostAccepted(responseData: any): boolean {
     if (!responseData) return false;
 
-    // Check common acceptance indicators
+    // FIRST: Check for explicit error indicators - these override everything
+    // Important: Some responses include both lead_id AND error status (like Koalaty/LeadProsper)
+    const errorIndicators = [
+      responseData.status === 'ERROR',
+      responseData.status === 'error',
+      responseData.status === 'REJECTED',
+      responseData.status === 'rejected',
+      responseData.status === 'FAILED',
+      responseData.status === 'failed',
+      responseData.error === true,
+      responseData.rejected === true,
+      responseData.accepted === false,
+      responseData.success === false,
+      // Check for error codes (non-zero typically means error)
+      (responseData.code !== undefined && responseData.code !== 0),
+    ];
+
+    if (errorIndicators.some(indicator => indicator === true)) {
+      return false;
+    }
+
+    // THEN: Check for success indicators (only if no errors)
     const acceptIndicators = [
       responseData.accepted === true,
       responseData.success === true,
       responseData.status === 'accepted',
+      responseData.status === 'ACCEPTED',
       responseData.status === 'success',
+      responseData.status === 'SUCCESS',
       responseData.result === 'accepted',
       responseData.result === 'success',
       responseData.leadId !== undefined, // Many buyers return a leadId on success

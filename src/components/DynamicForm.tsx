@@ -329,6 +329,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
             </h2>
 
             {/* Call Option - DNI enabled */}
+            {/* TEMPORARILY DISABLED - Not ready to sell calls yet
             {serviceSlug && (
               <div className="text-center py-4 px-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="text-sm text-gray-600 mb-3">Prefer to talk to someone?</p>
@@ -351,6 +352,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
                 <span className="px-4 bg-white text-gray-500">or fill out the form below</span>
               </div>
             </div>
+            */}
 
             <EmailInput
               value={formData.email}
@@ -411,6 +413,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
             </h2>
 
             {/* Call Option - DNI enabled */}
+            {/* TEMPORARILY DISABLED - Not ready to sell calls yet
             {serviceSlug && (
               <div className="text-center py-4 px-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="text-sm text-gray-600 mb-3">Prefer to talk to someone?</p>
@@ -433,6 +436,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
                 <span className="px-4 bg-white text-gray-500">or fill out the form below</span>
               </div>
             </div>
+            */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TextInput
