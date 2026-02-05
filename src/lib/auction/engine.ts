@@ -702,12 +702,15 @@ export class AuctionEngine {
       });
 
       // Log transaction with parsed data
+      // REJECTED = buyer responded with valid JSON but didn't accept (business rejection)
+      // FAILED = reserved for system errors (thrown in catch block below)
       await this.logTransaction(lead.id, buyer.id, 'PING', {
         request: payload,
         response: responseData,
         statusCode: response.status,
         responseTime,
         success: isSuccess,
+        isRejected: !isSuccess, // Got valid response but not accepted = rejection
         bidAmount: validatedBid,
         originalBidAmount: parsedResponse.bidAmount,
         parsedStatus: parsedResponse.status,
@@ -929,6 +932,7 @@ export class AuctionEngine {
         statusCode: response.status,
         deliveryTime,
         success: response.ok,
+        isRejected: !response.ok, // Got HTTP response but not 2xx = rejection
         bidAmount: winningBid?.bidAmount,
         // Winner tracking fields
         isWinner: response.ok, // Only true if POST succeeded
@@ -1249,12 +1253,15 @@ export class AuctionEngine {
       });
 
       // Log transaction with cascade tracking
+      // REJECTED = buyer responded but chose not to accept (business rejection)
+      // FAILED = reserved for system errors (thrown in catch block below)
       await this.logTransaction(lead.id, buyer.id, 'POST', {
         request: payload,
         response: responseData,
         statusCode: response.status,
         deliveryTime,
         success: isAccepted,
+        isRejected: !isAccepted, // Got valid response but not accepted = rejection
         bidAmount: bid.bidAmount,
         isWinner: isAccepted,
         lostReason,
@@ -1752,6 +1759,7 @@ export class AuctionEngine {
 
     const headers: Record<string, string> = {
       'Content-Type': contentType,
+      'Accept': 'application/json',
       'X-Request-Type': requestType,
       'X-Service-Type': serviceConfig.serviceTypeName,
       'X-Lead-Source': 'contractor-platform',
@@ -1980,16 +1988,20 @@ export class AuctionEngine {
     actionType: 'PING' | 'POST' | 'DELIVERY',
     details: any
   ): Promise<void> {
-    // Determine status: SUCCESS, FAILED, or TIMEOUT
-    const getStatus = (): 'success' | 'failed' | 'timeout' => {
+    // Determine status: SUCCESS, FAILED, TIMEOUT, or REJECTED
+    // REJECTED = buyer responded but chose not to accept (business rejection)
+    // FAILED = system/technical error (timeout, network error, invalid JSON)
+    const getStatus = (): 'success' | 'failed' | 'timeout' | 'rejected' => {
       if (details.success) return 'success';
       if (details.isTimeout) return 'timeout';
+      if (details.isRejected) return 'rejected';
       return 'failed';
     };
 
-    const getDbStatus = (): 'SUCCESS' | 'FAILED' | 'TIMEOUT' => {
+    const getDbStatus = (): 'SUCCESS' | 'FAILED' | 'TIMEOUT' | 'REJECTED' => {
       if (details.success) return 'SUCCESS';
       if (details.isTimeout) return 'TIMEOUT';
+      if (details.isRejected) return 'REJECTED';
       return 'FAILED';
     };
 

@@ -413,7 +413,7 @@ export interface TransactionLog {
   leadId: string;
   buyerId: string;
   actionType: 'PING' | 'POST' | 'WEBHOOK' | 'RETRY' | 'DELIVERY';
-  status: 'pending' | 'success' | 'failed' | 'timeout';
+  status: 'pending' | 'success' | 'failed' | 'timeout' | 'rejected';
   payload: Record<string, any>;
   response?: Record<string, any>;
   responseTime: number;

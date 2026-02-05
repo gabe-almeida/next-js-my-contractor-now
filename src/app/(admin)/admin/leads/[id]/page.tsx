@@ -782,6 +782,8 @@ export default function LeadDetailPage() {
                           ? 'bg-green-100 text-green-800'
                           : tx.status === 'FAILED'
                           ? 'bg-red-100 text-red-800'
+                          : tx.status === 'REJECTED'
+                          ? 'bg-amber-100 text-amber-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
                         {tx.status === 'SUCCESS' && <CheckCircle className="h-3 w-3 mr-1" />}
