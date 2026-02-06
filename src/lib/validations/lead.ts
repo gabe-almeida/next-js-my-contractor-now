@@ -92,8 +92,8 @@ export const windowsFormSchema = z.object({
   zipCode: zipCodeSchema,
   ownsHome: z.boolean(),
   timeframe: timeframeSchema,
-  // Match actual form options: '1', '2', '3-5', '6-9', '9+'
-  numberOfWindows: z.enum(['1', '2', '3-5', '6-9', '9+']),
+  // Match actual form options: '1', '2', '3-5', '6+' (legacy '6-9'/'9+' kept for in-flight leads)
+  numberOfWindows: z.enum(['1', '2', '3-5', '6+', '6-9', '9+']),
   // Window types is optional - not collected in current flow
   windowTypes: z.array(z.enum([
     'double_hung',
