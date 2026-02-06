@@ -25,31 +25,15 @@ import { buildQuestionFlow, buildFallbackFlow, validateQuestionFlow } from '@/li
 import DynamicFormWrapper from '@/components/forms/DynamicFormWrapper';
 import Footer from '@/components/layout/Footer';
 
-// Revalidate every 5 minutes (matches homepage for consistency)
+// Skip build-time prerendering — Render build env can't reach Supabase.
+// Pages are server-rendered on first request, then cached via ISR (5 min).
+// This guarantees the correct DB-driven flow every time (no fallback).
 export const revalidate = 300;
+export const dynamicParams = true;
 
-/**
- * Pre-build pages for all active services at deploy time
- *
- * WHY: Instant page loads for known services - no server round-trip
- * WHEN: At build time (next build) and when new services are added
- * HOW: Queries all active service types and returns their slugs
- */
 export async function generateStaticParams() {
-  try {
-    const services = await prisma.serviceType.findMany({
-      where: { active: true },
-      select: { name: true },
-    });
-
-    return services.map((s) => ({
-      slug: s.name.toLowerCase(),
-    }));
-  } catch (error) {
-    console.error('Failed to generate static params:', error);
-    // Return empty array - pages will be generated on-demand
-    return [];
-  }
+  // Return empty — all service pages built on first request, not at deploy time
+  return [];
 }
 
 /**
@@ -60,64 +44,54 @@ export async function generateStaticParams() {
  * HOW: Directly queries database and builds flow
  */
 async function getServiceFlow(slug: string) {
-  try {
-    const serviceType = await prisma.serviceType.findFirst({
-      where: {
-        OR: [{ name: slug }, { name: slug.toLowerCase() }, { id: slug }],
-        active: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        displayName: true,
-        formSchema: true,
-      },
-    });
+  const serviceType = await prisma.serviceType.findFirst({
+    where: {
+      OR: [{ name: slug }, { name: slug.toLowerCase() }, { id: slug }],
+      active: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      displayName: true,
+      formSchema: true,
+    },
+  });
 
-    if (!serviceType) {
-      return null;
-    }
-
-    // Build the question flow from formSchema
-    let flow;
-    if (serviceType.formSchema) {
-      flow = buildQuestionFlow({
-        id: serviceType.id,
-        name: serviceType.name,
-        displayName: serviceType.displayName || undefined,
-        formSchema: serviceType.formSchema,
-      });
-    } else {
-      // Use fallback flow if no formSchema defined
-      console.warn(`Service "${serviceType.name}" has no formSchema, using fallback flow`);
-      flow = buildFallbackFlow(serviceType.name);
-    }
-
-    // Validate the generated flow
-    const validation = validateQuestionFlow(flow);
-    if (!validation.valid) {
-      console.error(`Invalid flow generated for service "${serviceType.name}":`, validation.errors);
-      // Return fallback flow instead of failing completely
-      flow = buildFallbackFlow(serviceType.name);
-    }
-
-    return {
-      flow,
-      service: {
-        id: serviceType.id,
-        name: serviceType.name,
-        displayName: serviceType.displayName,
-      },
-    };
-  } catch (error) {
-    // DB unreachable at build time — use fallback flow so prerender succeeds.
-    // ISR will fetch the real flow from DB on the first runtime request.
-    console.error(`Failed to fetch service flow for "${slug}":`, error);
-    return {
-      flow: buildFallbackFlow(slug),
-      service: { id: '', name: slug, displayName: slug },
-    };
+  if (!serviceType) {
+    return null;
   }
+
+  // Build the question flow from formSchema
+  let flow;
+  if (serviceType.formSchema) {
+    flow = buildQuestionFlow({
+      id: serviceType.id,
+      name: serviceType.name,
+      displayName: serviceType.displayName || undefined,
+      formSchema: serviceType.formSchema,
+    });
+  } else {
+    // Use fallback flow if no formSchema defined
+    console.warn(`Service "${serviceType.name}" has no formSchema, using fallback flow`);
+    flow = buildFallbackFlow(serviceType.name);
+  }
+
+  // Validate the generated flow
+  const validation = validateQuestionFlow(flow);
+  if (!validation.valid) {
+    console.error(`Invalid flow generated for service "${serviceType.name}":`, validation.errors);
+    // Return fallback flow instead of failing completely
+    flow = buildFallbackFlow(serviceType.name);
+  }
+
+  return {
+    flow,
+    service: {
+      id: serviceType.id,
+      name: serviceType.name,
+      displayName: serviceType.displayName,
+    },
+  };
 }
 
 /**
