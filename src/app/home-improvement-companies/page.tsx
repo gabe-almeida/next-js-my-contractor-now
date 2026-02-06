@@ -99,14 +99,9 @@ export default function HomeImprovementCompaniesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {companies.map((company, index) => (
-                  <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <span className="text-sm font-medium text-gray-900">{index + 1}.</span>
-                    <span className="ml-2 text-gray-700">{company}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-gray-700 leading-relaxed">
+                {companies.join(', ')}
+              </p>
 
               <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
                 <h3 className="text-lg font-semibold text-blue-900 mb-2">Your Privacy Rights</h3>
