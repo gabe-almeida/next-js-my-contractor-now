@@ -41,6 +41,11 @@ interface FormSchemaField {
  */
 interface FormSchema {
   fields: FormSchemaField[];
+  // Optional step ordering override
+  // WHY: Lets each service control the order of standard + custom steps
+  // WHEN: Default order (service fields → address → timeline → homeowner → name → contact) isn't ideal
+  // HOW: Array of step IDs in desired order. Steps not listed are appended at end.
+  stepOrder?: string[];
   // Optional UI configuration
   ui?: {
     theme?: string;
@@ -241,53 +246,73 @@ export function buildQuestionFlow(serviceType: ServiceTypeInput): QuestionFlow {
   const questions: Record<string, Question> = { ...STANDARD_QUESTIONS };
   const steps: string[] = [];
 
-  // Parse formSchema if present
+  // Parse formSchema once (reused for fields and stepOrder)
+  let formSchema: FormSchema | null = null;
   if (serviceType.formSchema) {
     try {
-      const formSchema: FormSchema = JSON.parse(serviceType.formSchema);
-
-      if (formSchema.fields && Array.isArray(formSchema.fields)) {
-        // Track which standard fields are defined in schema
-        const definedFields = new Set<string>();
-
-        // Convert each field to a question
-        for (const field of formSchema.fields) {
-          if (!field.name) {
-            console.warn('Skipping field with missing name:', field);
-            continue;
-          }
-
-          const fieldNameLower = field.name.toLowerCase();
-
-          // Skip fields that match standard steps (they'll be added automatically)
-          if (STANDARD_STEPS.includes(fieldNameLower as any)) {
-            definedFields.add(fieldNameLower);
-            // Allow overriding standard question labels
-            if (STANDARD_QUESTIONS[fieldNameLower]) {
-              questions[fieldNameLower] = {
-                ...STANDARD_QUESTIONS[fieldNameLower],
-                question: field.label || STANDARD_QUESTIONS[fieldNameLower].question,
-              };
-            }
-            continue;
-          }
-
-          // Add service-specific question
-          questions[field.name] = fieldToQuestion(field);
-          steps.push(field.name);
-          definedFields.add(fieldNameLower);
-        }
-      }
+      formSchema = JSON.parse(serviceType.formSchema);
     } catch (error) {
       console.error('Failed to parse formSchema JSON:', error);
-      // Continue with standard questions only
     }
   }
 
-  // Add standard steps in correct order
-  for (const step of STANDARD_STEPS) {
-    if (!steps.includes(step)) {
-      steps.push(step);
+  // Process fields from formSchema
+  if (formSchema?.fields && Array.isArray(formSchema.fields)) {
+    for (const field of formSchema.fields) {
+      if (!field.name) {
+        console.warn('Skipping field with missing name:', field);
+        continue;
+      }
+
+      const fieldNameLower = field.name.toLowerCase();
+
+      // Skip fields that match standard steps (they'll be added automatically)
+      if (STANDARD_STEPS.includes(fieldNameLower as any)) {
+        // Allow overriding standard question labels
+        if (STANDARD_QUESTIONS[fieldNameLower]) {
+          questions[fieldNameLower] = {
+            ...STANDARD_QUESTIONS[fieldNameLower],
+            question: field.label || STANDARD_QUESTIONS[fieldNameLower].question,
+          };
+        }
+        continue;
+      }
+
+      // Add service-specific question
+      questions[field.name] = fieldToQuestion(field);
+      steps.push(field.name);
+    }
+  }
+
+  // Build final step order
+  if (formSchema?.stepOrder && Array.isArray(formSchema.stepOrder)) {
+    // Use custom step order from formSchema
+    // WHY: Lets services control question flow order (e.g. address before or after name)
+    const orderedSteps: string[] = [];
+    for (const stepId of formSchema.stepOrder) {
+      if (questions[stepId] && !orderedSteps.includes(stepId)) {
+        orderedSteps.push(stepId);
+      }
+    }
+    // Append any steps not listed in stepOrder (safety net)
+    for (const step of steps) {
+      if (!orderedSteps.includes(step)) {
+        orderedSteps.push(step);
+      }
+    }
+    for (const step of STANDARD_STEPS) {
+      if (!orderedSteps.includes(step)) {
+        orderedSteps.push(step);
+      }
+    }
+    steps.length = 0;
+    steps.push(...orderedSteps);
+  } else {
+    // Default: add standard steps in fixed order
+    for (const step of STANDARD_STEPS) {
+      if (!steps.includes(step)) {
+        steps.push(step);
+      }
     }
   }
 

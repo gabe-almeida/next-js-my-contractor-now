@@ -245,7 +245,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
                       )
                     : ''
                 }
-                placeholder="Enter your address or ZIP code"
+                placeholder="Enter your address"
                 onAddressSelect={(addressData: AddressSelectData) => {
                   // Store all address components for flexible field mapping
                   // 'address' field stores street for backwards compatibility

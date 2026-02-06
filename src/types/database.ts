@@ -256,6 +256,8 @@ export interface FormSchema {
   title: string;
   description?: string;
   fields: FormField[];
+  // Custom step ordering override for flow-builder.ts
+  stepOrder?: string[];
   sections?: {
     id: string;
     title: string;
