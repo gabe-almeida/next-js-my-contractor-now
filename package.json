@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "next dev",
-    "build": "next build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public",
+    "build": "node scripts/restore-next-cache.js && next build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && node scripts/save-next-cache.js",
     "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "type-check": "tsc --noEmit",

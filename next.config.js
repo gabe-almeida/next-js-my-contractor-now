@@ -18,6 +18,11 @@ const nextConfig = {
     serverComponentsExternalPackages: ['rate-limiter-flexible'],
   },
 
+  // WHY: Skip ESLint + TypeScript during build — they run separately via `npm run lint` and `type-check`
+  // WHEN: Every `next build` on Render — saves ~15-30s per deploy
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+
   async headers() {
     return [
       {
@@ -132,12 +137,14 @@ module.exports = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
+  // Disabled widenClientFileUpload to speed up builds (~10-20s savings)
+  // Standard source maps still upload — only extra client files are skipped
+  widenClientFileUpload: false,
 
-  // Automatically annotate React components to show their full name in breadcrumbs and session replay
+  // Disabled component annotation to speed up builds (~5-10s savings)
+  // React component names still appear in dev tools, just not in Sentry breadcrumbs
   reactComponentAnnotation: {
-    enabled: true,
+    enabled: false,
   },
 
   // Disabled tunnelRoute to reduce memory usage on 512MB Render instance
