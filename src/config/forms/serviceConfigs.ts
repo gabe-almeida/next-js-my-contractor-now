@@ -355,20 +355,6 @@ export const windowsFormConfig: FormConfig = {
             { value: '11+', label: '11+ windows' }
           ]
         },
-        {
-          id: 'window-type',
-          name: 'windowType',
-          type: 'select',
-          label: 'Window Type',
-          options: [
-            { value: 'double-hung', label: 'Double-Hung' },
-            { value: 'casement', label: 'Casement' },
-            { value: 'sliding', label: 'Sliding' },
-            { value: 'bay-bow', label: 'Bay/Bow' },
-            { value: 'picture', label: 'Picture' },
-            { value: 'not-sure', label: 'Not Sure' }
-          ]
-        }
       ]
     },
     {
