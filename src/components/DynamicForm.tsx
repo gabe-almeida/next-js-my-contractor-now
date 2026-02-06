@@ -7,6 +7,7 @@ import { useFormValidation, ContactFormData } from '@/hooks/useFormValidation';
 import { getTCPAConfig, createTCPAConsent, TCPAConsent } from '@/config/tcpa';
 // TCPA is now displayed as plain text below the submit button (implicit consent by submission)
 import AddressAutocomplete, { AddressSelectData } from '@/components/forms/inputs/AddressAutocomplete';
+import { useRadar } from '@/hooks/useRadar';
 import Header from '@/components/layout/Header';
 import { getAttributionData, AttributionData } from '@/utils/attribution';
 import { TrustedFormProvider, useTrustedForm } from '@/components/forms/compliance/TrustedFormProvider';
@@ -30,6 +31,11 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHomeownerChecked, setIsHomeownerChecked] = useState(true);
+
+  // Preload Radar SDK on form mount so it's ready by the time user reaches address step
+  // WHY: Dynamic import of radar-sdk-js + maplibre-gl is heavy (~1-2s)
+  // WHEN: Form mounts (step 1), so SDK is warm by step 4 (address)
+  useRadar();
 
   // Hooks to get current compliance tokens at submission time
   const { getCertUrl: getTrustedFormCertUrl, getToken: getTrustedFormToken } = useTrustedForm();
@@ -273,15 +279,13 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
             </div>
 
             {/* Homeowner confirmation - pre-checked, must be checked to proceed */}
-            <label className="flex items-start space-x-3 cursor-pointer mt-2">
-              <div className="flex-shrink-0 mt-0.5">
-                <input
-                  type="checkbox"
-                  checked={isHomeownerChecked}
-                  onChange={(e) => setIsHomeownerChecked(e.target.checked)}
-                  className="w-4 h-4 text-orange-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
+            <label className="flex items-center space-x-3 cursor-pointer mt-2">
+              <input
+                type="checkbox"
+                checked={isHomeownerChecked}
+                onChange={(e) => setIsHomeownerChecked(e.target.checked)}
+                className="w-4 h-4 flex-shrink-0 text-orange-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+              />
               <span className="text-sm text-gray-700">
                 I am the homeowner or authorized to make decisions about this project
               </span>
