@@ -76,7 +76,7 @@ import { BuyerResponseParser } from '../buyers/response-parser';
 import { loadBuyerConfigForAuction } from '../field-mapping/database-buyer-loader';
 import { ContractorDeliveryService, LeadForDelivery } from '../services/contractor-delivery-service';
 import { logger } from '../logger';
-import { addBreadcrumb, isBuyerApiError, reportBuyerApiError } from '@/lib/sentry';
+import { addBreadcrumb, captureMessage, isBuyerApiError, reportBuyerApiError } from '@/lib/sentry';
 import { PingTokenConfig, DEFAULT_PING_TOKEN_CONFIG } from '@/types/field-mapping';
 
 export class AuctionEngine {
@@ -88,7 +88,6 @@ export class AuctionEngine {
     bidDistribution: {}
   };
 
-  private static transactionLogs: TransactionLog[] = [];
   private static activeAuctions = new Map<string, AuctionState>();
 
   /**
@@ -1790,6 +1789,10 @@ export class AuctionEngine {
       Object.assign(headers, serviceConfig.webhookConfig.headers);
     }
 
+    // Protect critical headers from being overwritten by custom configs
+    headers['Content-Type'] = contentType;
+    headers['Accept'] = 'application/json';
+
     return headers;
   }
 
@@ -2023,8 +2026,6 @@ export class AuctionEngine {
       metadata: details
     };
 
-    this.transactionLogs.push(log);
-
     // Persist to database
     try {
       const { prisma } = await import('../db');
@@ -2060,6 +2061,11 @@ export class AuctionEngine {
       });
     } catch (error) {
       console.error('Failed to persist transaction to database:', error);
+      captureMessage(
+        `Transaction logging failed: ${(error as Error).message}`,
+        'warning',
+        { leadId, buyerId, actionType, error: (error as Error).message }
+      );
       // Don't throw - we don't want to fail the auction if logging fails
     }
   }
@@ -2231,23 +2237,6 @@ export class AuctionEngine {
    */
   static getPerformanceMetrics(): PerformanceMetrics['auctionMetrics'] {
     return { ...this.performanceMetrics };
-  }
-
-  /**
-   * Get transaction logs
-   */
-  static getTransactionLogs(leadId?: string, buyerId?: string): TransactionLog[] {
-    let logs = [...this.transactionLogs];
-
-    if (leadId) {
-      logs = logs.filter(log => log.leadId === leadId);
-    }
-
-    if (buyerId) {
-      logs = logs.filter(log => log.buyerId === buyerId);
-    }
-
-    return logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
   /**

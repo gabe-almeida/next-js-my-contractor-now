@@ -65,7 +65,7 @@ import { sendAuctionCompletionEmail, buildEmailDataFromDatabase } from '@/lib/se
 import { AuctionEngine } from '@/lib/auction/engine';
 import { LeadData } from '@/lib/templates/types';
 import { trackLeadCAPI } from '@/lib/meta/conversion-api';
-import { captureApiError, addBreadcrumb } from '@/lib/sentry';
+import { captureApiError, captureMessage, addBreadcrumb } from '@/lib/sentry';
 
 export async function POST(request: NextRequest) {
   try {
@@ -475,6 +475,22 @@ export async function POST(request: NextRequest) {
 
       setTimeout(async () => {
         addBreadcrumb('setTimeout callback started', 'auction', { leadId: result.id });
+
+        // Recover leads stuck in PROCESSING > 5 min (orphaned by deploys/restarts)
+        try {
+          const stuckLeads = await prisma.lead.updateMany({
+            where: {
+              status: LeadStatus.PROCESSING,
+              updatedAt: { lt: new Date(Date.now() - 5 * 60 * 1000) },
+            },
+            data: { status: LeadStatus.REJECTED },
+          });
+          if (stuckLeads.count > 0) {
+            captureMessage(`Recovered ${stuckLeads.count} stuck PROCESSING leads`, 'warning');
+          }
+        } catch {
+          // Don't block current auction if cleanup fails
+        }
 
         // Helper to run auction with timeout protection
         const runAuctionWithTimeout = async () => {
