@@ -19,7 +19,7 @@ export default function Footer() {
               />
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
-              Connect with top-rated contractors in your area. Get instant quotes for roofing, windows, HVAC, and more home improvement projects.
+              Connect with top-rated contractors in your area.
             </p>
           </div>
 
