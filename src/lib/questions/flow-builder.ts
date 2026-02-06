@@ -174,8 +174,8 @@ const STANDARD_QUESTIONS: Record<string, Question> = {
     question: "What's your timeline?",
     required: true,
     options: [
-      { value: 'within_3_months', label: 'Within 3 months' },
-      { value: '3_plus_months', label: '3+ months' },
+      { value: 'within_3_months', label: 'As soon as possible' },
+      { value: '3_plus_months', label: '1-3 months' },
       { value: 'not_sure', label: "I'm not sure" },
     ],
   },
