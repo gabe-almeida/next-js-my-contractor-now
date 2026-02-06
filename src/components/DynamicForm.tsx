@@ -5,7 +5,7 @@ import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { Question, QuestionFlow, getNextStep, shouldShowQuestion } from '@/lib/questions';
 import { useFormValidation, ContactFormData } from '@/hooks/useFormValidation';
 import { getTCPAConfig, createTCPAConsent, TCPAConsent } from '@/config/tcpa';
-import TCPACheckbox from '@/components/forms/compliance/TCPACheckbox';
+// TCPA is now displayed as plain text below the submit button (implicit consent by submission)
 import AddressAutocomplete, { AddressSelectData } from '@/components/forms/inputs/AddressAutocomplete';
 import Header from '@/components/layout/Header';
 import { getAttributionData, AttributionData } from '@/utils/attribution';
@@ -44,7 +44,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
 
   // TCPA configuration and form validation
   const tcpaConfig = getTCPAConfig(buyerId);
-  const { formData, validation, touched, updateField, setFieldTouched, isSubmitEnabled } = useFormValidation(tcpaConfig.isRequired);
+  // TCPA is now implicit consent (shown as text below submit button, not a checkbox)
+  // Pass false for requireTCPA so form validation doesn't block on checkbox
+  const { formData, validation, touched, updateField, setFieldTouched, isSubmitEnabled } = useFormValidation(false);
 
   // Get valid steps based on current answers
   const getValidSteps = () => {
@@ -382,15 +384,6 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
               value={complianceStatus.jornaya.token || ''}
             />
 
-            {/* TCPA Checkbox - only shows when contact info is valid */}
-            <TCPACheckbox
-              config={tcpaConfig}
-              isContactValid={validation.isContactInfoValid}
-              value={formData.tcpaConsent}
-              onChange={(accepted) => updateField('tcpaConsent', accepted)}
-              className="mt-6"
-            />
-
             <button
               onClick={handleContactSubmit}
               disabled={isSubmitting || !isSubmitEnabled}
@@ -402,6 +395,12 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
             >
               {isSubmitting ? 'Submitting...' : 'Get My Quotes'}
             </button>
+
+            {/* TCPA disclosure text - implicit consent by submitting */}
+            <div
+              className="text-xs text-gray-500 leading-relaxed mt-4"
+              dangerouslySetInnerHTML={{ __html: tcpaConfig.text }}
+            />
           </div>
         );
 
@@ -491,15 +490,6 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
               value={complianceStatus.jornaya.token || ''}
             />
 
-            {/* TCPA Checkbox - only shows when contact info is valid */}
-            <TCPACheckbox
-              config={tcpaConfig}
-              isContactValid={validation.isContactInfoValid}
-              value={formData.tcpaConsent}
-              onChange={(accepted) => updateField('tcpaConsent', accepted)}
-              className="mt-6"
-            />
-
             <button
               onClick={handleContactSubmit}
               disabled={isSubmitting || !isSubmitEnabled}
@@ -511,6 +501,12 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
             >
               {isSubmitting ? 'Submitting...' : 'Get My Quotes'}
             </button>
+
+            {/* TCPA disclosure text - implicit consent by submitting */}
+            <div
+              className="text-xs text-gray-500 leading-relaxed mt-4"
+              dangerouslySetInnerHTML={{ __html: tcpaConfig.text }}
+            />
           </div>
         );
 

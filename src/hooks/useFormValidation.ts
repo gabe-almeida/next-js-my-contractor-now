@@ -44,7 +44,7 @@ export const useFormValidation = (requireTCPA: boolean = true): FormValidationHo
     lastName: '',
     email: '',
     phone: '',
-    tcpaConsent: false
+    tcpaConsent: true
   });
 
   const [validation, setValidation] = useState<ValidationState>({
