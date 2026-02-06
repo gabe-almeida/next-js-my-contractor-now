@@ -29,6 +29,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHomeownerChecked, setIsHomeownerChecked] = useState(true);
 
   // Hooks to get current compliance tokens at submission time
   const { getCertUrl: getTrustedFormCertUrl, getToken: getTrustedFormToken } = useTrustedForm();
@@ -249,8 +250,7 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
                 }
                 placeholder="Enter your address"
                 onAddressSelect={(addressData: AddressSelectData) => {
-                  // Store all address components for flexible field mapping
-                  // 'address' field stores street for backwards compatibility
+                  // Store address without auto-advancing (user must click Continue)
                   const storedData = {
                     address: addressData.street,       // Street address (backwards compat)
                     street: addressData.street,        // Explicit street field
@@ -259,10 +259,9 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
                     zipCode: addressData.zipCode,      // ZIP code
                     formattedAddress: addressData.formattedAddress  // Full display
                   };
-                  handleAnswer(currentQuestion.id, storedData);
+                  setAnswers(prev => ({ ...prev, [currentQuestion.id]: storedData }));
                 }}
                 onInputChange={(value) => {
-                  // Update the display value without triggering submission
                   if (value === '') {
                     const newAnswers = { ...answers };
                     delete newAnswers[currentQuestion.id];
@@ -272,6 +271,54 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
                 className="text-base"
               />
             </div>
+
+            {/* Homeowner confirmation - pre-checked, must be checked to proceed */}
+            <label className="flex items-start space-x-3 cursor-pointer mt-2">
+              <div className="flex-shrink-0 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={isHomeownerChecked}
+                  onChange={(e) => setIsHomeownerChecked(e.target.checked)}
+                  className="w-4 h-4 text-orange-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <span className="text-sm text-gray-700">
+                I am the homeowner or authorized to make decisions about this project
+              </span>
+            </label>
+
+            <button
+              onClick={() => {
+                const addressData = answers[currentQuestion.id];
+                if (!addressData || !isHomeownerChecked) return;
+
+                // Store isHomeowner='yes' alongside the address answer
+                // This produces the same value as selecting "Yes" on the standalone step
+                const newAnswers = { ...answers, isHomeowner: 'yes' };
+                setAnswers(newAnswers);
+
+                // Navigate to next step using updated answers
+                const nextStepId = getNextStep(flow, currentQuestion.id, newAnswers);
+                if (nextStepId) {
+                  const newValidSteps = flow.steps.filter(stepId => {
+                    const q = flow.questions[stepId];
+                    return shouldShowQuestion(q, newAnswers);
+                  });
+                  const nextIndex = newValidSteps.indexOf(nextStepId);
+                  if (nextIndex !== -1) {
+                    setCurrentStep(nextIndex);
+                  }
+                }
+              }}
+              disabled={!answers[currentQuestion.id] || !isHomeownerChecked}
+              className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                !answers[currentQuestion.id] || !isHomeownerChecked
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-orange-500 text-white hover:bg-orange-600'
+              }`}
+            >
+              Continue
+            </button>
           </div>
         );
 

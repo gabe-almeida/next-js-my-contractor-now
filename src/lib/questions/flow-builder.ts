@@ -188,6 +188,11 @@ const STANDARD_QUESTIONS: Record<string, Question> = {
       { value: 'yes', label: 'Yes' },
       { value: 'no', label: 'No' },
     ],
+    // Skip this step if already answered (e.g., from the address step's homeowner checkbox)
+    conditions: [
+      { field: 'isHomeowner', operator: 'not_equals' as const, value: 'yes' },
+      { field: 'isHomeowner', operator: 'not_equals' as const, value: 'no' },
+    ],
   },
   authorizationConfirm: {
     id: 'authorizationConfirm',
