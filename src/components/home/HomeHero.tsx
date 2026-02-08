@@ -40,7 +40,10 @@ export default function HomeHero({ serviceTypes }: HomeHeroProps) {
   };
 
   return (
-    <div className="bg-gradient-to-r from-orange-400 to-orange-500 min-h-[600px] flex items-center justify-center relative overflow-hidden">
+    <div
+      className="min-h-[600px] flex items-center justify-center relative overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse at 50% 35%, #FF8C00 0%, #F25200 55%, #E64200 100%)' }}
+    >
       <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
         {/* Contractor Mascot */}
         <div className="mb-8 flex justify-center">
