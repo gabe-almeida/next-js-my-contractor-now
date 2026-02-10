@@ -85,6 +85,7 @@ function mapFieldType(schemaType: string): Question['type'] {
     'contact_fields': 'contact_fields',
     'name': 'name_fields',
     'name_fields': 'name_fields',
+    'zip_code': 'zip_code',
   };
 
   return typeMap[schemaType.toLowerCase()] || 'text';
@@ -162,6 +163,12 @@ const STANDARD_STEPS = [
  * Standard questions that all service flows include
  */
 const STANDARD_QUESTIONS: Record<string, Question> = {
+  zipCode: {
+    id: 'zipCode',
+    type: 'zip_code',
+    question: "What's your zip code?",
+    required: true,
+  },
   address: {
     id: 'address',
     type: 'address',
@@ -307,6 +314,8 @@ export function buildQuestionFlow(serviceType: ServiceTypeInput): QuestionFlow {
     }
     for (const step of STANDARD_STEPS) {
       if (!orderedSteps.includes(step)) {
+        // Skip 'address' when 'zipCode' is already included (mutually exclusive)
+        if (step === 'address' && orderedSteps.includes('zipCode')) continue;
         orderedSteps.push(step);
       }
     }
@@ -377,7 +386,7 @@ export function validateQuestionFlow(flow: QuestionFlow): {
 
   // Check question types are valid
   const validTypes: Question['type'][] = [
-    'select', 'text', 'address', 'contact', 'name_fields', 'contact_fields'
+    'select', 'text', 'address', 'contact', 'name_fields', 'contact_fields', 'zip_code'
   ];
   for (const [id, question] of Object.entries(flow.questions || {})) {
     if (!validTypes.includes(question.type)) {

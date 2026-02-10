@@ -326,6 +326,74 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
           </div>
         );
 
+      case 'zip_code':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+              {currentQuestion.question}
+            </h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={5}
+                pattern="[0-9]*"
+                value={answers[currentQuestion.id] || ''}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '');
+                  setAnswers(prev => ({ ...prev, [currentQuestion.id]: digits }));
+                }}
+                placeholder="Enter 5-digit zip code"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400"
+                autoFocus
+              />
+            </div>
+
+            {/* Homeowner confirmation - same as address step */}
+            <label className="flex items-center space-x-3 cursor-pointer mt-2">
+              <input
+                type="checkbox"
+                checked={isHomeownerChecked}
+                onChange={(e) => setIsHomeownerChecked(e.target.checked)}
+                className="w-4 h-4 flex-shrink-0 text-orange-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+              />
+              <span className="text-sm text-gray-700">
+                I am the homeowner or authorized to make decisions about this project
+              </span>
+            </label>
+
+            <button
+              onClick={() => {
+                const zipValue = answers[currentQuestion.id];
+                if (!zipValue || zipValue.length !== 5 || !isHomeownerChecked) return;
+
+                const newAnswers = { ...answers, isHomeowner: 'yes' };
+                setAnswers(newAnswers);
+
+                const nextStepId = getNextStep(flow, currentQuestion.id, newAnswers);
+                if (nextStepId) {
+                  const newValidSteps = flow.steps.filter(stepId => {
+                    const q = flow.questions[stepId];
+                    return shouldShowQuestion(q, newAnswers);
+                  });
+                  const nextIndex = newValidSteps.indexOf(nextStepId);
+                  if (nextIndex !== -1) {
+                    setCurrentStep(nextIndex);
+                  }
+                }
+              }}
+              disabled={!answers[currentQuestion.id] || answers[currentQuestion.id]?.length !== 5 || !isHomeownerChecked}
+              className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                !answers[currentQuestion.id] || answers[currentQuestion.id]?.length !== 5 || !isHomeownerChecked
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-orange-500 text-white hover:bg-orange-600'
+              }`}
+            >
+              Continue
+            </button>
+          </div>
+        );
+
       case 'name_fields':
         return (
           <div className="space-y-6">

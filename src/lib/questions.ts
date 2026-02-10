@@ -6,7 +6,7 @@ export interface QuestionOption {
 
 export interface Question {
   id: string;
-  type: 'select' | 'text' | 'address' | 'contact' | 'name_fields' | 'contact_fields';
+  type: 'select' | 'text' | 'address' | 'contact' | 'name_fields' | 'contact_fields' | 'zip_code';
   question: string;
   required: boolean;
   options?: QuestionOption[];
