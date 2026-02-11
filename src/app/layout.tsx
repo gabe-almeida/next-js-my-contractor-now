@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { PostHogProvider } from './providers'
+import PostHogPageView from './PostHogPageView'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -186,11 +188,14 @@ export default function RootLayout({
         </noscript>
       </head>
       <body className={`${inter.className} antialiased`}>
+        <PostHogProvider>
+        <PostHogPageView />
         <ErrorBoundary>
           <div id="main-content" className="min-h-screen flex flex-col">
             {children}
           </div>
         </ErrorBoundary>
+        </PostHogProvider>
         <div id="portal-root" />
         <noscript>
           <div className="fixed inset-0 bg-yellow-50 border-l-4 border-yellow-400 p-4 z-50">
