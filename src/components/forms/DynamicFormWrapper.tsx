@@ -10,6 +10,7 @@
  */
 
 import DynamicForm from '@/components/DynamicForm';
+import posthog from 'posthog-js';
 import type { QuestionFlow } from '@/lib/questions';
 import { usePageTracking } from '@/hooks/usePageTracking';
 
@@ -70,8 +71,16 @@ export default function DynamicFormWrapper({ flow, serviceSlug }: DynamicFormWra
       const result = await response.json();
 
       if (result.success) {
+        posthog.capture('form_submitted', {
+          service_type: serviceSlug,
+          lead_id: result.data.leadId,
+          zip_code: typeof answers.address === 'object'
+            ? answers.address?.zipCode
+            : answers.zipCode || answers.address,
+          timeframe: answers.timeline,
+        });
         // Redirect to thank you page with lead ID
-        window.location.href = `/thank-you?leadId=${result.data.leadId}`;
+        window.location.href = `/thank-you?leadId=${result.data.leadId}&service=${serviceSlug}`;
       } else {
         // Show error to user
         const errorMsg = result.message || result.error || 'Unknown error';

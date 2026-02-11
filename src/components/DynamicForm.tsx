@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
+import posthog from 'posthog-js';
 import { Question, QuestionFlow, getNextStep, shouldShowQuestion } from '@/lib/questions';
 import { useFormValidation, ContactFormData } from '@/hooks/useFormValidation';
 import { getTCPAConfig, createTCPAConsent, TCPAConsent } from '@/config/tcpa';
@@ -68,6 +69,22 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
   const currentQuestion = currentStepId ? flow.questions[currentStepId] : null;
   const totalSteps = validSteps.length;
 
+  // Track when a new step is viewed
+  const lastTrackedStep = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentStepId && currentStepId !== lastTrackedStep.current) {
+      lastTrackedStep.current = currentStepId;
+      posthog.capture('form_step_viewed', {
+        service_type: flow.serviceType,
+        step_number: currentStep + 1,
+        total_steps: totalSteps,
+        step_id: currentStepId,
+        step_type: currentQuestion?.type,
+        step_question: currentQuestion?.question,
+      });
+    }
+  }, [currentStepId, currentStep, totalSteps, flow.serviceType, currentQuestion?.type, currentQuestion?.question]);
+
   const handleAnswer = (questionId: string, value: any) => {
     const newAnswers = { ...answers, [questionId]: value };
 
@@ -76,6 +93,14 @@ function DynamicFormInner({ flow, onComplete, onBack, buyerId = 'default', servi
       questionId,
       value,
       allAnswersAfterUpdate: newAnswers
+    });
+
+    posthog.capture('form_step_completed', {
+      service_type: flow.serviceType,
+      step_number: currentStep + 1,
+      total_steps: totalSteps,
+      step_id: questionId,
+      step_type: flow.questions[questionId]?.type,
     });
 
     setAnswers(newAnswers);

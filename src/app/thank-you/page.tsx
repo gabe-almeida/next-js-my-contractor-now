@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
+import posthog from 'posthog-js';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { ADTOfferBanner } from '@/components/offers/ADTOfferBanner';
@@ -10,7 +11,15 @@ import { ADTOfferBanner } from '@/components/offers/ADTOfferBanner';
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const leadId = searchParams.get('leadId');
+  const service = searchParams.get('service');
   const isTestMode = searchParams.get('test') === 'true';
+
+  useEffect(() => {
+    posthog.capture('lead_converted', {
+      lead_id: leadId,
+      service_type: service,
+    });
+  }, [leadId, service]);
 
   return (
     <>

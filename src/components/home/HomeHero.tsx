@@ -13,6 +13,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import posthog from 'posthog-js';
 import PortalDropdown from '@/components/ui/PortalDropdown';
 import { usePageTracking } from '@/hooks/usePageTracking';
 
@@ -35,6 +36,10 @@ export default function HomeHero({ serviceTypes }: HomeHeroProps) {
     setSelectedService(serviceName);
     // Navigate to the specific service form at /services/[slug]
     if (serviceId !== 'other') {
+      posthog.capture('service_selected', {
+        service_id: serviceId,
+        service_name: serviceName,
+      });
       window.location.href = `/services/${serviceId}`;
     }
   };
