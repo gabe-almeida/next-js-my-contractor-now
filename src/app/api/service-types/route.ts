@@ -4,6 +4,7 @@ import { createServiceTypeSchema, updateServiceTypeSchema } from '@/lib/validati
 import { handleApiError } from '@/lib/utils';
 import { captureApiError } from '@/lib/sentry';
 import { revalidateOnServiceCreate } from '@/lib/revalidation';
+import { syncPostHogFunnel } from '@/lib/services/posthog-funnel-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
 
     // Revalidate pages so new service appears immediately
     revalidateOnServiceCreate(name);
+
+    // Auto-create PostHog funnel for this service type (fire-and-forget)
+    syncPostHogFunnel(name, displayName).catch(() => {});
 
     return NextResponse.json({
       success: true,

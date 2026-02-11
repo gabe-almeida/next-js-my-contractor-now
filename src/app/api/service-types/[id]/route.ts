@@ -17,6 +17,7 @@ import { handleApiError } from '@/lib/utils';
 import { RedisCache } from '@/config/redis';
 import { captureApiError } from '@/lib/sentry';
 import { revalidateServicePages, revalidateOnServiceDelete } from '@/lib/revalidation';
+import { syncPostHogFunnel, deletePostHogFunnel } from '@/lib/services/posthog-funnel-service';
 
 /**
  * Invalidate service flow cache when service is updated
@@ -131,6 +132,9 @@ export async function PUT(
     // Revalidate static pages so changes appear immediately
     revalidateServicePages(serviceType.name);
 
+    // Sync PostHog funnel with updated name/slug (fire-and-forget)
+    syncPostHogFunnel(serviceType.name, serviceType.displayName || serviceType.name).catch(() => {});
+
     return NextResponse.json({
       success: true,
       data: serviceType,
@@ -193,6 +197,9 @@ export async function DELETE(
       // Revalidate pages so deactivated service disappears from dropdown
       revalidateOnServiceDelete(existing.name);
 
+      // Remove PostHog funnel for deactivated service (fire-and-forget)
+      deletePostHogFunnel(existing.name).catch(() => {});
+
       return NextResponse.json({
         success: true,
         message: `Service type deactivated (${leadCount} leads reference this service)`,
@@ -209,6 +216,9 @@ export async function DELETE(
 
     // Revalidate pages so deleted service disappears
     revalidateOnServiceDelete(existing.name);
+
+    // Remove PostHog funnel for deleted service (fire-and-forget)
+    deletePostHogFunnel(existing.name).catch(() => {});
 
     return NextResponse.json({
       success: true,
