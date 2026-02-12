@@ -310,6 +310,78 @@ export function stateToAbbreviation(value: unknown): string {
 }
 
 // =============================================================================
+// ZIP Code Transforms
+// =============================================================================
+
+/**
+ * Derive 2-letter state abbreviation from a 5-digit US zip code
+ *
+ * WHY: Some buyers (PCM Growth) require State but we only collect zip code
+ * WHEN: Processing zipCode field for buyers that need State derived from zip
+ * HOW: Uses USPS zip code prefix ranges (first 3 digits) to determine state
+ */
+export function zipToState(value: unknown): string {
+  const zip = String(value).replace(/\D/g, '').slice(0, 5);
+  if (zip.length < 3) return '';
+  const prefix = parseInt(zip.slice(0, 3), 10);
+
+  // USPS zip prefix → state mapping (complete for all 50 states + DC + territories)
+  if (prefix >= 995 && prefix <= 999) return 'AK';
+  if (prefix >= 350 && prefix <= 369) return 'AL';
+  if (prefix >= 716 && prefix <= 729) return 'AR';
+  if (prefix >= 850 && prefix <= 865) return 'AZ';
+  if (prefix >= 900 && prefix <= 961) return 'CA';
+  if (prefix >= 800 && prefix <= 816) return 'CO';
+  if (prefix >= 60 && prefix <= 69) return 'CT';
+  if (prefix === 200 || prefix === 202 || (prefix >= 203 && prefix <= 205)) return 'DC';
+  if (prefix === 197 || prefix === 198 || prefix === 199) return 'DE';
+  if (prefix >= 320 && prefix <= 349) return 'FL';
+  if (prefix >= 300 && prefix <= 319) return 'GA';
+  if (prefix >= 967 && prefix <= 968) return 'HI';
+  if (prefix >= 500 && prefix <= 528) return 'IA';
+  if (prefix >= 832 && prefix <= 838) return 'ID';
+  if (prefix >= 600 && prefix <= 629) return 'IL';
+  if (prefix >= 460 && prefix <= 479) return 'IN';
+  if (prefix >= 660 && prefix <= 679) return 'KS';
+  if (prefix >= 400 && prefix <= 427) return 'KY';
+  if (prefix >= 700 && prefix <= 714) return 'LA';
+  if (prefix >= 10 && prefix <= 27) return 'MA';
+  if (prefix >= 206 && prefix <= 219) return 'MD';
+  if (prefix >= 39 && prefix <= 49) return 'ME';
+  if (prefix >= 480 && prefix <= 499) return 'MI';
+  if (prefix >= 550 && prefix <= 567) return 'MN';
+  if (prefix >= 630 && prefix <= 658) return 'MO';
+  if (prefix >= 386 && prefix <= 397) return 'MS';
+  if (prefix >= 590 && prefix <= 599) return 'MT';
+  if (prefix >= 270 && prefix <= 289) return 'NC';
+  if (prefix >= 580 && prefix <= 588) return 'ND';
+  if (prefix >= 680 && prefix <= 693) return 'NE';
+  if (prefix >= 30 && prefix <= 38) return 'NH';
+  if (prefix >= 70 && prefix <= 89) return 'NJ';
+  if (prefix >= 870 && prefix <= 884) return 'NM';
+  if (prefix >= 889 && prefix <= 898) return 'NV';
+  if ((prefix >= 100 && prefix <= 149) || (prefix >= 5 && prefix <= 9)) return 'NY';
+  if (prefix >= 430 && prefix <= 459) return 'OH';
+  if (prefix >= 730 && prefix <= 749) return 'OK';
+  if (prefix >= 970 && prefix <= 979) return 'OR';
+  if (prefix >= 150 && prefix <= 196) return 'PA';
+  if (prefix >= 28 && prefix <= 29) return 'RI';
+  if (prefix >= 290 && prefix <= 299) return 'SC';
+  if (prefix >= 570 && prefix <= 577) return 'SD';
+  if (prefix >= 370 && prefix <= 385) return 'TN';
+  if ((prefix >= 750 && prefix <= 799) || (prefix >= 885 && prefix <= 886)) return 'TX';
+  if (prefix >= 840 && prefix <= 847) return 'UT';
+  if (prefix >= 220 && prefix <= 246) return 'VA';
+  if (prefix >= 50 && prefix <= 59) return 'VT';
+  if (prefix >= 980 && prefix <= 994) return 'WA';
+  if (prefix >= 530 && prefix <= 549) return 'WI';
+  if (prefix >= 247 && prefix <= 268) return 'WV';
+  if (prefix >= 820 && prefix <= 831) return 'WY';
+
+  return '';
+}
+
+// =============================================================================
 // URL Transforms
 // =============================================================================
 
@@ -468,6 +540,10 @@ export function executeTransform(transformId: string, value: unknown): unknown {
     // Address transforms
     case 'address.stateAbbrev':
       return stateToAbbreviation(value);
+
+    // ZIP transforms
+    case 'zip.toState':
+      return zipToState(value);
 
     // URL transforms
     case 'url.fullUrl':

@@ -683,7 +683,19 @@ export class AuctionEngine {
       );
 
       // Validate bid against pricing rules
-      const validatedBid = this.validateBid(parsedResponse.bidAmount, serviceConfig);
+      // WHY: Fixed-price buyers (e.g., PCM Growth) may return "Matched" without a price field
+      // WHEN: Return_Best_Price is disabled on their account (no dynamic pricing)
+      // HOW: Fall back to configured minBid when PING is accepted but no price returned
+      let validatedBid = this.validateBid(parsedResponse.bidAmount, serviceConfig);
+      if (validatedBid === 0 && parsedResponse.status === 'accepted' && serviceConfig.pricing.minBid > 0) {
+        validatedBid = serviceConfig.pricing.minBid;
+        logger.info('Using configured minBid as fallback for accepted PING with no price', {
+          leadId: lead.id,
+          buyerId: buyer.id,
+          buyerName: buyer.name,
+          fallbackBid: validatedBid,
+        });
+      }
 
       // Determine success: parser says accepted AND bid is valid
       const isSuccess = parsedResponse.status === 'accepted' && validatedBid > 0;
@@ -1246,9 +1258,9 @@ export class AuctionEngine {
         isAccepted,
         lostReason,
         deliveryTime,
-        responseStatus: responseData?.status,
+        responseStatus: responseData?.status || responseData?.response?.status,
         responseCode: responseData?.code,
-        responseLeadId: responseData?.lead_id,
+        responseLeadId: responseData?.lead_id || responseData?.response?.lead_id,
       });
 
       // Log transaction with cascade tracking
@@ -1338,6 +1350,11 @@ export class AuctionEngine {
   private static isPostAccepted(responseData: any): boolean {
     if (!responseData) return false;
 
+    // Support nested response formats (e.g., boberdoo: { response: { status: "Success" } })
+    // WHY: Boberdoo-based buyers (Home Appointments, PCM Growth) wrap responses in a "response" object
+    // WHEN: Called after POST to determine if the lead was accepted
+    const nested = responseData.response;
+
     // FIRST: Check for explicit error indicators - these override everything
     // Important: Some responses include both lead_id AND error status (like Koalaty/LeadProsper)
     const errorIndicators = [
@@ -1355,6 +1372,11 @@ export class AuctionEngine {
       responseData.success === false,
       // Check for error codes (non-zero typically means error)
       (responseData.code !== undefined && responseData.code !== 0),
+      // Nested response checks (boberdoo format: { response: { status: "Error" } })
+      nested?.status === 'Error',
+      nested?.status === 'error',
+      nested?.status === 'ERROR',
+      nested?.status === 'Unmatched',
     ];
 
     if (errorIndicators.some(indicator => indicator === true)) {
@@ -1374,6 +1396,12 @@ export class AuctionEngine {
       responseData.leadId !== undefined, // Many buyers return a leadId on success
       responseData.lead_id !== undefined,
       responseData.confirmation !== undefined,
+      // Nested response checks (boberdoo format: { response: { status: "Success" } })
+      nested?.status === 'Success',
+      nested?.status === 'success',
+      nested?.status === 'SUCCESS',
+      nested?.status === 'Matched',
+      nested?.lead_id !== undefined,
     ];
 
     return acceptIndicators.some(indicator => indicator === true);

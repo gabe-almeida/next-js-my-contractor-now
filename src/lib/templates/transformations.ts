@@ -36,6 +36,8 @@ const SHARED_TRANSFORMS = new Set([
   'number.integer', 'number.round', 'number.twoDecimals', 'number.currency', 'number.percentage',
   // Address
   'address.stateAbbrev',
+  // ZIP
+  'zip.toState',
   // URL
   'url.fullUrl'
 ]);

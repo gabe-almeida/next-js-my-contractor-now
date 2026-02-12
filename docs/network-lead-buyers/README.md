@@ -7,6 +7,7 @@ Documentation for all network lead buyer integrations (PING/POST auction partner
 | Buyer | Type | Services | Status |
 |-------|------|----------|--------|
 | [Modernize](./modernize/) | NETWORK | Windows, Roofing, HVAC, Bathrooms | Active |
+| [PCM Growth](./PCM%20Growth/) | NETWORK | Windows (zip-only) | **Inactive** - Ready to activate |
 | [Koalaty Leads](./koalaty-leads/) | NETWORK | Windows | **Inactive** |
 | [PX](./PX/) | NETWORK | Windows, Bathrooms | **Inactive** - Awaiting API Token |
 
@@ -19,6 +20,8 @@ network-lead-buyers/
 │   └── windows.md         # (TODO: Add Modernize docs)
 ├── koalaty-leads/
 │   └── windows.md         # Koalaty Leads Windows integration
+├── PCM Growth/
+│   └── windows.md         # PCM Growth Windows (zip-only) integration
 ├── PX/
 │   └── README.md          # PX Windows & Bathrooms integration
 └── Home Appointments/

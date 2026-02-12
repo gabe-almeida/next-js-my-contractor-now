@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     // See: /docs/forms-system.md#auto-injected-fields
     let finalFormData = { ...sanitizedFormData };
 
-    if (serviceType.name === 'windows') {
+    if (serviceType.name === 'windows' || serviceType.name === 'windows-zip-only') {
       // Windows: Always set projectScope to "install" (repair/install question removed)
       // All buyer field mappings with sourceField="formData.projectScope" will receive "install"
       // and transform via their valueMaps (e.g., "install" → "New Unit Installed" for PX)
